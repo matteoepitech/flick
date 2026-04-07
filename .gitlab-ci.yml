@@ -33,4 +33,4 @@ mirror-job:
   script:
     - git remote remove github 2>/dev/null || true
     - git remote add github https://oauth2:${MIRROR_TOKEN}@${MIRROR_URL}
-    - git push github HEAD:main --force
+    - git push github HEAD:refs/heads/main --force
