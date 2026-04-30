@@ -11,12 +11,14 @@ import (
 	"bytes"
 	"crypto/tls"
 	"fmt"
-	"github.com/spf13/cobra"
-	"github.com/tiagomelo/go-clipboard/clipboard"
 	"io"
 	"mime/multipart"
 	"net/http"
 	"os"
+
+	"github.com/schollz/progressbar/v3"
+	"github.com/spf13/cobra"
+	"github.com/tiagomelo/go-clipboard/clipboard"
 )
 
 // doUploadRequest: Do the upload request on the server.
@@ -49,7 +51,7 @@ func doUploadRequest(req *http.Request) error {
 	defer resp.Body.Close()
 
 	bodyString := string(body)
-	fmt.Print("Code: " + bodyString + "\n")
+	fmt.Print("\nCode: " + bodyString + "\n")
 
 	c := clipboard.New(clipboard.ClipboardOptions{Primary: true})
 	if err := c.CopyText(bodyString); err != nil {
@@ -99,12 +101,16 @@ func RunUpload(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("Failure: Cannot finalize the upload body: %w\n", err)
 	}
 
-	req, err := http.NewRequest("POST", "https://"+serverIP+":15702/upload", body)
+	bar := progressbar.DefaultBytes(int64(body.Len()), "Uploading")
+	progressBody := io.TeeReader(body, bar)
+
+	req, err := http.NewRequest("POST", "https://"+serverIP+":15702/upload", progressBody)
 	if err != nil {
 		return fmt.Errorf("Failure: Cannot create the request for the server.\n")
 	}
 
 	req.Header.Set("Content-Type", writer.FormDataContentType())
+	req.ContentLength = int64(body.Len())
 
 	return doUploadRequest(req)
 }
