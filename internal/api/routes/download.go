@@ -10,6 +10,7 @@ package routes
 import (
 	"github.com/matteoepitech/flick/internal/api/logging"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"os"
 )
@@ -25,35 +26,59 @@ import (
 func DownloadFileHandler(dataDir string, logger logging.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
-			http.Error(w, "This endpoint is meant to be GET only", http.StatusNotFound)
+			http.Error(w, "GET only", http.StatusMethodNotAllowed)
 			return
 		}
 
-		query := r.URL.Query()
-		code := query.Get("code")
-		logger.Info("Trying to find the ressource with the code: <%s>", code)
-		content, err := os.ReadDir(dataDir + code)
+		code := r.URL.Query().Get("code")
+		if code == "" {
+			http.Error(w, "Invalid request", http.StatusBadRequest)
+			return
+		}
 
+		path := dataDir + code
+
+		entries, err := os.ReadDir(path)
 		if err != nil {
-			logger.InfoError("Wrong share code")
+			logger.InfoError("The code <%s> doesn't exist.", code)
+			http.Error(w, "Code not found", http.StatusNotFound)
 			return
 		}
-		for _, entry := range content {
-			file, err := os.Stat(dataDir + code + "/" + entry.Name())
+
+		writer := multipart.NewWriter(w)
+		defer writer.Close()
+
+		w.Header().Set("Content-Type", writer.FormDataContentType())
+
+		for _, entry := range entries {
+			fullPath := path + "/" + entry.Name()
+
+			file, err := os.Open(fullPath)
 			if err != nil {
-				logger.InfoError("The ressource <%s> is not found", code)
-				http.Error(w, "Resource not found", http.StatusNotFound)
-				return
-			}
-			fileContent, err := os.Open(dataDir + code + "/" + entry.Name())
-			if err != nil {
-				logger.InfoError("The ressource <%s> can't be downloaded", code)
-				http.Error(w, "Internal server error", http.StatusInternalServerError)
-				return
+				logger.InfoError("Cannot open file %s", entry.Name())
+				continue
 			}
 
-			io.Copy(w, fileContent)
-			logger.InfoSuccess("A file has been downloaded with the code <%s> (%d bytes)", code, file.Size())
+			info, err := file.Stat()
+			if err != nil {
+				file.Close()
+				continue
+			}
+
+			part, err := writer.CreateFormFile("file", entry.Name())
+			if err != nil {
+				file.Close()
+				continue
+			}
+
+			_, err = io.Copy(part, file)
+			file.Close()
+
+			if err != nil {
+				continue
+			}
+
+			logger.InfoSuccess("Sent file <%s> (%d bytes)", entry.Name(), info.Size())
 		}
 	}
 }

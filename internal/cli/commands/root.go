@@ -1,0 +1,49 @@
+/*
+** FLICK PROJECT, 2026
+** flick/internal/cli/commands/root
+** File description:
+** Commands root file
+ */
+
+package commands
+
+import (
+	"context"
+	"github.com/spf13/cobra"
+)
+
+// Root CMD using cobra
+var rootCmd = &cobra.Command{
+	Use:  "flick-cli",
+	RunE: runCLI,
+}
+
+// The default server IP.
+var serverIP string = "127.0.0.1"
+
+// Execute: Execute the root command.
+//
+// Params:
+// - ctx (context.Context): The context of the program.
+//
+// Returns:
+// - result1 (error): An error if something occured.
+func Execute(ctx context.Context) error {
+	return rootCmd.ExecuteContext(ctx)
+}
+
+// runCLI: Run the CLI command.
+//
+// Params:
+// - cmd (*cobra.Command): The actual command done by the user.
+// - args ([]string): The args.
+//
+// Returns:
+// - result1 (error): An error if something occured.
+func runCLI(cmd *cobra.Command, args []string) error {
+	if len(args) > 0 {
+		return RunUpload(cmd, args)
+	} else {
+		return RunDownload(cmd, args)
+	}
+}
