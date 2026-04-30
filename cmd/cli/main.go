@@ -10,7 +10,6 @@ package main
 import (
 	"context"
 	"github.com/matteoepitech/flick/internal/cli"
-	"log"
 )
 
 // main Main entry point
@@ -18,6 +17,6 @@ func main() {
 	err := cli.Run(context.Background())
 
 	if err != nil {
-		log.Fatal(err)
+		return
 	}
 }

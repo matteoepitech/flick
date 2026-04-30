@@ -9,7 +9,9 @@ package cli
 
 import (
 	"context"
+
 	"github.com/matteoepitech/flick/internal/cli/commands"
+	"github.com/matteoepitech/flick/internal/cli/config"
 )
 
 // Run: Run the CLI.
@@ -20,5 +22,8 @@ import (
 // Returns:
 // - result1 (error): nil if no error, otherwise an error.
 func Run(ctx context.Context) error {
+	if err := config.Conf.LoadWithFile(); err != nil {
+		return err
+	}
 	return commands.Execute(ctx)
 }

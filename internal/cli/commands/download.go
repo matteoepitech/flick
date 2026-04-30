@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/matteoepitech/flick/internal/cli/config"
 	"github.com/spf13/cobra"
 )
 
@@ -121,9 +122,9 @@ func RunDownload(cmd *cobra.Command, args []string) error {
 
 	body := &bytes.Buffer{}
 
-	req, err := http.NewRequest("GET", "https://"+serverIP+":15702/download?code="+code, body)
+	req, err := http.NewRequest("GET", "https://"+config.Conf.ServerIP+":15702/download?code="+code, body)
 	if err != nil {
-		return fmt.Errorf("Failure: Cannot create the request for the server.\n")
+		return fmt.Errorf("Failure: Cannot create the request for the server.")
 	}
 
 	return doDownloadRequest(req)

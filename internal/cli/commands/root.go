@@ -14,8 +14,10 @@ import (
 
 // Root CMD using cobra
 var rootCmd = &cobra.Command{
-	Use:  "flick-cli",
-	RunE: runCLI,
+	Use:          "flick-cli",
+	Args:         cobra.ArbitraryArgs,
+	RunE:         runCLI,
+	SilenceUsage: true,
 }
 
 // The default server IP.
@@ -41,9 +43,13 @@ func Execute(ctx context.Context) error {
 // Returns:
 // - result1 (error): An error if something occured.
 func runCLI(cmd *cobra.Command, args []string) error {
-	if len(args) > 0 {
-		return RunUpload(cmd, args)
-	} else {
+	if len(args) == 0 {
 		return RunDownload(cmd, args)
 	}
+	for _, sub := range cmd.Commands() {
+		if sub.Name() == args[0] {
+			return cmd.Help()
+		}
+	}
+	return RunUpload(cmd, args)
 }
