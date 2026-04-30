@@ -9,6 +9,7 @@ package routes
 
 import (
 	"github.com/matteoepitech/flick/internal/api/logging"
+	"io"
 	"net/http"
 	"os"
 )
@@ -30,21 +31,29 @@ func DownloadFileHandler(dataDir string, logger logging.Logger) http.HandlerFunc
 
 		query := r.URL.Query()
 		code := query.Get("code")
-
 		logger.Info("Trying to find the ressource with the code: <%s>", code)
-		file, err := os.Stat(dataDir + code)
-		if err != nil {
-			logger.InfoError("The ressource <%s> is not found", code)
-			http.Error(w, "Resource not found", http.StatusNotFound)
-		}
+		content, err := os.ReadDir(dataDir + code)
 
-		content, err := os.ReadFile(dataDir + code)
 		if err != nil {
-			logger.InfoError("The ressource <%s> can't be downloaded", code)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			logger.InfoError("Wrong share code")
+			return
 		}
+		for _, entry := range content {
+			file, err := os.Stat(dataDir + code + "/" + entry.Name())
+			if err != nil {
+				logger.InfoError("The ressource <%s> is not found", code)
+				http.Error(w, "Resource not found", http.StatusNotFound)
+				return
+			}
+			fileContent, err := os.Open(dataDir + code + "/" + entry.Name())
+			if err != nil {
+				logger.InfoError("The ressource <%s> can't be downloaded", code)
+				http.Error(w, "Internal server error", http.StatusInternalServerError)
+				return
+			}
 
-		w.Write(content)
-		logger.InfoSuccess("A file has been downloaded with the code <%s> (%d bytes)", code, file.Size())
+			io.Copy(w, fileContent)
+			logger.InfoSuccess("A file has been downloaded with the code <%s> (%d bytes)", code, file.Size())
+		}
 	}
 }

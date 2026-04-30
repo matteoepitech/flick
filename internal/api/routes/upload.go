@@ -8,6 +8,7 @@
 package routes
 
 import (
+	"fmt"
 	"github.com/matteoepitech/flick/internal/api/code"
 	"github.com/matteoepitech/flick/internal/api/logging"
 	"io"
@@ -55,6 +56,7 @@ func UploadFileHandler(dataDir string, logger logging.Logger) http.HandlerFunc {
 			http.Error(w, "Error while copying the file", http.StatusInternalServerError)
 			return
 		}
-		logger.InfoSuccess("Received a file with code <%s> (%d bytes)", header.Filename, fileBytes)
+		logger.InfoSuccess("Received a file with code <%s> (%d bytes)", codeDir, fileBytes)
+		fmt.Fprintf(w, "%s\n", codeDir)
 	}
 }
