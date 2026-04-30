@@ -12,6 +12,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"github.com/spf13/cobra"
+	"github.com/tiagomelo/go-clipboard/clipboard"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -47,7 +48,15 @@ func doUploadRequest(req *http.Request) error {
 	}
 	defer resp.Body.Close()
 
-	fmt.Print("Code: " + string(body))
+	bodyString := string(body)
+	fmt.Print("Code: " + bodyString + "\n")
+
+	c := clipboard.New(clipboard.ClipboardOptions{Primary: true})
+	if err := c.CopyText(bodyString); err != nil {
+		return err
+	}
+
+	fmt.Println("Code copied to clipboard.")
 	return nil
 }
 
