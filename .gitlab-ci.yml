@@ -17,13 +17,14 @@ build-job:
   rules:
     - if: '$CI_COMMIT_BRANCH !~ /-noci$/ && $CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_COMMIT_BRANCH !~ /-noci$/ && $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_COMMIT_TAG'
+  image: golang:1.22
   script:
-    - |
-      true
-  # artifacts:
-  #   paths:
-  #     - "$BIN_NAME"
-  #   expire_in: 1 hour
+    - ./build.sh
+  artifacts:
+    paths:
+      - "./build/bin/"
+    expire_in: 1 hour
 
 mirror-job:
   stage: mirror

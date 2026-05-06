@@ -71,6 +71,9 @@ func doDownloadRequest(req *http.Request) error {
 
 	totalSizeStr := resp.Header.Get("X-Total-Size")
 	totalSize, _ := strconv.ParseInt(totalSizeStr, 10, 64)
+	if totalSize <= 0 {
+		totalSize = -1
+	}
 	bar := progressbar.DefaultBytes(totalSize, "Downloading")
 
 	contentType := resp.Header.Get("Content-Type")
