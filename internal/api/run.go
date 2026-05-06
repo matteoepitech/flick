@@ -9,15 +9,11 @@ package api
 
 import (
 	"context"
-	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
-
 	"github.com/matteoepitech/flick/internal/api/logging"
-	"github.com/matteoepitech/flick/internal/api/metadata"
 	"github.com/matteoepitech/flick/internal/api/routes"
 	"github.com/quic-go/quic-go/http3"
+	"net/http"
+	"os"
 )
 
 // Where the data is stored
@@ -49,12 +45,8 @@ func Run(ctx context.Context) error {
 
 	http.HandleFunc("/upload", routes.UploadFileHandler(dataDir, logger))
 	http.HandleFunc("/download", routes.DownloadFileHandler(dataDir, logger))
-	logger.InfoSuccess("Starting FLICK server on port 15702...")
 
-	stopSignal := make(chan os.Signal, 1)
-	signal.Notify(stopSignal, os.Interrupt, syscall.SIGTERM)
-	go metadata.CheckExpiration(dataDir, logger)
-	<-stopSignal
+	logger.InfoSuccess("Starting FLICK server on port 15702...")
 
 	err = http3.ListenAndServeTLS(":15702", "certificates/cert.pem", "certificates/key.pem", nil)
 	if err != nil {

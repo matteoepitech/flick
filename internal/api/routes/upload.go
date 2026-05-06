@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"github.com/matteoepitech/flick/internal/api/code"
 	"github.com/matteoepitech/flick/internal/api/logging"
-	"github.com/matteoepitech/flick/internal/api/metadata"
 	"io"
 	"net/http"
 	"os"
@@ -59,6 +58,5 @@ func UploadFileHandler(dataDir string, logger logging.Logger) http.HandlerFunc {
 		}
 		logger.InfoSuccess("Received a file with code <%s> (%d bytes)", codeDir, fileBytes)
 		fmt.Fprintf(w, "%s", codeDir)
-		metadata.SetExpiration("10m", dataDir+codeDir+"/", codeDir, logger)
 	}
 }
