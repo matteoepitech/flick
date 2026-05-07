@@ -6,6 +6,7 @@ default:
 stages:
   - build
   - mirror
+  - deploy
 
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
@@ -17,7 +18,7 @@ build-job:
   rules:
     - if: '$CI_COMMIT_BRANCH !~ /-noci$/ && $CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_COMMIT_BRANCH !~ /-noci$/ && $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"'
-    - if: '$CI_COMMIT_TAG'
+    - if: '$CI_COMMIT_TAG =~ /^v/'
   image: golang:1.22
   script:
     - ./build.sh
@@ -25,6 +26,25 @@ build-job:
     paths:
       - "./build/bin/"
     expire_in: 1 hour
+
+deploy-job:
+  stage: deploy
+  needs: [build-job]
+  rules:
+    - if: '$CI_COMMIT_BRANCH !~ /-noci$/ && $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_COMMIT_TAG =~ /^v/'
+  script:
+    - VERSION=${CI_COMMIT_TAG:-$CI_COMMIT_SHORT_SHA}
+    - SSH_DIR=$(mktemp -d)
+    - cp "$FLICK_SSH_KNOWN_HOSTS" "$SSH_DIR/known_hosts"
+    - cp "$FLICK_SSH_PRIVATE" "$SSH_DIR/key"
+    - chmod 600 "$SSH_DIR/key"
+    - SSH_OPTS="-i $SSH_DIR/key -o UserKnownHostsFile=$SSH_DIR/known_hosts"
+    - echo "Deploying version $VERSION"
+    - ssh $SSH_OPTS deploy@flick.d3l.tech "mkdir -p /var/www/flick/releases/$VERSION"
+    - rsync -avz -e "ssh $SSH_OPTS" build/bin/ deploy@flick.d3l.tech:/var/www/flick/releases/$VERSION/
+    - rsync -avz -e "ssh $SSH_OPTS" build/bin/version.json deploy@flick.d3l.tech:/var/www/flick/releases/version.json
+    - rm -rf "$SSH_DIR"
 
 mirror-job:
   stage: mirror
