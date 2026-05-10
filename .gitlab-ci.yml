@@ -31,10 +31,11 @@ deploy-job:
   stage: deploy
   needs: [build-job]
   rules:
-    - if: '$CI_COMMIT_BRANCH !~ /-noci$/ && $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"'
     - if: '$CI_COMMIT_TAG =~ /^v/'
   script:
-    - VERSION=${CI_COMMIT_TAG:-$CI_COMMIT_SHORT_SHA}
+    - git fetch origin main
+    - git merge-base --is-ancestor $CI_COMMIT_SHA origin/main || { echo "Tag is not on main, aborting..."; exit 1; }
+    - VERSION=$CI_COMMIT_TAG
     - SSH_DIR=$(mktemp -d)
     - cp "$FLICK_SSH_KNOWN_HOSTS" "$SSH_DIR/known_hosts"
     - cp "$FLICK_SSH_PRIVATE" "$SSH_DIR/key"
