@@ -14,6 +14,9 @@ import (
 	"github.com/matteoepitech/flick/internal/cli/config"
 )
 
+// Current CLIVersion
+var CLIVersion string = "dev"
+
 // Run: Run the CLI.
 //
 // Params:
@@ -25,5 +28,6 @@ func Run(ctx context.Context) error {
 	if err := config.Conf.LoadWithFile(); err != nil {
 		return err
 	}
+	config.CheckUpdate(CLIVersion)
 	return commands.Execute(ctx)
 }
