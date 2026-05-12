@@ -1,42 +1,42 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
-# Version : tag git > hash court > "dev"
-VERSION=${CI_COMMIT_TAG:-${CI_COMMIT_SHORT_SHA:-$(git rev-parse --short HEAD 2>/dev/null || echo "dev")}}
+VERSION="${CI_COMMIT_TAG:-${CI_COMMIT_SHORT_SHA:-$(git rev-parse --short HEAD 2>/dev/null || echo dev)}}"
+COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
-echo "Build version : $VERSION"
+export CGO_ENABLED=0
 
+echo "Build version: $VERSION (commit=$COMMIT)"
 mkdir -p build/bin
 
+LDFLAGS="-s -w -X main.CLIVersion=$VERSION -X main.CLICommit=$COMMIT -X main.CLIBuildDate=$BUILD_DATE"
+
 PLATFORMS=("linux/amd64" "linux/arm64" "darwin/amd64" "darwin/arm64" "windows/amd64")
+BINARIES=("api" "cli")
 
 for PLATFORM in "${PLATFORMS[@]}"; do
   GOOS="${PLATFORM%/*}"
   GOARCH="${PLATFORM#*/}"
-
   SUFFIX=""
   [ "$GOOS" = "windows" ] && SUFFIX=".exe"
 
-  echo "  Compilation $GOOS/$GOARCH..."
-
-  # Flick API
-  GOOS=$GOOS GOARCH=$GOARCH go build \
-    -ldflags="-X main.Version=$VERSION" \
-    -o "build/bin/flick-api-${GOOS}-${GOARCH}${SUFFIX}" \
-    ./cmd/api
-
-  # Flick CLI
-  GOOS=$GOOS GOARCH=$GOARCH go build \
-    -ldflags="-X main.Version=$VERSION" \
-    -o "build/bin/flick-cli-${GOOS}-${GOARCH}${SUFFIX}" \
-    ./cmd/cli
+  for BIN in "${BINARIES[@]}"; do
+    echo "  → flick-${BIN} ${GOOS}/${GOARCH}"
+    GOOS=$GOOS GOARCH=$GOARCH go build \
+      -ldflags="$LDFLAGS" \
+      -o "build/bin/flick-${BIN}-${GOOS}-${GOARCH}${SUFFIX}" \
+      "./cmd/${BIN}"
+  done
 done
 
-BASE_URL=${RELEASE_BASE_URL:-"https://flick.d3l.tech/releases"}
+BASE_URL="${RELEASE_BASE_URL:-https://flick.d3l.tech/releases}"
 
 cat > build/bin/version.json << EOF
 {
   "version": "$VERSION",
+  "commit": "$COMMIT",
+  "build_date": "$BUILD_DATE",
   "url_linux_amd64":   "$BASE_URL/$VERSION/flick-cli-linux-amd64",
   "url_linux_arm64":   "$BASE_URL/$VERSION/flick-cli-linux-arm64",
   "url_darwin_amd64":  "$BASE_URL/$VERSION/flick-cli-darwin-amd64",
@@ -45,7 +45,6 @@ cat > build/bin/version.json << EOF
 }
 EOF
 
-# Checksums
 cd build/bin
 sha256sum flick-* > checksums.txt
 cd -
