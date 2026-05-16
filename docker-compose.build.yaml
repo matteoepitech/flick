@@ -1,0 +1,22 @@
+# Copyright (c) 2026 Flick. All Rights Reserved.
+#
+# Build override: adds build contexts so docker compose build produces the prod images. Used by CI release-server-job.
+# Usage:
+#   docker compose -f docker-compose.yaml -f docker-compose.build.yaml build
+
+services:
+  # API Service
+  flick-api:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      args:
+        VERSION: ${VERSION:-selfbuild}
+        COMMIT: ${COMMIT:-}
+        BUILD_DATE: ${BUILD_DATE:-}
+
+  # Web Service
+  flick-web:
+    build:
+      context: ./web/
+      dockerfile: Dockerfile

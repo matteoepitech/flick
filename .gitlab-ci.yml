@@ -23,12 +23,7 @@ build-job:
     - if: '$CI_COMMIT_TAG =~ /^v/'
   image: golang:1.22
   script:
-    - |
-      if [ -n "$CI_COMMIT_TAG" ]; then
-        ./build.sh "$CI_COMMIT_TAG"
-      else
-        ./build.sh
-      fi
+    - make build
   artifacts:
     paths:
       - "./build/bin/"
@@ -73,8 +68,7 @@ release-server-job:
     - export COMMIT="$CI_COMMIT_SHORT_SHA"
     - export BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
     - echo "Building compose stack version $VERSION (commit=$COMMIT)"
-    - docker compose build
-    - docker compose push
+    - make images-push
     - docker tag "$REGISTRY_IMAGE/flick-api:$VERSION" "$REGISTRY_IMAGE/flick-api:latest" # Re-tag the API
     - docker tag "$REGISTRY_IMAGE/flick-web:$VERSION" "$REGISTRY_IMAGE/flick-web:latest" # Re-tag the Web
     - docker push "$REGISTRY_IMAGE/flick-api:latest"
