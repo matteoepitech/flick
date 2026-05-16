@@ -48,9 +48,11 @@ func needChanges(input string) bool {
 // - error: An error if occurred.
 func RunConfigure(cmd *cobra.Command, args []string) error {
 	var changeServer string
-	var changeExpTime string
+	var changeDefExpTime string
+	var changeMaxExpTime string
 	var serverIP string
-	var expTime string
+	var DefExpTime string
+	var MaxExpTime string
 
 	fmt.Printf("Change the default Flick server? (y/n): ")
 	fmt.Scan(&changeServer)
@@ -61,11 +63,19 @@ func RunConfigure(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Printf("Change the default expiration time? (y/n): ")
-	fmt.Scan(&changeExpTime)
-	if needChanges(changeExpTime) {
-		fmt.Printf("Enter expiration time: ")
-		fmt.Scan(&expTime)
-		config.Conf.ExpTime = expTime // TODO: verify input
+	fmt.Scan(&changeDefExpTime)
+	if needChanges(changeDefExpTime) {
+		fmt.Printf("Enter the default expiration time: ")
+		fmt.Scan(&DefExpTime)
+		config.Conf.DefExpTime = DefExpTime // TODO: verify input
+	}
+
+	fmt.Printf("Change the maximum expiration time? (y/n): ")
+	fmt.Scan(&changeMaxExpTime)
+	if needChanges(changeMaxExpTime) {
+		fmt.Printf("Enter the maximum expiration time: ")
+		fmt.Scan(&MaxExpTime)
+		config.Conf.MaxExpTime = MaxExpTime // TODO: verify input
 	}
 
 	if err := config.Conf.SaveConfigurationFile(); err != nil {

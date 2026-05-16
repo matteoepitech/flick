@@ -54,12 +54,14 @@ func Run(ctx context.Context) error {
 	stopSignal := make(chan os.Signal, 1)
 	signal.Notify(stopSignal, os.Interrupt, syscall.SIGTERM)
 	go metadata.CheckExpiration(dataDir, logger)
-	<-stopSignal
 
-	err = http3.ListenAndServeTLS(":15702", "certificates/cert.pem", "certificates/key.pem", nil)
-	if err != nil {
-		return logger.InfoError("Unable to start the API with server error: %s", err.Error())
-	}
+	go func() {
+		err = http3.ListenAndServeTLS(":15702", "certificates/cert.pem", "certificates/key.pem", nil)
+		if err != nil {
+			logger.InfoError("Unable to start the API with server error: %s", err.Error())
+		}
+	}()
+	<-stopSignal
 
 	return nil
 }

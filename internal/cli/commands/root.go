@@ -23,6 +23,10 @@ var rootCmd = &cobra.Command{
 // The default server IP.
 var serverIP string = "127.0.0.1"
 
+func init() {
+	rootCmd.Flags().String("exp", "1d", "Expiration duration")
+}
+
 // Execute: Execute the root command.
 //
 // Params:
@@ -46,10 +50,14 @@ func runCLI(cmd *cobra.Command, args []string) error {
 	if len(args) == 0 {
 		return RunDownload(cmd, args)
 	}
+
+	exp, _ := cmd.Flags().GetString("exp")
+
 	for _, sub := range cmd.Commands() {
 		if sub.Name() == args[0] {
 			return cmd.Help()
 		}
+
 	}
-	return RunUpload(cmd, args)
+	return RunUpload(cmd, args, exp)
 }
