@@ -50,7 +50,10 @@ func UploadFileHandler(dataDir string, logger logging.Logger) http.HandlerFunc {
 			return
 		}
 		defer dst.Close()
-
+		if !metadata.SetExpiration(r.URL.Query().Get("expiration"), dataDir+codeDir+"/", codeDir, logger) {
+			logger.InfoError("Error in expiration time")
+			return
+		}
 		fileBytes, err := io.Copy(dst, file)
 		if err != nil {
 			logger.InfoError("Error while uploading a file of code <%s>", header.Filename)
@@ -59,6 +62,5 @@ func UploadFileHandler(dataDir string, logger logging.Logger) http.HandlerFunc {
 		}
 		logger.InfoSuccess("Received a file with code <%s> (%d bytes)", codeDir, fileBytes)
 		fmt.Fprintf(w, "%s", codeDir)
-		metadata.SetExpiration("10m", dataDir+codeDir+"/", codeDir, logger)
 	}
 }

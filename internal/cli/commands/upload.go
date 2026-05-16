@@ -70,7 +70,7 @@ func doUploadRequest(req *http.Request) error {
 //
 // Returns:
 // - result1 (error): An error if occured.
-func RunUpload(cmd *cobra.Command, args []string) error {
+func RunUpload(cmd *cobra.Command, args []string, exp string) error {
 	if len(args) < 1 {
 		return fmt.Errorf("Failure: Internal CLI error.")
 	}
@@ -105,7 +105,12 @@ func RunUpload(cmd *cobra.Command, args []string) error {
 	bar := progressbar.DefaultBytes(int64(body.Len()), "Uploading")
 	progressBody := io.TeeReader(body, bar)
 
-	req, err := http.NewRequest("POST", "https://"+config.Conf.ServerIP+":15702/upload", progressBody)
+	expValue := exp
+	if expValue == "" {
+		expValue = config.Conf.DefExpTime
+	}
+
+	req, err := http.NewRequest("POST", "https://"+config.Conf.ServerIP+":15702/upload?expiration="+expValue, progressBody)
 	if err != nil {
 		return fmt.Errorf("Failure: Cannot create the request for the server.")
 	}
