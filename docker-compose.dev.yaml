@@ -1,0 +1,38 @@
+# Copyright (c) 2026 Flick. All Rights Reserved.
+#
+# Dev override:
+#   - API: rebuilt from the prod Dockerfile (fast thanks to layer cache).
+#          Re-run make dev after Go changes.
+#   - Web: hot reload via next dev with the source bind-mounted.
+
+services:
+  # API Service
+  flick-api:
+    image: flick-api:dev # Give the name flick-api:dev to the image
+    platform: ""
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      args:
+        VERSION: dev
+    container_name: flick-api-dev
+
+  # Web Service
+  flick-web:
+    image: flick-web:dev # Give the name flick-web:dev to the image
+    platform: ""
+    build:
+      context: ./web/
+      dockerfile: Dockerfile.dev
+    container_name: flick-web-dev
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+    volumes:
+      - ./web:/app
+      - flick-web-node-modules:/app/node_modules
+      - flick-web-next-cache:/app/.next
+
+volumes:
+  flick-web-node-modules:
+  flick-web-next-cache:

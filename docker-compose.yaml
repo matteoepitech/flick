@@ -1,16 +1,15 @@
 # Copyright (c) 2026 Flick. All Rights Reserved.
+#
+# Production stack: pulls prebuilt images from the registry.
+# Use overrides for build/dev:
+#   - docker-compose.build.yaml : adds build contexts (CI release)
+#   - docker-compose.dev.yaml   : hot-reload dev stack
 
 services:
   # API Service
   flick-api:
     platform: linux/amd64
     image: dellixou/flick-api:${VERSION:-latest}
-    build:
-      context: ./
-      args:
-        VERSION: ${VERSION:-selfbuild}
-        COMMIT: ${COMMIT:-}
-        BUILD_DATE: ${BUILD_DATE:-}
     container_name: flick-api
     restart: unless-stopped
     ports:
@@ -25,8 +24,6 @@ services:
   flick-web:
     platform: linux/amd64
     image: dellixou/flick-web:${VERSION:-latest}
-    build:
-      context: ./web/
     container_name: flick-web
     restart: unless-stopped
     environment:
