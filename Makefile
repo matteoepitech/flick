@@ -21,9 +21,13 @@ build:
 dev: build
 	$(COMPOSE_DEV) up --build
 
-### Stop and remove the stack (works for dev or prod)
+### Stop and remove the prod stack, keeps volumes (safe for data)
 down:
-	$(COMPOSE_DEV) down
+	$(COMPOSE) down
+
+### Stop the dev stack and wipe its volumes (node_modules, .next cache)
+down-dev:
+	$(COMPOSE_DEV) down -v
 
 ### Start the prod stack from registry image
 up:
@@ -45,4 +49,4 @@ images-push: images
 clean:
 	rm -rf build/bin tmp
 
-.PHONY: help dev down up pull build images images-push clean
+.PHONY: help dev down down-dev up pull build images images-push clean

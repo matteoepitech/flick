@@ -1,0 +1,98 @@
+{
+  "Header": {
+    "login": "Sign in",
+    "send": "Send a file",
+    "receive": "Receive with a code"
+  },
+  "Hero": {
+    "badge": "Frictionless file transfer",
+    "titleStart": "Share with a",
+    "titleHighlight": "code.",
+    "description": "Flick generates a short code your contact enters to download. No account required.",
+    "ctaSend": "Send a file",
+    "ctaReceive": "Receive with a code"
+  },
+  "Features": {
+    "instantTitle": "Instant upload",
+    "instantBody": "Drop your files and get a code in seconds.",
+    "receiveTitle": "Simple reception",
+    "receiveBody": "Enter the code shared by your contact to download.",
+    "expirationTitle": "Controlled expiry",
+    "expirationBody": "Set a lifetime: 1h, 24h, 7 days or custom.",
+    "protectionTitle": "Optional protection",
+    "protectionBody": "Add a password to secure access to your files."
+  },
+  "Send": {
+    "back": "Back",
+    "title": "Send files",
+    "description": "Drop your files and configure sharing options.",
+    "dropTitle": "Drop your files here",
+    "dropOr": "or",
+    "dropBrowse": "browse",
+    "dropLimits": "up to {maxFiles} files, {maxSize} max",
+    "useExample": "Use a sample file",
+    "exampleFile": "sample.pdf",
+    "filesSelected": "{count, plural, =1 {# file selected} other {# files selected}}",
+    "remove": "Remove",
+    "options": "Sharing options",
+    "expiration": "Link expiration",
+    "expiration1h": "1 hour",
+    "expiration2h": "2 hours",
+    "expiration3h": "3 hours",
+    "expiration4h": "4 hours",
+    "passwordTitle": "Password protection",
+    "passwordDescription": "Requires a password to download",
+    "passwordPlaceholder": "Choose a password",
+    "messageLabel": "Message (optional)",
+    "messagePlaceholder": "Add a note for the recipient…",
+    "cancel": "Cancel",
+    "submit": "Generate code",
+    "submitting": "Uploading…",
+    "uploadProgress": "{name} — {percent}%",
+    "uploadError": "Upload failed. Please retry.",
+    "comingSoon": "Not available"
+  },
+  "SendSuccess": {
+    "back": "New transfer",
+    "title": "Your code is ready",
+    "description": "Share this code (or the link) with your recipient.",
+    "codeLabel": "Share code",
+    "copy": "Copy",
+    "copied": "Copied",
+    "openLink": "Open receive link",
+    "noCode": "No code received. Please retry the upload."
+  },
+  "Receive": {
+    "back": "Back",
+    "title": "Receive a file",
+    "description": "Enter the code shared by the sender.",
+    "placeholder": "Ex: hello-world-123",
+    "submit": "Access file",
+    "loading": "Checking..."
+  },
+  "ReceiveCode": {
+    "back": "Change code",
+    "title": "File(s) available",
+    "subtitle": "Code {code}",
+    "download": "Download",
+    "downloadAll": "Download all",
+    "loading": "Fetching…",
+    "notFound": "This code does not exist or has expired.",
+    "error": "Could not fetch the file. Please retry."
+  },
+  "HowItWorks": {
+    "eyebrow": "How it works",
+    "title": "Three steps, zero friction.",
+    "step1Title": "Drop",
+    "step1Body": "Drag your files into Flick. We handle the encrypted upload.",
+    "step2Title": "Share the code",
+    "step2Body": "A short code is generated. Copy it, say it, send it in a message.",
+    "step3Title": "Download",
+    "step3Body": "The recipient enters the code and grabs the file in one click."
+  },
+  "CallToAction": {
+    "title": "Create an account for more",
+    "body": "Groups, history, recurring shares and advanced control.",
+    "button": "Create a free account"
+  }
+}

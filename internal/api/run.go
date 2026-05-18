@@ -23,6 +23,36 @@ import (
 // Where the data is stored
 var dataDir string
 
+// Constants
+const addr string = ":15702"
+const certFile string = "certificates/cert.pem"
+const keyFile string = "certificates/key.pem"
+
+// withCORS: Wrap a handler with permissive CORS headers so browsers on any origin can call the
+// API. Handles the preflight OPTIONS request transparently.
+//
+// Params:
+// - next (http.HandlerFunc): The wrapped handler.
+//
+// Returns:
+// - http.HandlerFunc: The wrapping handler with CORS headers applied.
+func withCORS(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "*")
+		w.Header().Set("Access-Control-Expose-Headers", "X-Total-Size, Content-Type")
+		w.Header().Set("Access-Control-Max-Age", "86400")
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		next(w, r)
+	}
+}
+
 // Logging for the API
 var logger logging.Logger = logging.Logger{
 	Prefix: "API",
@@ -47,8 +77,27 @@ func Run(ctx context.Context) error {
 		return logger.InfoError("Unable to start the API, cannot create the directory %s", dataDir)
 	}
 
-	http.HandleFunc("/upload", routes.UploadFileHandler(dataDir, logger))
-	http.HandleFunc("/download", routes.DownloadFileHandler(dataDir, logger))
+	mux := http.NewServeMux()
+	mux.HandleFunc("/upload", withCORS(routes.UploadFileHandler(dataDir, logger)))
+	mux.HandleFunc("/download", withCORS(routes.DownloadFileHandler(dataDir, logger)))
+
+	h3Server := &http3.Server{
+		Addr:    addr,
+		Handler: mux,
+	}
+
+	h2Handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := h3Server.SetQUICHeaders(w.Header()); err != nil {
+			logger.InfoError("Cannot set QUIC headers: %s", err.Error())
+		}
+		mux.ServeHTTP(w, r)
+	})
+
+	h2Server := &http.Server{
+		Addr:    addr,
+		Handler: h2Handler,
+	}
+
 	logger.InfoSuccess("Starting FLICK server on port 15702...")
 
 	stopSignal := make(chan os.Signal, 1)
@@ -56,9 +105,13 @@ func Run(ctx context.Context) error {
 	go metadata.CheckExpiration(dataDir, logger)
 
 	go func() {
-		err = http3.ListenAndServeTLS(":15702", "certificates/cert.pem", "certificates/key.pem", nil)
-		if err != nil {
-			logger.InfoError("Unable to start the API with server error: %s", err.Error())
+		if err := h3Server.ListenAndServeTLS(certFile, keyFile); err != nil {
+			logger.InfoError("HTTP/3 server stopped: %s", err.Error())
+		}
+	}()
+	go func() {
+		if err := h2Server.ListenAndServeTLS(certFile, keyFile); err != nil {
+			logger.InfoError("HTTP/2 server stopped: %s", err.Error())
 		}
 	}()
 	<-stopSignal
