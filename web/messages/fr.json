@@ -1,0 +1,98 @@
+{
+  "Header": {
+    "login": "Se connecter",
+    "send": "Envoyer un fichier",
+    "receive": "Recevoir avec un code"
+  },
+  "Hero": {
+    "badge": "Transfert de fichiers sans friction",
+    "titleStart": "Partagez en un",
+    "titleHighlight": "code.",
+    "description": "Flick génère un code court que votre contact entre pour télécharger. Sans compte requis.",
+    "ctaSend": "Envoyer un fichier",
+    "ctaReceive": "Recevoir avec un code"
+  },
+  "Features": {
+    "instantTitle": "Envoi instantané",
+    "instantBody": "Glissez vos fichiers et obtenez un code en quelques secondes.",
+    "receiveTitle": "Réception simple",
+    "receiveBody": "Entrez le code partagé par votre contact pour télécharger.",
+    "expirationTitle": "Expiration maîtrisée",
+    "expirationBody": "Définissez une durée de vie : 1h, 24h, 7 jours ou personnalisée.",
+    "protectionTitle": "Protection optionnelle",
+    "protectionBody": "Ajoutez un mot de passe pour sécuriser l'accès à vos fichiers."
+  },
+  "Send": {
+    "back": "Retour",
+    "title": "Envoyer des fichiers",
+    "description": "Déposez vos fichiers et configurez les options de partage.",
+    "dropTitle": "Glissez vos fichiers ici",
+    "dropOr": "ou",
+    "dropBrowse": "parcourez",
+    "dropLimits": "jusqu'à {maxFiles} fichiers, {maxSize} max",
+    "useExample": "Utiliser un fichier d'exemple",
+    "exampleFile": "exemple.pdf",
+    "filesSelected": "{count, plural, =1 {# fichier sélectionné} other {# fichiers sélectionnés}}",
+    "remove": "Retirer",
+    "options": "Options de partage",
+    "expiration": "Expiration du lien",
+    "expiration1h": "1 heure",
+    "expiration2h": "2 heures",
+    "expiration3h": "3 heures",
+    "expiration4h": "4 heures",
+    "passwordTitle": "Protection par mot de passe",
+    "passwordDescription": "Requiert un mot de passe pour télécharger",
+    "passwordPlaceholder": "Choisissez un mot de passe",
+    "messageLabel": "Message (optionnel)",
+    "messagePlaceholder": "Ajoutez une note pour le destinataire…",
+    "cancel": "Annuler",
+    "submit": "Générer le code",
+    "submitting": "Envoi en cours…",
+    "uploadProgress": "{name} — {percent}%",
+    "uploadError": "Échec de l'envoi. Réessayez.",
+    "comingSoon": "Non disponible"
+  },
+  "SendSuccess": {
+    "back": "Nouvel envoi",
+    "title": "Votre code est prêt",
+    "description": "Partagez ce code (ou le lien) avec votre destinataire.",
+    "codeLabel": "Code de partage",
+    "copy": "Copier",
+    "copied": "Copié",
+    "openLink": "Ouvrir le lien de réception",
+    "noCode": "Aucun code reçu. Réessayez l'envoi."
+  },
+  "Receive": {
+    "back": "Retour",
+    "title": "Recevoir un fichier",
+    "description": "Entrez le code communiqué par l'expéditeur.",
+    "placeholder": "Ex : hello-world-123",
+    "submit": "Accéder au fichier",
+    "loading": "Vérification..."
+  },
+  "ReceiveCode": {
+    "back": "Changer de code",
+    "title": "Fichier(s) disponible(s)",
+    "subtitle": "Code {code}",
+    "download": "Télécharger",
+    "downloadAll": "Tout télécharger",
+    "loading": "Récupération…",
+    "notFound": "Ce code n'existe pas ou a expiré.",
+    "error": "Impossible de récupérer le fichier. Réessayez."
+  },
+  "HowItWorks": {
+    "eyebrow": "Comment ça marche",
+    "title": "Trois étapes, zéro friction.",
+    "step1Title": "Déposez",
+    "step1Body": "Glissez vos fichiers dans Flick. On s'occupe de l'upload chiffré.",
+    "step2Title": "Partagez le code",
+    "step2Body": "Un code court est généré. Copiez-le, dictez-le, envoyez-le par message.",
+    "step3Title": "Téléchargement",
+    "step3Body": "Le destinataire entre le code et récupère le fichier en un clic."
+  },
+  "CallToAction": {
+    "title": "Créez un compte pour plus",
+    "body": "Groupes, historique, partages récurrents et contrôle avancé.",
+    "button": "Créer un compte gratuit"
+  }
+}
