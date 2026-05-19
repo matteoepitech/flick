@@ -15,6 +15,7 @@ import (
 	"strconv"
 
 	"github.com/matteoepitech/flick/internal/api/logging"
+	"github.com/matteoepitech/flick/internal/api/path"
 )
 
 // doDownloadMultipartForm: Do the download request.
@@ -60,12 +61,11 @@ func doDownloadMultipartForm(writer *multipart.Writer, entries []os.DirEntry, pa
 // DownloadFileHandler: Build the download file handler.
 //
 // Params:
-// - dataDir (string): The directory where files are stored.
 // - logger (logging.Logger): The logger to use.
 //
 // Returns:
 // - http.HandlerFunc: The handler function.
-func DownloadFileHandler(dataDir string, logger logging.Logger) http.HandlerFunc {
+func DownloadFileHandler(logger logging.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			http.Error(w, "GET only", http.StatusMethodNotAllowed)
@@ -78,9 +78,9 @@ func DownloadFileHandler(dataDir string, logger logging.Logger) http.HandlerFunc
 			return
 		}
 
-		path := dataDir + code
+		codePath := path.GetDataDir() + code
 
-		entries, err := os.ReadDir(path)
+		entries, err := os.ReadDir(codePath)
 		if err != nil {
 			logger.InfoError("The code <%s> doesn't exist.", code)
 			http.Error(w, "Code not found", http.StatusNotFound)
@@ -99,6 +99,6 @@ func DownloadFileHandler(dataDir string, logger logging.Logger) http.HandlerFunc
 
 		w.Header().Set("Content-Type", writer.FormDataContentType())
 		w.Header().Set("X-Total-Size", strconv.FormatInt(totalSize, 10))
-		doDownloadMultipartForm(writer, entries, path, logger)
+		doDownloadMultipartForm(writer, entries, codePath, logger)
 	}
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/matteoepitech/flick/internal/api/code"
 	"github.com/matteoepitech/flick/internal/api/logging"
 	"github.com/matteoepitech/flick/internal/api/metadata"
+	"github.com/matteoepitech/flick/internal/api/path"
 	"io"
 	"net/http"
 	"os"
@@ -20,12 +21,11 @@ import (
 // UploadFileHandler: Build the upload file handler.
 //
 // Params:
-// - dataDir (string): The directory where files are stored.
 // - logger (logging.Logger): The logger to use.
 //
 // Returns:
 // - http.HandlerFunc: The handler function.
-func UploadFileHandler(dataDir string, logger logging.Logger) http.HandlerFunc {
+func UploadFileHandler(logger logging.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "This endpoint is meant to be POST only", http.StatusNotFound)
@@ -41,19 +41,37 @@ func UploadFileHandler(dataDir string, logger logging.Logger) http.HandlerFunc {
 			return
 		}
 		defer file.Close()
-		var codeDir string = code.CodeGen()
-		os.MkdirAll(dataDir+codeDir, 0755)
-		dst, err := os.Create(dataDir + codeDir + "/" + header.Filename)
+
+		m := new(metadata.Metadata)
+
+		if !metadata.SetExpiration(m, r.URL.Query().Get("expiration"), logger) {
+			logger.InfoError("Error in expiration time")
+			return
+		}
+
+		// Generate a code until we found one correct.
+		var codeDir string
+		for {
+			codeDir = code.CodeGen()
+			if code.IsCodeAlreadyExistInList(codeDir) {
+				continue
+			}
+			// Add the code to the cache in RAM to prevent re-use of this code in the future.
+			code.AddCodeToList(codeDir, r.URL.Query().Get("expiration"))
+			break
+		}
+
+		os.MkdirAll(path.GetDataDir()+codeDir, 0755)
+		metadata.CreateMetadataFile(*m, path.GetDataDir()+codeDir+"/", codeDir, logger)
+
+		dst, err := os.Create(path.GetDataDir() + codeDir + "/" + header.Filename)
 		if err != nil {
 			logger.InfoError("Error while uploading a file of code <%s>", header.Filename)
 			http.Error(w, "Cannot save the file", http.StatusInternalServerError)
 			return
 		}
 		defer dst.Close()
-		if !metadata.SetExpiration(r.URL.Query().Get("expiration"), dataDir+codeDir+"/", codeDir, logger) {
-			logger.InfoError("Error in expiration time")
-			return
-		}
+
 		fileBytes, err := io.Copy(dst, file)
 		if err != nil {
 			logger.InfoError("Error while uploading a file of code <%s>", header.Filename)

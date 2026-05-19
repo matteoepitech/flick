@@ -14,14 +14,12 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/matteoepitech/flick/internal/api/code"
 	"github.com/matteoepitech/flick/internal/api/logging"
-	"github.com/matteoepitech/flick/internal/api/metadata"
+	"github.com/matteoepitech/flick/internal/api/path"
 	"github.com/matteoepitech/flick/internal/api/routes"
 	"github.com/quic-go/quic-go/http3"
 )
-
-// Where the data is stored
-var dataDir string
 
 // Constants
 const addr string = ":15702"
@@ -66,20 +64,13 @@ var logger logging.Logger = logging.Logger{
 // Returns:
 // - result1 (error): nil if no error, otherwise an error.
 func Run(ctx context.Context) error {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return logger.InfoError("Unable to start the API, cannot get the HOME directory")
-	}
-
-	dataDir = homeDir + "/.flick/data/" // global var
-	err = os.MkdirAll(dataDir, 0755)
-	if err != nil {
-		return logger.InfoError("Unable to start the API, cannot create the directory %s", dataDir)
+	if err := os.MkdirAll(path.GetDataDir(), 0755); err != nil {
+		return logger.InfoError("Unable to start the API, cannot create the directory %s", path.GetDataDir())
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/upload", withCORS(routes.UploadFileHandler(dataDir, logger)))
-	mux.HandleFunc("/download", withCORS(routes.DownloadFileHandler(dataDir, logger)))
+	mux.HandleFunc("/upload", withCORS(routes.UploadFileHandler(logger)))
+	mux.HandleFunc("/download", withCORS(routes.DownloadFileHandler(logger)))
 
 	h3Server := &http3.Server{
 		Addr:    addr,
@@ -98,11 +89,13 @@ func Run(ctx context.Context) error {
 		Handler: h2Handler,
 	}
 
+	// Init the code cache from disk into RAM.
+	code.InitCodeCache()
+
 	logger.InfoSuccess("Starting FLICK server on port 15702...")
 
 	stopSignal := make(chan os.Signal, 1)
 	signal.Notify(stopSignal, os.Interrupt, syscall.SIGTERM)
-	go metadata.CheckExpiration(dataDir, logger)
 
 	go func() {
 		if err := h3Server.ListenAndServeTLS(certFile, keyFile); err != nil {

@@ -9,6 +9,8 @@ package commands
 
 import (
 	"context"
+
+	"github.com/matteoepitech/flick/internal/cli/config"
 	"github.com/spf13/cobra"
 )
 
@@ -20,11 +22,9 @@ var rootCmd = &cobra.Command{
 	SilenceUsage: true,
 }
 
-// The default server IP.
-var serverIP string = "127.0.0.1"
-
+// init: Init root.
 func init() {
-	rootCmd.Flags().String("exp", "1d", "Expiration duration")
+	rootCmd.Flags().String("exp", config.Conf.DefExpTime, "Expiration duration")
 }
 
 // Execute: Execute the root command.
