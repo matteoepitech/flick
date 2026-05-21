@@ -25,7 +25,7 @@
         "title": "Sécurité",
         "description": "Authentification et options de protection."
       },
-      "antiAbuse": {
+      "anti_abuse": {
         "title": "Anti-Abus",
         "description": "Limitation de débit et protection contre les abus."
       }
@@ -35,48 +35,48 @@
         "label": "Activer la persistance",
         "description": "Si désactivé, les fichiers ne sont pas stockés sur le serveur et sont envoyés via un serveur STUN/TURN. Cela signifie qu'ils ne peuvent être téléchargés que lorsque l'expéditeur est en ligne."
       },
-      "maxFileSizeMb": {
+      "max_file_size_mb": {
         "label": "Taille max d'un fichier (Mo)"
       },
-      "defaultExpiration": {
+      "default_expiration": {
         "label": "Expiration par défaut (ex. 15m, 24h)",
         "description": "Durée de vie par défaut pour les fichiers partagés. Les utilisateurs peuvent changer leur propre durée par défaut."
       },
-      "maxExpiration": {
+      "max_expiration": {
         "label": "Expiration max (ex. 24h, 7d)"
       },
-      "allowMultipleDownloads": {
+      "allow_multiple_downloads": {
         "label": "Autoriser plusieurs téléchargements par fichier",
         "description": "Si désactivé, chaque fichier ne peut être téléchargé qu'une seule fois."
       },
-      "defaultDownloadCount": {
+      "default_download_count": {
         "label": "Limite par défaut de téléchargements",
         "description": "Nombre de téléchargements autorisés par défaut pour chaque fichier. Les utilisateurs peuvent changer leur propre limite."
       },
-      "maxDownloadCount": {
+      "max_download_count": {
         "label": "Limite max de téléchargements (0 pour illimité)"
       },
-      "requirePassword": {
+      "require_password": {
         "label": "Exiger un mot de passe par défaut",
         "description": "Force les utilisateurs à définir un mot de passe pour chaque transfert."
       },
-      "activateRateLimit": {
+      "activate_rate_limit": {
         "label": "Activer la limitation de débit",
         "description": "Applique des plafonds horaires sur la génération de clés et les envois."
       },
-      "maxGenerationKeyPerHour": {
+      "max_generation_key_per_hour": {
         "label": "Max générations de clé par heure par IP",
         "description": "Une clé est un identifiant partiel utilisé pour reconnaître un client et appliquer des limites par client. Ceci plafonne le nombre de nouvelles clés qu'une même IP peut demander par heure, afin d'éviter qu'un client change de clé pour contourner les limites par clé."
       },
-      "maxUploadPerHourPerKey": {
+      "max_upload_per_hour_per_key": {
         "label": "Max envois par heure et par clé",
         "description": "Nombre maximal d'envois autorisés par heure pour une même clé client. C'est la limite principale par client."
       },
-      "maxUploadPerHourPerIP": {
+      "max_upload_per_hour_per_ip": {
         "label": "Max envois par heure et par IP",
         "description": "Nombre maximal d'envois autorisés par heure depuis une même adresse IP. Seconde ligne de défense si un client tente de changer de clé."
       },
-      "maxUploadPerHour": {
+      "max_upload_per_hour": {
         "label": "Max envois par heure (global)",
         "description": "Plafond global sur toute l'instance. Protège le serveur d'une surcharge indépendamment des clients."
       }

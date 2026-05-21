@@ -25,7 +25,7 @@
         "title": "Security",
         "description": "Authentication and protection options."
       },
-      "antiAbuse": {
+      "anti_abuse": {
         "title": "Anti-Abuse",
         "description": "Rate limiting and abuse protection."
       }
@@ -35,48 +35,48 @@
         "label": "Enable persistence",
         "description": "If disabled, files are sent using a STUN/TURN server and are not stored on the server. This means they can only be downloaded while the sender is online."
       },
-      "maxFileSizeMb": {
+      "max_file_size_mb": {
         "label": "Max file size (MB)"
       },
-      "defaultExpiration": {
+      "default_expiration": {
         "label": "Default expiration (e.g. 15m, 24h)",
         "description": "Default lifetime for shared files. Users can change their own default."
       },
-      "maxExpiration": {
+      "max_expiration": {
         "label": "Max expiration (e.g. 24h, 7d)"
       },
-      "allowMultipleDownloads": {
+      "allow_multiple_downloads": {
         "label": "Allow multiple downloads per file",
         "description": "If disabled, each file can only be downloaded once."
       },
-      "defaultDownloadCount": {
+      "default_download_count": {
         "label": "Default download count limit",
         "description": "Default number of downloads allowed per file. Users can change their own default."
       },
-      "maxDownloadCount": {
+      "max_download_count": {
         "label": "Max download count limit (0 for unlimited)"
       },
-      "requirePassword": {
+      "require_password": {
         "label": "Require password by default",
         "description": "Force users to set a password on every transfer."
       },
-      "activateRateLimit": {
+      "activate_rate_limit": {
         "label": "Enable rate limiting",
         "description": "Apply per-hour caps on key generation and uploads."
       },
-      "maxGenerationKeyPerHour": {
+      "max_generation_key_per_hour": {
         "label": "Max key generations per hour per IP",
         "description": "A key is a partial identifier used to recognize a client and apply per-client limits. This caps how many new keys a single IP can request per hour, to prevent a client from rotating keys to bypass per-key limits."
       },
-      "maxUploadPerHourPerKey": {
+      "max_upload_per_hour_per_key": {
         "label": "Max uploads per hour per key",
         "description": "Maximum number of uploads allowed per hour for a single client key. The main per-client rate limit."
       },
-      "maxUploadPerHourPerIP": {
+      "max_upload_per_hour_per_ip": {
         "label": "Max uploads per hour per IP",
         "description": "Maximum number of uploads allowed per hour from a single IP address. A second line of defense if a client tries to rotate keys."
       },
-      "maxUploadPerHour": {
+      "max_upload_per_hour": {
         "label": "Max uploads per hour (global)",
         "description": "Global cap across the whole instance. Protects the server from overload regardless of clients."
       }

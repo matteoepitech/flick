@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/matteoepitech/flick/internal/api/logging"
+	"github.com/matteoepitech/flick/internal/api/serverconfig"
 	"github.com/matteoepitech/flick/internal/api/utils"
-	"github.com/matteoepitech/flick/internal/cli/config"
 )
 
 // struct used for the JSON template
@@ -126,7 +126,7 @@ func CheckExpirationToRemove(dataDir string) error {
 // Returns:
 // - result1 (bool): True if in config bounds, else false.
 func checkConfigTime(duration time.Time, logger logging.Logger) bool {
-	maxExp, err := utils.ParseExpirationTime(config.Conf.MaxExpTime)
+	maxExp, err := utils.ParseExpirationTime(serverconfig.Conf.MaxExpiration)
 	if err != nil {
 		logger.InfoError("Failed to parse max expiration time in configuration")
 		return false

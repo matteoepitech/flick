@@ -17,28 +17,14 @@ import (
 
 // Configuration structure type
 type Configuration struct {
-	ServerIP                 string `json:"server_ip"`
-	MaxExpTime               string `json:"max_exp_time"`
-	DefExpTime               string `json:"def_exp_time"`
-	Persistance              bool   `json:"persistance"`
-	RateLimit                bool   `json:"rate_limit"`
-	DownloadAmount           bool   `json:"download_amount"`
-	MaxDownloadAmountPerUser int    `json:"max_download_amount_per_user"`
-	MaxUploadSize            string `json:"max_upload_size"`
-	MaxAmountMaxTime         int    `json:"max_amount_max_time"`
+	ServerIP   string `json:"server_ip"`
+	DefExpTime string `json:"def_exp_time"`
 }
 
 // Global configuration of the CLI
 var Conf Configuration = Configuration{
-	ServerIP:                 "127.0.0.1",
-	DefExpTime:               "15m",
-	MaxExpTime:               "4h",
-	MaxDownloadAmountPerUser: -1,
-	MaxUploadSize:            "1GiB",
-	Persistance:              true,
-	RateLimit:                true,
-	DownloadAmount:           false,
-	MaxAmountMaxTime:         5,
+	ServerIP:   "127.0.0.1",
+	DefExpTime: "15m",
 }
 
 // configPaths: Resolve the configuration directory and file paths.
