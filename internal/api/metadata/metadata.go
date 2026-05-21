@@ -10,16 +10,20 @@ package metadata
 import (
 	"encoding/json"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/matteoepitech/flick/internal/api/logging"
 	"github.com/matteoepitech/flick/internal/api/serverconfig"
 	"github.com/matteoepitech/flick/internal/api/utils"
+	"github.com/matteoepitech/flick/internal/api/utils/data"
 )
 
 // struct used for the JSON template
 type Metadata struct {
-	Expiration string `json:"expiration"`
+	Expiration           string `json:"expiration"`
+	CurrentDownloadCount int32  `json:"current_download_count"`
+	MaxDownloadCount     int32  `json:"max_download_count"`
 }
 
 // createMetadataFile: Creates the metadata file containing the expiration date.
@@ -47,7 +51,7 @@ func CreateMetadataFile(metadata Metadata, filepath string, code string, logger 
 // - logger (logging.Logger): The logger.
 //
 // Returns:
-// - result1 (bool): Returns true if the metadata file has benn created, else false.
+// - result1 (bool): Return true if the metadata has been changed, else false.
 func SetExpiration(metadata *Metadata, exp string, logger logging.Logger) bool {
 	duration, err := utils.ParseExpirationTime(exp)
 
@@ -69,6 +73,31 @@ func SetExpiration(metadata *Metadata, exp string, logger logging.Logger) bool {
 		return false
 	}
 	metadata.Expiration = duration.Format(time.RFC3339)
+	return true
+}
+
+// SetMaxDownloadCount: Defines the max download count based on the received pattern.
+//
+// Params:
+// - metadata (*Metadata): The metadata to modify.
+// - maxDownloadCount (string): The max download count string.
+// - logger (logging.Logger): The logger.
+//
+// Returns:
+// - result1 (bool): Return true if the metadata has been changed, else false.
+func SetMaxDownloadCount(metadata *Metadata, maxDownloadCount string, logger logging.Logger) bool {
+	mdc, err := strconv.Atoi(maxDownloadCount)
+	if err != nil {
+		logger.InfoError("Failed to parse the max download count value for metadata (%q)", maxDownloadCount)
+		return false
+	}
+
+	if mdc > serverconfig.Conf.MaxDownloadCount {
+		logger.InfoError("Max download count is higher than maximum defined in configuration (%q)", maxDownloadCount)
+		return false
+	}
+
+	metadata.MaxDownloadCount = int32(mdc)
 	return true
 }
 
@@ -106,11 +135,7 @@ func CheckExpirationToRemove(dataDir string) error {
 				continue
 			}
 			if time.Now().After(dateExp) {
-				subdir, _ := os.ReadDir(dataDir + entries.Name())
-				for _, files := range subdir {
-					os.Remove(dataDir + code + "/" + files.Name())
-				}
-				os.Remove(dataDir + entries.Name())
+				data.DeleteDataDirWithCode(entries.Name())
 			}
 		}
 	}

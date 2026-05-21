@@ -9,6 +9,7 @@ package commands
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/matteoepitech/flick/internal/cli/config"
 	"github.com/spf13/cobra"
@@ -25,6 +26,7 @@ var rootCmd = &cobra.Command{
 // init: Init root.
 func init() {
 	rootCmd.Flags().String("exp", config.Conf.DefExpTime, "Expiration duration")
+	rootCmd.Flags().String("mdc", strconv.FormatInt(int64(config.Conf.DefDownloadCount), 10), "Max download count")
 }
 
 // Execute: Execute the root command.
@@ -52,6 +54,7 @@ func runCLI(cmd *cobra.Command, args []string) error {
 	}
 
 	exp, _ := cmd.Flags().GetString("exp")
+	mdc, _ := cmd.Flags().GetString("mdc")
 
 	for _, sub := range cmd.Commands() {
 		if sub.Name() == args[0] {
@@ -59,5 +62,5 @@ func runCLI(cmd *cobra.Command, args []string) error {
 		}
 
 	}
-	return RunUpload(cmd, args, exp)
+	return RunUpload(cmd, args, exp, mdc)
 }

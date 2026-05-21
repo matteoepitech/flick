@@ -49,6 +49,11 @@ func UploadFileHandler(logger logging.Logger) http.HandlerFunc {
 			return
 		}
 
+		if !metadata.SetMaxDownloadCount(m, r.URL.Query().Get("maxDownloadCount"), logger) {
+			logger.InfoError("Error in max download count")
+			return
+		}
+
 		// Generate a code until we found one correct.
 		var codeDir string
 		for {

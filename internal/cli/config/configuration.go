@@ -17,14 +17,16 @@ import (
 
 // Configuration structure type
 type Configuration struct {
-	ServerIP   string `json:"server_ip"`
-	DefExpTime string `json:"def_exp_time"`
+	ServerIP         string `json:"server_ip"`
+	DefExpTime       string `json:"def_exp_time"`
+	DefDownloadCount int32  `json:"def_download_count"`
 }
 
 // Global configuration of the CLI
 var Conf Configuration = Configuration{
-	ServerIP:   "127.0.0.1",
-	DefExpTime: "15m",
+	ServerIP:         "127.0.0.1",
+	DefExpTime:       "15m",
+	DefDownloadCount: 1,
 }
 
 // configPaths: Resolve the configuration directory and file paths.

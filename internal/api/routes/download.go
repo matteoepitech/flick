@@ -8,6 +8,7 @@
 package routes
 
 import (
+	"encoding/json"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -15,8 +16,40 @@ import (
 	"strconv"
 
 	"github.com/matteoepitech/flick/internal/api/logging"
+	"github.com/matteoepitech/flick/internal/api/metadata"
 	"github.com/matteoepitech/flick/internal/api/path"
+	"github.com/matteoepitech/flick/internal/api/utils/data"
 )
+
+// onDownloadFinished: When a download is done we do this.
+//
+// Params:
+// - code (string): The code to update.
+// - logger (logging.Logger): The logger.
+func onDownloadFinished(code string, logger logging.Logger) {
+	metadataPath := path.GetDataDir() + "/" + code + "/"
+	metadataFile, err := os.Open(metadataPath + "." + code + "-metadata.json")
+	if err != nil {
+		logger.InfoError("Error while reading the metadata.json file during a download finished action.")
+	}
+	defer metadataFile.Close()
+
+	var meta metadata.Metadata
+	err = json.NewDecoder(metadataFile).Decode(&meta)
+
+	if err != nil {
+		logger.InfoError("Error while reading the metadata.json file during a download finished action.")
+	}
+
+	// WARN: Should we use something to prevent race condition here? Maybe in future.
+	if meta.CurrentDownloadCount+1 >= meta.MaxDownloadCount && meta.MaxDownloadCount != 0 {
+		data.DeleteDataDirWithCode(code)
+		return
+	}
+	meta.CurrentDownloadCount += 1
+	metadata.CreateMetadataFile(meta, metadataPath, code, logger)
+
+}
 
 // doDownloadMultipartForm: Do the download request.
 //
@@ -53,7 +86,6 @@ func doDownloadMultipartForm(writer *multipart.Writer, entries []os.DirEntry, pa
 		if err != nil {
 			continue
 		}
-
 		logger.InfoSuccess("Sent file <%s> (%d bytes)", entry.Name(), info.Size())
 	}
 }
@@ -100,5 +132,6 @@ func DownloadFileHandler(logger logging.Logger) http.HandlerFunc {
 		w.Header().Set("Content-Type", writer.FormDataContentType())
 		w.Header().Set("X-Total-Size", strconv.FormatInt(totalSize, 10))
 		doDownloadMultipartForm(writer, entries, codePath, logger)
+		onDownloadFinished(code, logger)
 	}
 }

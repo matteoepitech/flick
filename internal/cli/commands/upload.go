@@ -14,7 +14,9 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"os"
+	"strconv"
 
 	"github.com/matteoepitech/flick/internal/cli/config"
 	"github.com/schollz/progressbar/v3"
@@ -67,10 +69,13 @@ func doUploadRequest(req *http.Request) error {
 //
 // Params:
 // - cmd (*cobra.Command): The command.
+// - args ([]string): The differents arguments of this command.
+// - exp (string): The expiration of this upload.
+// - mdc (string): The Max Download Count of this upload.
 //
 // Returns:
 // - result1 (error): An error if occured.
-func RunUpload(cmd *cobra.Command, args []string, exp string) error {
+func RunUpload(cmd *cobra.Command, args []string, exp string, mdc string) error {
 	if len(args) < 1 {
 		return fmt.Errorf("Failure: Internal CLI error.")
 	}
@@ -110,7 +115,18 @@ func RunUpload(cmd *cobra.Command, args []string, exp string) error {
 		expValue = config.Conf.DefExpTime
 	}
 
-	req, err := http.NewRequest("POST", "https://"+config.Conf.ServerIP+":15702/upload?expiration="+expValue, progressBody)
+	mdcValue := mdc
+	if mdcValue == "" {
+		mdcValue = strconv.FormatInt(int64(config.Conf.DefDownloadCount), 10)
+	}
+
+	params := url.Values{}
+	params.Set("expiration", expValue)
+	params.Set("maxDownloadCount", mdcValue)
+
+	reqURL := fmt.Sprintf("https://%s:15702/upload?%s", config.Conf.ServerIP, params.Encode())
+
+	req, err := http.NewRequest("POST", reqURL, progressBody)
 	if err != nil {
 		return fmt.Errorf("Failure: Cannot create the request for the server.")
 	}
