@@ -46,39 +46,58 @@ func SendServerConfig(logger logging.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		dir := path.GetFlickDir()
 
-		if r.Method != http.MethodPost {
-			data, _ := os.ReadFile(filepath.Join(dir, "server-config.json"))
+		// GET method
+		if r.Method == http.MethodGet {
+			data, err := os.ReadFile(filepath.Join(dir, "server-config.json"))
+			if err != nil {
+				http.Error(w, "Failed to read config", http.StatusInternalServerError)
+				return
+			}
+
+			var conf serverconfig.Configuration
+			if err := json.Unmarshal(data, &conf); err != nil {
+				http.Error(w, "Failed to parse config", http.StatusInternalServerError)
+				return
+			}
+
+			out, _ := json.MarshalIndent(conf, "", "  ")
 			w.Header().Set("Content-Type", "application/json")
-			w.Write(data)
+			w.Write(out)
+
 			return
 		}
 
-		var newConf serverconfig.Configuration
-		decoder := json.NewDecoder(r.Body)
-		decoder.DisallowUnknownFields()
-		if err := decoder.Decode(&newConf); err != nil {
-			http.Error(w, "Invalid JSON: "+err.Error(), http.StatusBadRequest)
-			return
+		// POST method
+		if r.Method == http.MethodPost {
+			var newConf serverconfig.Configuration
+			decoder := json.NewDecoder(r.Body)
+			decoder.DisallowUnknownFields()
+			if err := decoder.Decode(&newConf); err != nil {
+				http.Error(w, "Invalid JSON: "+err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			if err := serverconfig.Validate(&newConf); err != nil {
+				http.Error(w, "Validation failed: "+err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			defaultDur, _ := utils.ParseExpirationTime(newConf.DefaultExpiration)
+			maxDur, _ := utils.ParseExpirationTime(newConf.MaxExpiration)
+			if defaultDur.After(maxDur) {
+				http.Error(w, "default_expiration must be <= max_expiration", http.StatusBadRequest)
+				return
+			}
+
+			serverconfig.Conf = newConf
+			data, _ := json.MarshalIndent(serverconfig.Conf, "", "  ")
+			if err := os.WriteFile(filepath.Join(dir, "server-config.json"), data, 0644); err != nil {
+				http.Error(w, "Failed to save config", http.StatusInternalServerError)
+				return
+			}
+			fmt.Fprint(w, "OK")
 		}
 
-		if err := serverconfig.Validate(&newConf); err != nil {
-			http.Error(w, "Validation failed: "+err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		defaultDur, _ := utils.ParseExpirationTime(newConf.DefaultExpiration)
-		maxDur, _ := utils.ParseExpirationTime(newConf.MaxExpiration)
-		if defaultDur.After(maxDur) {
-			http.Error(w, "default_expiration must be <= max_expiration", http.StatusBadRequest)
-			return
-		}
-
-		serverconfig.Conf = newConf
-		data, _ := json.MarshalIndent(serverconfig.Conf, "", "  ")
-		if err := os.WriteFile(filepath.Join(dir, "server-config.json"), data, 0644); err != nil {
-			http.Error(w, "Failed to save config", http.StatusInternalServerError)
-			return
-		}
-		fmt.Fprint(w, "OK")
+		http.Error(w, "Invalid request", http.StatusBadRequest)
 	}
 }

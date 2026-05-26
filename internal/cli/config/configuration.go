@@ -8,9 +8,11 @@
 package config
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 )
@@ -18,8 +20,8 @@ import (
 // Configuration structure type
 type Configuration struct {
 	ServerIP         string `json:"server_ip"`
-	DefExpTime       string `json:"def_exp_time"`
-	DefDownloadCount int32  `json:"def_download_count"`
+	DefExpTime       string `json:"default_expiration"`
+	DefDownloadCount int32  `json:"default_download_count"`
 }
 
 // Global configuration of the CLI
@@ -80,12 +82,12 @@ func (c Configuration) SaveConfigurationFile() error {
 	}
 
 	if err := os.MkdirAll(configDir, 0755); err != nil {
-		return fmt.Errorf("failed to create config directory: %w", err)
+		return fmt.Errorf("Failed to create config directory: %w", err)
 	}
 
 	file, err := os.Create(configFile)
 	if err != nil {
-		return fmt.Errorf("failed to create config file: %w", err)
+		return fmt.Errorf("Failed to create config file: %w", err)
 	}
 	defer file.Close()
 
@@ -93,7 +95,35 @@ func (c Configuration) SaveConfigurationFile() error {
 	encoder.SetIndent("", "    ")
 
 	if err := encoder.Encode(c); err != nil {
-		return fmt.Errorf("failed to encode config file: %w", err)
+		return fmt.Errorf("Failed to encode config file: %w", err)
+	}
+	return nil
+}
+
+// ReplaceUsingServerConfiguration: Replace the content of the default configuration of server against the current client configuration.
+//
+// Returns:
+// - result1 (error): If something occured.
+func (c *Configuration) ReplaceUsingServerConfiguration() error {
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // Dev only: local self-signed cert.
+		},
+	}
+	url := fmt.Sprintf("https://%s:15702/user-configure", c.ServerIP)
+
+	resp, err := client.Get(url)
+	if err != nil {
+		return fmt.Errorf("Failed to fetch server configuration: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("Server returned %s", resp.Status)
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(c); err != nil {
+		return fmt.Errorf("Failed to decode server configuration: %w", err)
 	}
 	return nil
 }
@@ -103,5 +133,12 @@ func (c Configuration) SaveConfigurationFile() error {
 // Returns:
 // - result1 (error): If something occured.
 func createConfigurationFile() error {
-	return Conf.SaveConfigurationFile()
+	if err := Conf.ReplaceUsingServerConfiguration(); err != nil {
+		return fmt.Errorf("Failed to retrieve configuration from server")
+	}
+
+	if err := Conf.SaveConfigurationFile(); err != nil {
+		return fmt.Errorf("Failed to create configuration file at ~/.flick/config.json")
+	}
+	return nil
 }

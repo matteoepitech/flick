@@ -72,6 +72,7 @@ func Run(ctx context.Context) error {
 	mux.HandleFunc("/upload", withCORS(routes.UploadFileHandler(logger)))
 	mux.HandleFunc("/download", withCORS(routes.DownloadFileHandler(logger)))
 	mux.HandleFunc("/configure", withCORS(routes.SendServerConfig(logger)))
+	mux.HandleFunc("/user-configure", withCORS(routes.SendServerUserConfig(logger)))
 	routes.WriteDefaultConfig(logger)
 
 	h3Server := &http3.Server{
