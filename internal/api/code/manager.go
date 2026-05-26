@@ -20,12 +20,16 @@ import (
 var Cache *cache.Cache
 
 // InitCodeCache: Init the cache by creating the cache, load the current cache on disk and save every expiration.
-func InitCodeCache() {
+//
+// Returns:
+// - result1 (error): Error if loading the cache from disk fails.
+func InitCodeCache() error {
 	Cache = cache.New(1*time.Hour, 1*time.Minute)
 	Cache.OnEvicted(func(key string, value any) {
 		_ = SaveCacheManagerFile(path.GetCacheFile())
 		metadata.CheckExpirationToRemove(path.GetDataDir())
 	})
+	return LoadCacheManagerFile(path.GetCacheFile())
 }
 
 // AddCodeToList: Add a code in the list of the manager.

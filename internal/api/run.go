@@ -92,7 +92,9 @@ func Run(ctx context.Context) error {
 	}
 
 	// Init the code cache from disk into RAM.
-	code.InitCodeCache()
+	if err := code.InitCodeCache(); err != nil {
+		logger.InfoError("Cannot load code cache from disk: %s", err.Error())
+	}
 
 	logger.InfoSuccess("Starting FLICK server on port 15702...")
 
