@@ -146,7 +146,8 @@
     "copy": "Copy",
     "copied": "Copied",
     "openLink": "Open receive link",
-    "noCode": "No code received. Please retry the upload."
+    "noCode": "No code received. Please retry the upload.",
+    "expiresIn": "Expires in {exp}"
   },
   "Receive": {
     "back": "Back",

@@ -21,6 +21,7 @@ function SendSuccessContent() {
   const t = useTranslations("SendSuccess")
   const searchParams = useSearchParams()
   const codes = searchParams.getAll("code").filter(Boolean)
+  const exp = searchParams.get("exp")
   const [copied, setCopied] = useState<string | null>(null)
 
   async function copyCode(code: string) {
@@ -57,6 +58,9 @@ function SendSuccessContent() {
               <p className="rounded-lg border border-dashed border-primary/30 bg-primary/5 px-5 py-4 text-center font-mono text-2xl font-bold tracking-[0.15em] break-all text-primary">
                 {code}
               </p>
+              {exp && (
+                <p className="text-center text-sm text-muted-foreground">{t("expiresIn", { exp })}</p>
+              )}
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Button
                   type="button"

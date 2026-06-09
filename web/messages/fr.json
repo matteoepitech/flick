@@ -146,7 +146,8 @@
     "copy": "Copier",
     "copied": "Copié",
     "openLink": "Ouvrir le lien de réception",
-    "noCode": "Aucun code reçu. Réessayez l'envoi."
+    "noCode": "Aucun code reçu. Réessayez l'envoi.",
+    "expiresIn": "Expire dans {exp}"
   },
   "Receive": {
     "back": "Retour",

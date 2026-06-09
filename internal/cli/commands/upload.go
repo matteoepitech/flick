@@ -29,10 +29,11 @@ import (
 //
 // Params:
 // - req (*http.Request): The request HTTP.
+// - exp (string): The expiration of this upload, shown next to the code.
 //
 // Returns:
 // - result1 (error): An error occured.
-func doUploadRequest(req *http.Request) error {
+func doUploadRequest(req *http.Request, exp string) error {
 	client := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // Dev only: local self-signed cert.
@@ -54,14 +55,13 @@ func doUploadRequest(req *http.Request) error {
 	}
 
 	bodyString := string(body)
-	fmt.Print("\nCode: " + bodyString + "\n")
+	fmt.Printf("\nCode: %s \033[33m[%s left]\033[0m\n", bodyString, exp)
 
 	c := clipboard.New(clipboard.ClipboardOptions{Primary: true})
 	if err := c.CopyText(bodyString); err != nil {
 		return err
 	}
 
-	fmt.Println("Code copied to clipboard.")
 	return nil
 }
 
@@ -161,5 +161,9 @@ func RunUpload(cmd *cobra.Command, args []string, exp string, mdc string) error 
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	req.ContentLength = int64(body.Len())
 
-	return doUploadRequest(req)
+	if err := doUploadRequest(req, exp); err != nil {
+		return err
+	}
+	fmt.Println("Code copied to clipboard.")
+	return nil
 }

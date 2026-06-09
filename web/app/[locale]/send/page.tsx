@@ -105,6 +105,7 @@ export default function SendPage() {
       }
       const params = new URLSearchParams()
       for (const code of codes) params.append("code", code)
+      params.set("exp", expiration)
       router.push(`/send/success?${params.toString()}`)
     } catch (err) {
       console.error(err)
