@@ -17,6 +17,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/matteoepitech/flick/internal/cli/config"
 	"github.com/schollz/progressbar/v3"
@@ -83,6 +84,43 @@ func RunUpload(cmd *cobra.Command, args []string, exp string, mdc string) error 
 	if err != nil {
 		return fmt.Errorf("Failure: Cannot get that file.")
 	}
+
+	serverLimits, err := config.GetServerLimits()
+	if err != nil {
+		return fmt.Errorf("Failure: Cannot get server limits: %w", err)
+	}
+
+	if serverLimits.MaxFileSizeMb > 0 && stat.Size() > int64(serverLimits.MaxFileSizeMb)*1024*1024 {
+		return fmt.Errorf("Failure: The file is too large. The server only accepts files up to %d MB.", serverLimits.MaxFileSizeMb)
+	}
+
+	expValue := exp
+	if expValue == "" {
+		expValue = config.Conf.DefExpTime
+	}
+
+	mdcValue := mdc
+	if mdcValue == "" {
+		mdcValue = strconv.FormatInt(int64(config.Conf.DefDownloadCount), 10)
+	}
+
+	if serverLimits.MaxDownloadCount > 0 {
+		mdvInt, err := strconv.ParseInt(mdcValue, 10, 32)
+		if err == nil && mdvInt > int64(serverLimits.MaxDownloadCount) {
+			return fmt.Errorf("Failure: The max download count is too large. The server only allows up to %d downloads.", serverLimits.MaxDownloadCount)
+		}
+	}
+
+	if serverLimits.MaxExpiration != "" && expValue != "" {
+		if serverDuration, err := time.ParseDuration(serverLimits.MaxExpiration); err == nil {
+			if clientDuration, err := time.ParseDuration(expValue); err == nil {
+				if clientDuration > serverDuration {
+					return fmt.Errorf("Failure: The expiration is too large. The server only allows up to %s.", serverLimits.MaxExpiration)
+				}
+			}
+		}
+	}
+
 	fmt.Printf("Uploading the file %s... (%d bytes)\n", stat.Name(), stat.Size())
 
 	file, err := os.Open(args[0])
@@ -108,16 +146,6 @@ func RunUpload(cmd *cobra.Command, args []string, exp string, mdc string) error 
 
 	bar := progressbar.DefaultBytes(int64(body.Len()), "Uploading")
 	progressBody := io.TeeReader(body, bar)
-
-	expValue := exp
-	if expValue == "" {
-		expValue = config.Conf.DefExpTime
-	}
-
-	mdcValue := mdc
-	if mdcValue == "" {
-		mdcValue = strconv.FormatInt(int64(config.Conf.DefDownloadCount), 10)
-	}
 
 	params := url.Values{}
 	params.Set("expiration", expValue)

@@ -114,6 +114,7 @@
     "dropOr": "or",
     "dropBrowse": "browse",
     "dropLimits": "up to {maxFiles} files, {maxSize} max",
+    "fileTooLarge": "The file \"{name}\" is too large (max {size}).",
     "useExample": "Use a sample file",
     "exampleFile": "sample.pdf",
     "filesSelected": "{count, plural, =1 {# file selected} other {# files selected}}",

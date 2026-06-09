@@ -24,11 +24,48 @@ type Configuration struct {
 	DefDownloadCount int32  `json:"default_download_count"`
 }
 
+// Server limits structure type (fetched dynamically, not saved in local config)
+type ServerLimits struct {
+	MaxFileSizeMb        int32  `json:"max_file_size_mb"`
+	MaxExpiration        string `json:"max_expiration"`
+	MaxDownloadCount     int32  `json:"max_download_count"`
+}
+
 // Global configuration of the CLI
 var Conf Configuration = Configuration{
 	ServerIP:         "127.0.0.1",
 	DefExpTime:       "15m",
 	DefDownloadCount: 1,
+}
+
+// GetServerLimits: Get the current server limits and configuration.
+//
+// Returns:
+// - result1 (*ServerLimits): The server limits.
+// - result2 (error): If something occured.
+func GetServerLimits() (*ServerLimits, error) {
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // Dev only: local self-signed cert.
+		},
+	}
+	url := fmt.Sprintf("https://%s:15702/user-configure", Conf.ServerIP)
+
+	resp, err := client.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to fetch server configuration: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("Server returned %s", resp.Status)
+	}
+
+	var limits ServerLimits
+	if err := json.NewDecoder(resp.Body).Decode(&limits); err != nil {
+		return nil, fmt.Errorf("Failed to decode server configuration: %w", err)
+	}
+	return &limits, nil
 }
 
 // configPaths: Resolve the configuration directory and file paths.

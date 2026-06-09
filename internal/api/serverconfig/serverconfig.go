@@ -18,12 +18,12 @@ import (
 // Server configuration template
 type Configuration struct {
 	Persistence             bool   `json:"persistence"`
-	MaxFileSizeMb           int    `json:"max_file_size_mb" validate:"required,gte=0"`
+	MaxFileSizeMb           int    `json:"max_file_size_mb" validate:"required,gte=0" user:"true"`
 	DefaultExpiration       string `json:"default_expiration" validate:"required,duration" user:"true"`
-	MaxExpiration           string `json:"max_expiration" validate:"required,duration"`
+	MaxExpiration           string `json:"max_expiration" validate:"required,duration" user:"true"`
 	AllowMultipleDownloads  bool   `json:"allow_multiple_downloads"`
 	DefaultDownloadCount    int    `json:"default_download_count" validate:"required,gte=1" user:"true"`
-	MaxDownloadCount        int    `json:"max_download_count" validate:"required,gtefield=DefaultDownloadCount"`
+	MaxDownloadCount        int    `json:"max_download_count" validate:"required,gtefield=DefaultDownloadCount" user:"true"`
 	RequirePassword         bool   `json:"require_password"`
 	ActivateRateLimit       bool   `json:"activate_rate_limit"`
 	MaxGenerationKeyPerHour int    `json:"max_generation_key_per_hour" validate:"required,gte=0"`

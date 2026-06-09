@@ -13,6 +13,7 @@ import (
 	"github.com/matteoepitech/flick/internal/api/logging"
 	"github.com/matteoepitech/flick/internal/api/metadata"
 	"github.com/matteoepitech/flick/internal/api/path"
+	"github.com/matteoepitech/flick/internal/api/serverconfig"
 	"io"
 	"net/http"
 	"os"
@@ -29,7 +30,16 @@ func UploadFileHandler() http.HandlerFunc {
 			return
 		}
 
-		r.ParseMultipartForm(100 << 20)
+		if serverconfig.Conf.MaxFileSizeMb > 0 {
+			r.Body = http.MaxBytesReader(w, r.Body, int64(serverconfig.Conf.MaxFileSizeMb)*1024*1024)
+		}
+
+		err := r.ParseMultipartForm(100 << 20)
+		if err != nil {
+			logging.LogInfoError("Cannot parse multipart form: %v", err)
+			WriteError(w, http.StatusBadRequest, "Payload too large or invalid request")
+			return
+		}
 
 		file, header, err := r.FormFile("file")
 		if err != nil {

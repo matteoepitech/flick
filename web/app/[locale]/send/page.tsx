@@ -9,12 +9,11 @@ import { Card } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
-import { ApiError, fetchDownloadCountLimits, uploadFile } from "@/lib/api"
+import { ApiError, fetchServerLimits, uploadFile } from "@/lib/api"
 import { Link, useRouter } from "@/i18n/navigation"
 import { cn } from "@/lib/utils"
 
 const MAX_FILES = 5
-const MAX_SIZE_LABEL = "2 Go"
 
 type Expiration = "1h" | "2h" | "3h" | "4h"
 
@@ -39,22 +38,38 @@ export default function SendPage() {
   const [submitting, setSubmitting] = useState(false)
   const [progress, setProgress] = useState<{ name: string; percent: number } | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [maxFileSize, setMaxFileSize] = useState<number>(1000 * 1024 * 1024)
 
   useEffect(() => {
     const controller = new AbortController()
-    fetchDownloadCountLimits(controller.signal)
-      .then(({ default: def, max, allowMultiple }) => {
+    fetchServerLimits(controller.signal)
+      .then(({ default: def, max, allowMultiple, maxFileSizeMb }) => {
         setAllowMultipleDownloads(allowMultiple)
         setMaxDownloadLimit(max)
         setMaxDownloadCount(allowMultiple ? def : 1)
+        if (maxFileSizeMb > 0) setMaxFileSize(maxFileSizeMb * 1024 * 1024)
       })
       .catch(() => {})
     return () => controller.abort()
   }, [])
 
   function addFiles(incoming: FileList | File[]) {
+    let hasError = false
+    const validFiles = Array.from(incoming).filter((file) => {
+      if (file.size > maxFileSize) {
+        setError(t("fileTooLarge", { name: file.name, size: formatBytes(maxFileSize) }))
+        hasError = true
+        return false
+      }
+      return true
+    })
+
+    if (validFiles.length > 0 && !hasError) {
+      setError(null) // clear possible previous error if we successfully add files without new errors
+    }
+
     setFiles((current) => {
-      const next = [...current, ...Array.from(incoming)]
+      const next = [...current, ...validFiles]
       return next.slice(0, MAX_FILES)
     })
   }
@@ -158,7 +173,7 @@ export default function SendPage() {
               >
                 {t("dropBrowse")}
               </button>{" "}
-              — {t("dropLimits", { maxFiles: MAX_FILES, maxSize: MAX_SIZE_LABEL })}
+              — {t("dropLimits", { maxFiles: MAX_FILES, maxSize: formatBytes(maxFileSize) })}
             </p>
           </div>
         </div>

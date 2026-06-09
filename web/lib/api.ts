@@ -112,6 +112,23 @@ export async function downloadByCode(code: string, signal?: AbortSignal): Promis
   return files
 }
 
+export async function loadUserConfiguration(
+  signal?: AbortSignal
+): Promise<Record<string, string | number | boolean>> {
+  const url = new URL("/user-configure", getApiBase())
+
+  const res = await fetch(url.toString(), { method: "GET", signal })
+  if (!res.ok) {
+    throw new ApiError(res.status, parseErrorMessage(await res.text().catch(() => ""), res.statusText))
+  }
+
+  const data = (await res.json()) as unknown
+  if (data === null || typeof data !== "object") {
+    throw new ApiError(res.status, "Invalid configuration response")
+  }
+  return data as Record<string, string | number | boolean>
+}
+
 export async function loadConfiguration(
   signal?: AbortSignal
 ): Promise<Record<string, string | number | boolean>> {
@@ -146,18 +163,20 @@ export async function saveConfiguration(
   }
 }
 
-export interface DownloadCountLimits {
+export interface ServerLimits {
   default: number
   max: number
   allowMultiple: boolean
+  maxFileSizeMb: number
 }
 
-export async function fetchDownloadCountLimits(signal?: AbortSignal): Promise<DownloadCountLimits> {
-  const conf = await loadConfiguration(signal)
+export async function fetchServerLimits(signal?: AbortSignal): Promise<ServerLimits> {
+  const conf = await loadUserConfiguration(signal)
   const def = typeof conf.default_download_count === "number" ? conf.default_download_count : 1
   const max = typeof conf.max_download_count === "number" ? conf.max_download_count : def
   const allowMultiple = conf.allow_multiple_downloads === true
-  return { default: def, max: Math.max(max, def), allowMultiple }
+  const maxFileSizeMb = typeof conf.max_file_size_mb === "number" ? conf.max_file_size_mb : 1000
+  return { default: def, max: Math.max(max, def), allowMultiple, maxFileSizeMb }
 }
 
 export interface StatsSnapshot {
