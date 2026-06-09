@@ -14,14 +14,13 @@ variables:
   MIRROR_URL: "github.com/matteoepitech/flick.git"
   BIN_NAME: "flick"
 
-# Build Job
+# Build Job (server / Go)
 build-job:
   stage: build
   rules:
     - if: '$CI_COMMIT_BRANCH !~ /-noci$/ && $CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_COMMIT_BRANCH !~ /-noci$/ && $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"'
-    - if: '$CI_COMMIT_TAG =~ /^v/'
-  image: golang:1.22
+    - if: "$CI_COMMIT_TAG =~ /^v/"
   script:
     - make build
   artifacts:
@@ -29,12 +28,22 @@ build-job:
       - "./build/bin/"
     expire_in: 1 hour
 
+# Build Web Job (npm / Next.js, built inside the web docker image)
+build-web-job:
+  stage: build
+  rules:
+    - if: '$CI_COMMIT_BRANCH !~ /-noci$/ && $CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH !~ /-noci$/ && $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"'
+    - if: "$CI_COMMIT_TAG =~ /^v/"
+  script:
+    - docker compose -f docker-compose.yaml -f docker-compose.build.yaml build flick-web
+
 # CLI Release Job
 release-cli-job:
   stage: release-cli
   needs: [build-job]
   rules:
-    - if: '$CI_COMMIT_TAG =~ /^v/'
+    - if: "$CI_COMMIT_TAG =~ /^v/"
   script:
     - git fetch origin main
     - git merge-base --is-ancestor $CI_COMMIT_SHA origin/main || { echo "Tag is not on main, aborting..."; exit 1; }
@@ -55,7 +64,7 @@ release-server-job:
   stage: release-server
   needs: [build-job]
   rules:
-    - if: '$CI_COMMIT_TAG =~ /^v/'
+    - if: "$CI_COMMIT_TAG =~ /^v/"
   variables:
     REGISTRY_IMAGE: docker.io/$DOCKERHUB_USER
   before_script:
