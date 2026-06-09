@@ -124,6 +124,7 @@
     "expiration2h": "2 hours",
     "expiration3h": "3 hours",
     "expiration4h": "4 hours",
+    "maxDownloadCount": "Max downloads",
     "passwordTitle": "Password protection",
     "passwordDescription": "Requires a password to download",
     "passwordPlaceholder": "Choose a password",

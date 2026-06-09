@@ -36,11 +36,13 @@ export interface UploadProgress {
 export async function uploadFile(
   file: File,
   expiration: string,
+  maxDownloadCount: number,
   onProgress?: (progress: UploadProgress) => void,
   signal?: AbortSignal
 ): Promise<string> {
   const url = new URL("/upload", getApiBase())
   url.searchParams.set("expiration", expiration)
+  url.searchParams.set("maxDownloadCount", String(maxDownloadCount))
 
   const form = new FormData()
   form.append("file", file)
@@ -129,6 +131,20 @@ export async function saveConfiguration(
   if (!res.ok) {
     throw new ApiError(res.status, await res.text().catch(() => res.statusText))
   }
+}
+
+export interface DownloadCountLimits {
+  default: number
+  max: number
+  allowMultiple: boolean
+}
+
+export async function fetchDownloadCountLimits(signal?: AbortSignal): Promise<DownloadCountLimits> {
+  const conf = await loadConfiguration(signal)
+  const def = typeof conf.default_download_count === "number" ? conf.default_download_count : 1
+  const max = typeof conf.max_download_count === "number" ? conf.max_download_count : def
+  const allowMultiple = conf.allow_multiple_downloads === true
+  return { default: def, max: Math.max(max, def), allowMultiple }
 }
 
 export interface StatsSnapshot {

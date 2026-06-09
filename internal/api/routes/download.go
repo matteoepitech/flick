@@ -131,7 +131,15 @@ func DownloadFileHandler() http.HandlerFunc {
 		w.Header().Set("Content-Type", writer.FormDataContentType())
 		w.Header().Set("X-Total-Size", strconv.FormatInt(totalSize, 10))
 
-		doDownloadMultipartForm(writer, entries, codePath)
+		metadataFilename := "." + code + "-metadata.json"
+		var filteredEntries []os.DirEntry
+		for _, entry := range entries {
+			if entry.Name() != metadataFilename {
+				filteredEntries = append(filteredEntries, entry)
+			}
+		}
+
+		doDownloadMultipartForm(writer, filteredEntries, codePath)
 		onDownloadFinished(code)
 		IncDownloads()
 	}

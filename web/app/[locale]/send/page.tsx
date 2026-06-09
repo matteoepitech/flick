@@ -2,14 +2,14 @@
 
 import { ArrowUpRight, ChevronLeft, FileText, Upload, X } from "lucide-react"
 import { useTranslations } from "next-intl"
-import { useRef, useState, type ChangeEvent, type DragEvent, type FormEvent } from "react"
+import { useEffect, useRef, useState, type ChangeEvent, type DragEvent, type FormEvent } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
-import { uploadFile } from "@/lib/api"
+import { fetchDownloadCountLimits, uploadFile } from "@/lib/api"
 import { Link, useRouter } from "@/i18n/navigation"
 import { cn } from "@/lib/utils"
 
@@ -33,9 +33,24 @@ export default function SendPage() {
   const [files, setFiles] = useState<File[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const [expiration, setExpiration] = useState<Expiration>("1h")
+  const [maxDownloadCount, setMaxDownloadCount] = useState<number>(1)
+  const [maxDownloadLimit, setMaxDownloadLimit] = useState<number>(1)
+  const [allowMultipleDownloads, setAllowMultipleDownloads] = useState<boolean>(false)
   const [submitting, setSubmitting] = useState(false)
   const [progress, setProgress] = useState<{ name: string; percent: number } | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const controller = new AbortController()
+    fetchDownloadCountLimits(controller.signal)
+      .then(({ default: def, max, allowMultiple }) => {
+        setAllowMultipleDownloads(allowMultiple)
+        setMaxDownloadLimit(max)
+        setMaxDownloadCount(allowMultiple ? def : 1)
+      })
+      .catch(() => {})
+    return () => controller.abort()
+  }, [])
 
   function addFiles(incoming: FileList | File[]) {
     setFiles((current) => {
@@ -68,7 +83,7 @@ export default function SendPage() {
     try {
       const codes: string[] = []
       for (const file of files) {
-        const code = await uploadFile(file, expiration, ({ loaded, total }) => {
+        const code = await uploadFile(file, expiration, maxDownloadCount, ({ loaded, total }) => {
           setProgress({ name: file.name, percent: Math.round((loaded / total) * 100) })
         })
         codes.push(code)
@@ -204,6 +219,31 @@ export default function SendPage() {
             </div>
           </div>
 
+          {allowMultipleDownloads && (
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="maxDownloadCount" className="text-sm font-semibold text-foreground">
+                  {t("maxDownloadCount")}
+                </Label>
+                <span className="text-sm font-semibold tabular-nums text-primary">{maxDownloadCount}</span>
+              </div>
+              <input
+                id="maxDownloadCount"
+                type="range"
+                min={1}
+                max={maxDownloadLimit}
+                step={1}
+                value={maxDownloadCount}
+                onChange={(event) => setMaxDownloadCount(Number(event.target.value))}
+                className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-muted accent-primary"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground tabular-nums">
+                <span>1</span>
+                <span>{maxDownloadLimit}</span>
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-col gap-3 opacity-60">
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -238,9 +278,9 @@ export default function SendPage() {
               <span className="truncate">{progress.name}</span>
               <span className="tabular-nums">{progress.percent}%</span>
             </div>
-            <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+            <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
               <div
-                className="h-full bg-primary transition-all duration-150"
+                className="h-full rounded-full bg-orange-500 transition-all duration-150"
                 style={{ width: `${progress.percent}%` }}
               />
             </div>
