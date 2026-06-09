@@ -109,12 +109,17 @@ func DownloadFileHandler() http.HandlerFunc {
 			return
 		}
 
-		codePath := path.GetDataDir() + code
+		if codepkg.IsCodeAlreadyExistInList(code) == false {
+			logging.LogInfoError("Code %q is expired or does not exist", code)
+			WriteError(w, http.StatusNotFound, "Code not found")
+			return
+		}
 
+		codePath := path.GetDataDir() + code
 		entries, err := os.ReadDir(codePath)
 		if err != nil {
-			logging.LogInfoError("Code %q does not exist", code)
-			WriteError(w, http.StatusNotFound, "Code not found")
+			logging.LogInfoError("Cannot read data directory for code %q: %v", code, err)
+			WriteError(w, http.StatusInternalServerError, "Cannot read the files")
 			return
 		}
 
