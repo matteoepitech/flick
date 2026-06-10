@@ -6,6 +6,24 @@
 #   - Web: hot reload via next dev with the source bind-mounted.
 
 services:
+  # PostgreSQL service
+  flick-postgres:
+    image: postgres:16-alpine
+    container_name: flick-postgres-dev
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - flick-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    ports:
+      - "5432:5432"
+
   # API Service
   flick-api:
     image: flick-api:dev # Give the name flick-api:dev to the image
@@ -16,6 +34,11 @@ services:
       args:
         VERSION: dev
     container_name: flick-api-dev
+    env_file:
+      - .env
+    depends_on:
+      flick-postgres:
+        condition: service_healthy
 
   # Web Service
   flick-web:
@@ -36,3 +59,4 @@ services:
 volumes:
   flick-web-node-modules:
   flick-web-next-cache:
+  flick-postgres-data:

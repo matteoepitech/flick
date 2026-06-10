@@ -6,17 +6,71 @@
 #   - docker-compose.dev.yaml   : hot-reload dev stack
 
 services:
+  # PostgreSQL service
+  flick-postgres:
+    image: postgres:16-alpine
+    container_name: flick-postgres
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - flick-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - flick
+
+  # Migrate service
+  flick-migrate:
+    image: ghcr.io/amacneil/dbmate:2
+    command: ["up"]
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable
+      DBMATE_MIGRATIONS_DIR: /db/migrations
+      DBMATE_SCHEMA_FILE: /db/schema.sql
+    volumes:
+      - ./db:/db
+    depends_on:
+      flick-postgres:
+        condition: service_healthy
+    networks:
+      - flick
+
   # API Service
   flick-api:
     platform: linux/amd64
     image: dellixou/flick-api:${VERSION:-latest}
     container_name: flick-api
     restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "15702:15702/udp"
       - "15702:15702/tcp"
     volumes:
       - ./certificates:/app/certificates:ro
+    depends_on:
+      flick-postgres:
+        condition: service_healthy
+      flick-migrate:
+        condition: service_completed_successfully
     networks:
       - flick
 
@@ -39,3 +93,6 @@ services:
 networks:
   flick:
     driver: bridge
+
+volumes:
+  flick-postgres-data:
