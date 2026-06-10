@@ -8,6 +8,7 @@
 COMPOSE       := docker compose
 COMPOSE_DEV   := $(COMPOSE) -f docker-compose.yaml -f docker-compose.dev.yaml
 COMPOSE_BUILD := $(COMPOSE) -f docker-compose.yaml -f docker-compose.build.yaml
+MIGRATE       := $(COMPOSE) run --rm --no-deps flick-migrate
 
 ### Show help message
 help:
@@ -45,8 +46,24 @@ images:
 images-push: images
 	$(COMPOSE_BUILD) push
 
+### Create a new migration file (usage: make migrate-new name=<NAME>)
+migrate-new:
+	$(COMPOSE) run --rm --no-deps flick-migrate new $(name)
+
+### Apply all pending migrations
+migrate-up:
+	$(MIGRATE) up
+
+### Roll back the last migration
+migrate-down:
+	$(MIGRATE) down
+
+### Show the status of all migrations
+migrate-status:
+	$(MIGRATE) status
+
 ### Remove build artifacts
 clean:
 	rm -rf build/bin tmp
 
-.PHONY: help dev down down-dev up pull build images images-push clean
+.PHONY: help dev down down-dev up pull build images images-push clean migrate-new migrate-up migrate-down migrate-status
