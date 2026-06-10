@@ -62,8 +62,12 @@ migrate-down:
 migrate-status:
 	$(MIGRATE) status
 
+### Generate type-safe Go code from db/queries (sqlc, runs in Docker)
+sqlc-generate:
+	docker run --rm -v $(PWD):/src -w /src sqlc/sqlc generate
+
 ### Remove build artifacts
 clean:
 	rm -rf build/bin tmp
 
-.PHONY: help dev down down-dev up pull build images images-push clean migrate-new migrate-up migrate-down migrate-status
+.PHONY: help dev down down-dev up pull build images images-push clean migrate-new migrate-up migrate-down migrate-status sqlc-generate
