@@ -51,7 +51,7 @@ Upload a file, get a simple code like `ocean-tiger-42`, share it. That's it.
 
 You send a file and Flick gives you a short code that is easy to remember or say out loud. The other person enters the code, from the website or the terminal, and gets the file. Files clean themselves up: they expire after a while or after a few downloads.
 
-```console
+```
 $ flick-cli myfile.pdf
 Uploading the file myfile.pdf... (2097152 bytes)
 Uploading 100% |████████████████████████████████| (2.1/2.1 MB, 46 MB/s)
@@ -60,7 +60,7 @@ Code: ocean-tiger-42 [15m left]
 Code copied to clipboard.
 ```
 
-```console
+```
 $ flick-cli
 Specify the code: ocean-tiger-42
 Searching the code ocean-tiger-42...
@@ -86,7 +86,7 @@ Get Flick running in minutes.
 
 All you need is [Docker](https://docs.docker.com/get-docker/) installed on your server.
 
-```bash
+```
 git clone https://github.com/matteoepitech/flick.git
 cd flick
 
@@ -123,7 +123,7 @@ To stop Flick, run `make down`. Your data is kept safe.
 
 Use the dev stack when you want to hack on Flick: the API is rebuilt from source and the web app hot-reloads.
 
-```bash
+```
 make dev        # start the dev stack
 make down-dev   # stop and clean up
 make help       # see all available commands
