@@ -209,6 +209,49 @@ export async function fetchStats(signal?: AbortSignal): Promise<StatsSnapshot> {
   return { timestamp, activeCodes, totalUploads, totalDownloads }
 }
 
+export interface AuthUser {
+  id: string
+  username: string
+  email: string
+}
+
+export async function registerUser(
+  username: string,
+  email: string,
+  password: string,
+  signal?: AbortSignal
+): Promise<AuthUser> {
+  const url = new URL("/register", getApiBase())
+
+  const res = await fetch(url.toString(), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, email, password }),
+    signal,
+  })
+  if (!res.ok) {
+    throw new ApiError(res.status, parseErrorMessage(await res.text().catch(() => ""), res.statusText))
+  }
+
+  return (await res.json()) as AuthUser
+}
+
+export async function loginUser(email: string, password: string, signal?: AbortSignal): Promise<AuthUser> {
+  const url = new URL("/login", getApiBase())
+
+  const res = await fetch(url.toString(), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+    signal,
+  })
+  if (!res.ok) {
+    throw new ApiError(res.status, parseErrorMessage(await res.text().catch(() => ""), res.statusText))
+  }
+
+  return (await res.json()) as AuthUser
+}
+
 export function triggerBlobDownload(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob)
   const a = document.createElement("a")

@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowDownLeft, ArrowUpRight, LayoutDashboard } from "lucide-react"
+import { ArrowDownLeft, ArrowUpRight, LayoutDashboard, LogIn } from "lucide-react"
 import { useTranslations } from "next-intl"
 
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -42,6 +42,12 @@ export default function SiteHeader() {
             <Link href="/receive">
               <ArrowDownLeft className="h-4 w-4" />
               {t("receive")}
+            </Link>
+          </Button>
+          <Button asChild variant="ghost">
+            <Link href="/login">
+              <LogIn className="h-4 w-4" />
+              {t("login")}
             </Link>
           </Button>
           <ThemeToggle />

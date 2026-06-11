@@ -20,6 +20,7 @@ import (
 	"github.com/matteoepitech/flick/internal/api/logging"
 	"github.com/matteoepitech/flick/internal/api/path"
 	"github.com/matteoepitech/flick/internal/api/routes"
+	"github.com/matteoepitech/flick/internal/api/routes/account"
 	"github.com/quic-go/quic-go/http3"
 )
 
@@ -84,7 +85,7 @@ func Run(ctx context.Context) error {
 		return logging.LogInfoError("Cannot create data directory %q: %v", path.GetDataDir(), err)
 	}
 
-	pool, _, err := setupDatabase(ctx) // TODO: THE _ IS NEEDED FOR HANDLE FUNC (FOR FUTURE ROUTES)
+	pool, queries, err := setupDatabase(ctx)
 	if err != nil {
 		return err
 	}
@@ -96,6 +97,8 @@ func Run(ctx context.Context) error {
 	mux.HandleFunc("/configure", withCORS(routes.SendServerConfig()))
 	mux.HandleFunc("/stats", withCORS(routes.SendStats()))
 	mux.HandleFunc("/user-configure", withCORS(routes.SendServerUserConfig()))
+	mux.HandleFunc("/register", withCORS(account.RegisterHandler(queries)))
+	mux.HandleFunc("/login", withCORS(account.LoginHandler(queries)))
 	routes.WriteDefaultConfig()
 
 	h3Server := &http3.Server{
