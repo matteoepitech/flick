@@ -115,13 +115,13 @@ func UpdateNewVersion(release ReleaseResponse) error {
 	return nil
 }
 
-// CheckUpdate: Check any update in flick.d3l.tech.
+// CheckUpdate: Check any update in apt.d3l.tech.
 //
 // Params:
 // - currentVersion (string): The current CLI version.
 func CheckUpdate(currentVersion string) {
 	body := &bytes.Buffer{}
-	req, err := http.NewRequest("GET", "https://flick.d3l.tech/releases/version.json", body)
+	req, err := http.NewRequest("GET", "https://apt.d3l.tech/releases/version.json", body)
 	if err != nil {
 		return
 	}

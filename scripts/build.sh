@@ -31,7 +31,7 @@ for PLATFORM in "${PLATFORMS[@]}"; do
   done
 done
 
-BASE_URL="${RELEASE_BASE_URL:-https://flick.d3l.tech/releases}"
+BASE_URL="${RELEASE_BASE_URL:-https://apt.d3l.tech/releases}"
 
 cat > build/bin/version.json << EOF
 {
