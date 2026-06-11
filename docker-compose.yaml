@@ -12,7 +12,8 @@ services:
     container_name: flick-postgres
     restart: unless-stopped
     env_file:
-      - .env
+      - path: .env
+        required: false
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -33,7 +34,8 @@ services:
     image: ghcr.io/amacneil/dbmate:2
     command: ["up"]
     env_file:
-      - .env
+      - path: .env
+        required: false
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable
       DBMATE_MIGRATIONS_DIR: /db/migrations
@@ -53,7 +55,8 @@ services:
     container_name: flick-api
     restart: unless-stopped
     env_file:
-      - .env
+      - path: .env
+        required: false
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable
       POSTGRES_HOST: ${POSTGRES_HOST}
