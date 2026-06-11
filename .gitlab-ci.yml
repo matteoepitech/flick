@@ -71,7 +71,7 @@ release-apt-job:
     - export VERSION="${CI_COMMIT_TAG#v}"
     - |
       for ARCH in amd64 arm64; do
-        cp "build/bin/flick-cli-linux-${ARCH}" build/bin/flick-deb-staging
+        cp "build/bin/flick-linux-${ARCH}" build/bin/flick-deb-staging
         docker run --rm -v "$PWD:/work" -w /work \
           -e VERSION="$VERSION" -e ARCH="$ARCH" \
           goreleaser/nfpm package -f nfpm.yaml -p deb -t "flick_${VERSION}_${ARCH}.deb"

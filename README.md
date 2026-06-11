@@ -52,7 +52,7 @@ Upload a file, get a simple code like `ocean-tiger-42`, share it. That's it.
 You send a file and Flick gives you a short code that is easy to remember or say out loud. The other person enters the code, from the website or the terminal, and gets the file. Files clean themselves up: they expire after a while or after a few downloads.
 
 ```
-$ flick-cli myfile.pdf
+$ flick myfile.pdf
 Uploading the file myfile.pdf... (2097152 bytes)
 Uploading 100% |████████████████████████████████| (2.1/2.1 MB, 46 MB/s)
 
@@ -61,7 +61,7 @@ Code copied to clipboard.
 ```
 
 ```
-$ flick-cli
+$ flick
 Specify the code: ocean-tiger-42
 Searching the code ocean-tiger-42...
 Downloading 100% |████████████████████████████████| (2.1/2.1 MB, 51 MB/s)
@@ -132,20 +132,20 @@ make help       # see all available commands
 
 ## The CLI
 
-Prefer the terminal? Grab the `flick-cli` binary for your platform (Linux, macOS or Windows):
+Prefer the terminal? Grab the `flick` binary for your platform (Linux, macOS or Windows):
 
 ```bash
 # Send a file
-flick-cli holiday-photos.zip
+flick holiday-photos.zip
 
 # Send with custom rules: expires in 1 hour, max 3 downloads
-flick-cli holiday-photos.zip --exp 1h --mdc 3
+flick holiday-photos.zip --exp 1h --mdc 3
 
 # Receive a file (it will ask you for the code)
-flick-cli
+flick
 
 # Set your defaults (server address, expiration...)
-flick-cli configure
+flick configure
 ```
 
 You can also build the binaries yourself:

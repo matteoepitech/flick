@@ -14,7 +14,6 @@ CLI_PKG="github.com/matteoepitech/flick/internal/cli"
 LDFLAGS="-s -w -X ${CLI_PKG}.CLIVersion=$VERSION -X ${CLI_PKG}.CLICommit=$COMMIT -X ${CLI_PKG}.CLIBuildDate=$BUILD_DATE"
 
 PLATFORMS=("linux/amd64" "linux/arm64" "darwin/amd64" "darwin/arm64" "windows/amd64")
-BINARIES=("cli")
 
 for PLATFORM in "${PLATFORMS[@]}"; do
   GOOS="${PLATFORM%/*}"
@@ -22,13 +21,11 @@ for PLATFORM in "${PLATFORMS[@]}"; do
   SUFFIX=""
   [ "$GOOS" = "windows" ] && SUFFIX=".exe"
 
-  for BIN in "${BINARIES[@]}"; do
-    echo "  → flick-${BIN} ${GOOS}/${GOARCH}"
-    GOOS=$GOOS GOARCH=$GOARCH go build \
-      -ldflags="$LDFLAGS" \
-      -o "build/bin/flick-${BIN}-${GOOS}-${GOARCH}${SUFFIX}" \
-      "./cmd/${BIN}"
-  done
+  echo "  → flick ${GOOS}/${GOARCH}"
+  GOOS=$GOOS GOARCH=$GOARCH go build \
+    -ldflags="$LDFLAGS" \
+    -o "build/bin/flick-${GOOS}-${GOARCH}${SUFFIX}" \
+    "./cmd/cli"
 done
 
 BASE_URL="${RELEASE_BASE_URL:-https://apt.d3l.tech/releases}"
@@ -38,11 +35,11 @@ cat > build/bin/version.json << EOF
   "version": "$VERSION",
   "commit": "$COMMIT",
   "build_date": "$BUILD_DATE",
-  "url_linux_amd64":   "$BASE_URL/$VERSION/flick-cli-linux-amd64",
-  "url_linux_arm64":   "$BASE_URL/$VERSION/flick-cli-linux-arm64",
-  "url_darwin_amd64":  "$BASE_URL/$VERSION/flick-cli-darwin-amd64",
-  "url_darwin_arm64":  "$BASE_URL/$VERSION/flick-cli-darwin-arm64",
-  "url_windows_amd64": "$BASE_URL/$VERSION/flick-cli-windows-amd64.exe"
+  "url_linux_amd64":   "$BASE_URL/$VERSION/flick-linux-amd64",
+  "url_linux_arm64":   "$BASE_URL/$VERSION/flick-linux-arm64",
+  "url_darwin_amd64":  "$BASE_URL/$VERSION/flick-darwin-amd64",
+  "url_darwin_arm64":  "$BASE_URL/$VERSION/flick-darwin-arm64",
+  "url_windows_amd64": "$BASE_URL/$VERSION/flick-windows-amd64.exe"
 }
 EOF
 

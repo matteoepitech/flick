@@ -85,6 +85,10 @@ func UpdateNewVersion(release ReleaseResponse) error {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("cannot download the new version: server returned %s", resp.Status)
+	}
+
 	tmpFile, err := os.Create(execPath + ".tmp")
 	if err != nil {
 		return err

@@ -17,7 +17,7 @@ import (
 
 // Root CMD using cobra
 var rootCmd = &cobra.Command{
-	Use:          "flick-cli",
+	Use:          "flick",
 	Args:         cobra.ArbitraryArgs,
 	RunE:         runCLI,
 	SilenceUsage: true,
