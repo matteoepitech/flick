@@ -113,10 +113,10 @@ Open `http://localhost`. 🎉
 >
 > No certificate to generate or manage: Caddy takes care of it.
 
-| Service | URL |
-| ------- | --- |
-| 🌐 Web app | http://localhost |
-| ⚙️ API | http://localhost/api/v1 |
+| Service    | URL                     |
+| ---------- | ----------------------- |
+| 🌐 Web app | http://localhost        |
+| ⚙️ API     | http://localhost/api/v1 |
 
 To stop Flick, run `make down`. Your data is kept safe.
 
@@ -132,7 +132,16 @@ make help       # see all available commands
 
 ## The CLI
 
-Prefer the terminal? Grab the `flick` binary for your platform (Linux, macOS or Windows):
+Prefer the terminal? On Debian/Ubuntu, install `flick` straight from the APT repository:
+
+```bash
+curl -fsSL https://apt.d3l.tech/apt/flick.gpg | sudo tee /usr/share/keyrings/flick.gpg > /dev/null
+echo "deb [signed-by=/usr/share/keyrings/flick.gpg] https://apt.d3l.tech/apt stable main" | sudo tee /etc/apt/sources.list.d/flick.list
+sudo apt update && sudo apt install flick
+```
+
+On other platforms (macOS, Windows, other Linux), grab the `flick` binary from
+[apt.d3l.tech/releases](https://apt.d3l.tech/releases/) - the CLI keeps itself up to date afterwards.
 
 ```bash
 # Send a file
@@ -182,14 +191,14 @@ Flick combines effortless sharing with full control over your server.
 
 The server creates a default configuration on first start. The main knobs:
 
-| Setting | Default | What it does |
-| ------- | ------- | ------------ |
-| `max_file_size_mb` | `1000` | Biggest file allowed |
-| `default_expiration` | `15m` | How long files live by default |
-| `max_expiration` | `4h` | Longest a file can live |
-| `default_download_count` | `1` | Downloads allowed by default |
-| `max_download_count` | `5` | Most downloads allowed per file |
-| `activate_rate_limit` | `true` | Protect your server from abuse |
+| Setting                  | Default | What it does                    |
+| ------------------------ | ------- | ------------------------------- |
+| `max_file_size_mb`       | `1000`  | Biggest file allowed            |
+| `default_expiration`     | `15m`   | How long files live by default  |
+| `max_expiration`         | `4h`    | Longest a file can live         |
+| `default_download_count` | `1`     | Downloads allowed by default    |
+| `max_download_count`     | `5`     | Most downloads allowed per file |
+| `activate_rate_limit`    | `true`  | Protect your server from abuse  |
 
 ## Technologies Used
 
