@@ -54,9 +54,9 @@ release-cli-job:
     - chmod 600 "$SSH_DIR/key"
     - SSH_OPTS="-i $SSH_DIR/key -o UserKnownHostsFile=$SSH_DIR/known_hosts"
     - echo "Deploying version $VERSION"
-    - ssh $SSH_OPTS deploy@flick.d3l.tech "mkdir -p /var/www/flick/releases/$VERSION"
-    - rsync -avz -e "ssh $SSH_OPTS" build/bin/ deploy@flick.d3l.tech:/var/www/flick/releases/$VERSION/
-    - rsync -avz -e "ssh $SSH_OPTS" build/bin/version.json deploy@flick.d3l.tech:/var/www/flick/releases/version.json
+    - ssh $SSH_OPTS deploy@apt.d3l.tech "mkdir -p /var/www/flick/releases/$VERSION"
+    - rsync -avz -e "ssh $SSH_OPTS" build/bin/ deploy@apt.d3l.tech:/var/www/flick/releases/$VERSION/
+    - rsync -avz -e "ssh $SSH_OPTS" build/bin/version.json deploy@apt.d3l.tech:/var/www/flick/releases/version.json
     - rm -rf "$SSH_DIR"
 
 # APT Repo Release Job
@@ -82,8 +82,8 @@ release-apt-job:
     - chmod 600 "$SSH_DIR/key"
     - SSH_OPTS="-i $SSH_DIR/key -o UserKnownHostsFile=$SSH_DIR/known_hosts"
     - echo "Publishing flick $VERSION to the APT repository"
-    - rsync -avz -e "ssh $SSH_OPTS" flick_${VERSION}_*.deb deploy@flick.d3l.tech:/tmp/
-    - ssh $SSH_OPTS deploy@flick.d3l.tech "reprepro -b /var/www/flick/apt includedeb stable /tmp/flick_${VERSION}_*.deb && rm /tmp/flick_${VERSION}_*.deb"
+    - rsync -avz -e "ssh $SSH_OPTS" flick_${VERSION}_*.deb deploy@apt.d3l.tech:/tmp/
+    - ssh $SSH_OPTS deploy@apt.d3l.tech "reprepro -b /var/www/flick/apt includedeb stable /tmp/flick_${VERSION}_*.deb && rm /tmp/flick_${VERSION}_*.deb"
     - rm -rf "$SSH_DIR"
 
 # Server Release Job
