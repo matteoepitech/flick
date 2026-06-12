@@ -68,7 +68,7 @@ func Run(ctx context.Context) error {
 	mux.HandleFunc("/api/v1/upload", routes.UploadFileHandler())
 	mux.HandleFunc("/api/v1/download", routes.DownloadFileHandler())
 	mux.HandleFunc("/api/v1/configure", routes.SendServerConfig())
-	mux.HandleFunc("/api/v1/stats", routes.SendStats())
+	mux.HandleFunc("/api/v1/stats", routes.SendStats(queries))
 	mux.HandleFunc("/api/v1/user-configure", routes.SendServerUserConfig())
 	mux.HandleFunc("/api/v1/register", account.RegisterHandler(queries))
 	mux.HandleFunc("/api/v1/login", account.LoginHandler(queries))

@@ -7,6 +7,9 @@ SELECT $1, $2, $3, (CASE WHEN first_user.is_first THEN 'admin' ELSE 'user' END):
 FROM first_user
 RETURNING *;
 
+-- name: CountUsers :one
+SELECT COUNT(*) AS user_count FROM users;
+
 -- name: GetUserByID :one
 SELECT * FROM users
 WHERE id = $1;

@@ -1,14 +1,14 @@
 "use client"
 
-import { ChevronLeft, Eye, EyeOff, UserRoundPlus } from "lucide-react"
+import { ChevronLeft, Eye, EyeOff, ShieldCheck, UserRoundPlus } from "lucide-react"
 import { useTranslations } from "next-intl"
-import { useState, type FormEvent } from "react"
+import { useEffect, useState, type FormEvent } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ApiError, registerUser } from "@/lib/api"
+import { ApiError, fetchStats, registerUser } from "@/lib/api"
 import { Link, useRouter } from "@/i18n/navigation"
 
 const MIN_PASSWORD_LENGTH = 8
@@ -24,6 +24,17 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isFirstAccount, setIsFirstAccount] = useState(false)
+
+  useEffect(() => {
+    const controller = new AbortController()
+    fetchStats(controller.signal)
+      .then((stats) => setIsFirstAccount(stats.userCount === 0))
+      .catch(() => {
+        // Ignore: the banner is informational, registration still works.
+      })
+    return () => controller.abort()
+  }, [])
 
   const canSubmit =
     username.trim().length > 0 &&
@@ -72,6 +83,13 @@ export default function RegisterPage() {
         <h1 className="text-3xl font-bold tracking-tight md:text-4xl">{t("title")}</h1>
         <p className="mt-3 text-base text-muted-foreground">{t("description")}</p>
       </div>
+
+      {isFirstAccount && (
+        <div className="mt-8 flex w-full items-start gap-3 rounded-lg border border-primary/30 bg-primary/10 px-4 py-3 text-left text-sm text-foreground">
+          <ShieldCheck className="mt-0.5 size-5 shrink-0 text-primary" />
+          <span>{t("firstAdminNotice")}</span>
+        </div>
+      )}
 
       <Card className="mt-10 w-full gap-6 p-6">
         <form onSubmit={handleSubmit} className="flex flex-col gap-5 text-left">

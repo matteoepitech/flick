@@ -11,6 +11,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countUsers = `-- name: CountUsers :one
+SELECT COUNT(*) AS user_count FROM users
+`
+
+func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countUsers)
+	var user_count int64
+	err := row.Scan(&user_count)
+	return user_count, err
+}
+
 const createUser = `-- name: CreateUser :one
 WITH first_user AS (
   SELECT NOT EXISTS (SELECT 1 FROM users) AS is_first

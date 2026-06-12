@@ -187,6 +187,7 @@
     "back": "Back",
     "title": "Create an account",
     "description": "Groups, history, recurring shares and advanced control.",
+    "firstAdminNotice": "Creation of the first administrator account. This account will have full control over the instance.",
     "username": "Username",
     "usernamePlaceholder": "yourname",
     "email": "Email",

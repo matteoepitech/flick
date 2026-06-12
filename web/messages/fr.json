@@ -187,6 +187,7 @@
     "back": "Retour",
     "title": "Créer un compte",
     "description": "Groupes, historique, partages récurrents et contrôle avancé.",
+    "firstAdminNotice": "Création du premier compte administrateur. Ce compte disposera de tous les droits sur l'instance.",
     "username": "Nom d'utilisateur",
     "usernamePlaceholder": "votrenom",
     "email": "Email",

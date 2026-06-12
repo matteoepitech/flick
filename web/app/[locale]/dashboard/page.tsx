@@ -10,12 +10,22 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart"
+import { Skeleton } from "@/components/ui/skeleton"
 import { fetchStats, type StatsSnapshot } from "@/lib/api"
 
 type Point = { time: string; activeCodes: number }
 
 const MAX_POINTS = 60
 const POLL_INTERVAL_MS = 5000
+
+// formatBytes: Render a byte count as a human-readable size (e.g. "1.5 MB").
+function formatBytes(bytes: number): string {
+  if (bytes <= 0) return "0 B"
+  const units = ["B", "KB", "MB", "GB", "TB"]
+  const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1)
+  const value = bytes / Math.pow(1024, exponent)
+  return `${value.toFixed(exponent === 0 ? 0 : 1)} ${units[exponent]}`
+}
 
 const chartConfig = {
   activeCodes: {
@@ -61,11 +71,11 @@ export default function DashboardPage() {
   const current = points.at(-1)?.activeCodes ?? 0
 
   const summary = [
-    { label: "Total uploads", value: latest ? String(latest.totalUploads) : "—" },
-    { label: "Total downloads", value: latest ? String(latest.totalDownloads) : "—" },
-    { label: "Active links", value: String(current) },
-    { label: "Storage used", value: "—" },
-    { label: "Users", value: "—" },
+    { label: "Total uploads", value: latest ? String(latest.totalUploads) : null },
+    { label: "Total downloads", value: latest ? String(latest.totalDownloads) : null },
+    { label: "Active links", value: latest ? String(current) : null },
+    { label: "Storage used", value: latest ? formatBytes(latest.storageBytes) : null },
+    { label: "Users", value: latest ? String(latest.userCount) : null },
   ]
 
   return (
@@ -80,7 +90,9 @@ export default function DashboardPage() {
           <Card key={s.label}>
             <CardHeader className="pb-2">
               <CardDescription>{s.label}</CardDescription>
-              <CardTitle className="text-3xl">{s.value}</CardTitle>
+              <CardTitle className="text-3xl">
+                {s.value === null ? <Skeleton className="h-9 w-20" /> : s.value}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-xs text-muted-foreground">Data will be wired to the Go API.</p>

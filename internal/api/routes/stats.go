@@ -9,11 +9,15 @@ package routes
 
 import (
 	"encoding/json"
+	"io/fs"
 	"net/http"
+	"path/filepath"
 	"sync/atomic"
 	"time"
 
 	"github.com/matteoepitech/flick/internal/api/code"
+	"github.com/matteoepitech/flick/internal/api/database"
+	"github.com/matteoepitech/flick/internal/api/path"
 )
 
 // Variables that will contain the total uploads/downloads.
@@ -48,15 +52,41 @@ func Downloads() uint64 {
 	return totalDownloads.Load()
 }
 
+// storageUsed: Walk the data directory and sum the size of every stored file.
+//
+// Returns:
+// - result1 (int64): Total bytes used by uploaded files.
+func storageUsed() int64 {
+	var total int64
+	_ = filepath.WalkDir(path.GetDataDir(), func(_ string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return nil
+		}
+		if info, err := d.Info(); err == nil {
+			total += info.Size()
+		}
+		return nil
+	})
+	return total
+}
+
 // SendStats: Build the stats handler.
+//
+// Params:
+// - queries (*database.Queries): The database queries.
 //
 // Returns:
 // - http.HandlerFunc: The handler function.
-func SendStats() http.HandlerFunc {
+func SendStats(queries *database.Queries) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
 			return
+		}
+
+		userCount, err := queries.CountUsers(r.Context())
+		if err != nil {
+			userCount = -1
 		}
 
 		payload := map[string]any{
@@ -64,6 +94,8 @@ func SendStats() http.HandlerFunc {
 			"activeCodes":    code.Cache.ItemCount(),
 			"totalUploads":   Uploads(),
 			"totalDownloads": Downloads(),
+			"userCount":      userCount,
+			"storageBytes":   storageUsed(),
 		}
 
 		w.Header().Set("Content-Type", "application/json")

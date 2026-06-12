@@ -191,6 +191,8 @@ export interface StatsSnapshot {
   activeCodes: number
   totalUploads: number
   totalDownloads: number
+  userCount: number
+  storageBytes: number
 }
 
 export async function fetchStats(signal?: AbortSignal): Promise<StatsSnapshot> {
@@ -210,10 +212,12 @@ export async function fetchStats(signal?: AbortSignal): Promise<StatsSnapshot> {
   const activeCodes = typeof obj.activeCodes === "number" ? obj.activeCodes : 0
   const totalUploads = typeof obj.totalUploads === "number" ? obj.totalUploads : 0
   const totalDownloads = typeof obj.totalDownloads === "number" ? obj.totalDownloads : 0
+  const userCount = typeof obj.userCount === "number" ? obj.userCount : 0
+  const storageBytes = typeof obj.storageBytes === "number" ? obj.storageBytes : 0
   const timestamp =
     typeof obj.timestamp === "string" ? obj.timestamp : new Date().toISOString()
 
-  return { timestamp, activeCodes, totalUploads, totalDownloads }
+  return { timestamp, activeCodes, totalUploads, totalDownloads, userCount, storageBytes }
 }
 
 export interface AuthUser {
