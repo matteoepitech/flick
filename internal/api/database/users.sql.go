@@ -12,25 +12,23 @@ import (
 )
 
 const createUser = `-- name: CreateUser :one
+WITH first_user AS (
+  SELECT NOT EXISTS (SELECT 1 FROM users) AS is_first
+)
 INSERT INTO users (username, email, password_hash, role)
-VALUES ($1, $2, $3, $4)
+SELECT $1, $2, $3, (CASE WHEN first_user.is_first THEN 'admin' ELSE 'user' END)::user_role
+FROM first_user
 RETURNING id, username, email, password_hash, role, created_at
 `
 
 type CreateUserParams struct {
-	Username     string   `json:"username"`
-	Email        string   `json:"email"`
-	PasswordHash string   `json:"password_hash"`
-	Role         UserRole `json:"role"`
+	Username     string `json:"username"`
+	Email        string `json:"email"`
+	PasswordHash string `json:"password_hash"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
-	row := q.db.QueryRow(ctx, createUser,
-		arg.Username,
-		arg.Email,
-		arg.PasswordHash,
-		arg.Role,
-	)
+	row := q.db.QueryRow(ctx, createUser, arg.Username, arg.Email, arg.PasswordHash)
 	var i User
 	err := row.Scan(
 		&i.ID,

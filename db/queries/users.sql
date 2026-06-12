@@ -1,6 +1,10 @@
 -- name: CreateUser :one
+WITH first_user AS (
+  SELECT NOT EXISTS (SELECT 1 FROM users) AS is_first
+)
 INSERT INTO users (username, email, password_hash, role)
-VALUES ($1, $2, $3, $4)
+SELECT $1, $2, $3, (CASE WHEN first_user.is_first THEN 'admin' ELSE 'user' END)::user_role
+FROM first_user
 RETURNING *;
 
 -- name: GetUserByID :one
