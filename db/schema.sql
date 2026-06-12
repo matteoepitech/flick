@@ -15,6 +15,27 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
+--
+-- Name: group_role; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.group_role AS ENUM (
+    'member',
+    'maintainer',
+    'owner'
+);
+
+
+--
+-- Name: user_role; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.user_role AS ENUM (
+    'user',
+    'admin'
+);
+
+
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
@@ -58,6 +79,7 @@ CREATE TABLE public.sessions (
 CREATE TABLE public.user_groups (
     user_id uuid NOT NULL,
     group_id uuid NOT NULL,
+    role public.group_role DEFAULT 'member'::public.group_role NOT NULL,
     joined_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
@@ -71,6 +93,7 @@ CREATE TABLE public.users (
     username text NOT NULL,
     email text NOT NULL,
     password_hash text NOT NULL,
+    role public.user_role DEFAULT 'user'::public.user_role NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 

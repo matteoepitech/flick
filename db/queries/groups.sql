@@ -39,3 +39,8 @@ SELECT u.* FROM users u
 JOIN user_groups ug ON ug.user_id = u.id
 WHERE ug.group_id = $1
 ORDER BY u.username;
+
+-- name: SetRoleInGroup :exec
+UPDATE user_groups ug
+SET role = $3
+WHERE ug.user_id = $1 AND ug.group_id = $2;

@@ -127,7 +127,7 @@ func (q *Queries) ListGroupsForUser(ctx context.Context, userID pgtype.UUID) ([]
 }
 
 const listUsersInGroup = `-- name: ListUsersInGroup :many
-SELECT u.id, u.username, u.email, u.password_hash, u.created_at FROM users u
+SELECT u.id, u.username, u.email, u.password_hash, u.role, u.created_at FROM users u
 JOIN user_groups ug ON ug.user_id = u.id
 WHERE ug.group_id = $1
 ORDER BY u.username
@@ -147,6 +147,7 @@ func (q *Queries) ListUsersInGroup(ctx context.Context, groupID pgtype.UUID) ([]
 			&i.Username,
 			&i.Email,
 			&i.PasswordHash,
+			&i.Role,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -171,5 +172,22 @@ type RemoveUserFromGroupParams struct {
 
 func (q *Queries) RemoveUserFromGroup(ctx context.Context, arg RemoveUserFromGroupParams) error {
 	_, err := q.db.Exec(ctx, removeUserFromGroup, arg.UserID, arg.GroupID)
+	return err
+}
+
+const setRoleInGroup = `-- name: SetRoleInGroup :exec
+UPDATE user_groups ug
+SET role = $3
+WHERE ug.user_id = $1 AND ug.group_id = $2
+`
+
+type SetRoleInGroupParams struct {
+	UserID  pgtype.UUID `json:"user_id"`
+	GroupID pgtype.UUID `json:"group_id"`
+	Role    GroupRole   `json:"role"`
+}
+
+func (q *Queries) SetRoleInGroup(ctx context.Context, arg SetRoleInGroupParams) error {
+	_, err := q.db.Exec(ctx, setRoleInGroup, arg.UserID, arg.GroupID, arg.Role)
 	return err
 }

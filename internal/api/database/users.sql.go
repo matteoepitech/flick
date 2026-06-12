@@ -12,25 +12,32 @@ import (
 )
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (username, email, password_hash)
-VALUES ($1, $2, $3)
-RETURNING id, username, email, password_hash, created_at
+INSERT INTO users (username, email, password_hash, role)
+VALUES ($1, $2, $3, $4)
+RETURNING id, username, email, password_hash, role, created_at
 `
 
 type CreateUserParams struct {
-	Username     string `json:"username"`
-	Email        string `json:"email"`
-	PasswordHash string `json:"password_hash"`
+	Username     string   `json:"username"`
+	Email        string   `json:"email"`
+	PasswordHash string   `json:"password_hash"`
+	Role         UserRole `json:"role"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
-	row := q.db.QueryRow(ctx, createUser, arg.Username, arg.Email, arg.PasswordHash)
+	row := q.db.QueryRow(ctx, createUser,
+		arg.Username,
+		arg.Email,
+		arg.PasswordHash,
+		arg.Role,
+	)
 	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.Username,
 		&i.Email,
 		&i.PasswordHash,
+		&i.Role,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -47,7 +54,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id pgtype.UUID) error {
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, username, email, password_hash, created_at FROM users
+SELECT id, username, email, password_hash, role, created_at FROM users
 WHERE email = $1
 `
 
@@ -59,13 +66,14 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.Username,
 		&i.Email,
 		&i.PasswordHash,
+		&i.Role,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, username, email, password_hash, created_at FROM users
+SELECT id, username, email, password_hash, role, created_at FROM users
 WHERE id = $1
 `
 
@@ -77,13 +85,14 @@ func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
 		&i.Username,
 		&i.Email,
 		&i.PasswordHash,
+		&i.Role,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, username, email, password_hash, created_at FROM users
+SELECT id, username, email, password_hash, role, created_at FROM users
 ORDER BY created_at DESC
 `
 
@@ -101,6 +110,7 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 			&i.Username,
 			&i.Email,
 			&i.PasswordHash,
+			&i.Role,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -111,4 +121,36 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const setUserRoleByEmail = `-- name: SetUserRoleByEmail :exec
+UPDATE users
+SET role = $2
+WHERE email = $1
+`
+
+type SetUserRoleByEmailParams struct {
+	Email string   `json:"email"`
+	Role  UserRole `json:"role"`
+}
+
+func (q *Queries) SetUserRoleByEmail(ctx context.Context, arg SetUserRoleByEmailParams) error {
+	_, err := q.db.Exec(ctx, setUserRoleByEmail, arg.Email, arg.Role)
+	return err
+}
+
+const setUserRoleByID = `-- name: SetUserRoleByID :exec
+UPDATE users
+SET role = $2
+WHERE id = $1
+`
+
+type SetUserRoleByIDParams struct {
+	ID   pgtype.UUID `json:"id"`
+	Role UserRole    `json:"role"`
+}
+
+func (q *Queries) SetUserRoleByID(ctx context.Context, arg SetUserRoleByIDParams) error {
+	_, err := q.db.Exec(ctx, setUserRoleByID, arg.ID, arg.Role)
+	return err
 }
