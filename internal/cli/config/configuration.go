@@ -35,7 +35,7 @@ type ServerLimits struct {
 
 // Global configuration of the CLI
 var Conf Configuration = Configuration{
-	ServerURL:        "http://localhost",
+	ServerURL:        "https://flick.d3l.tech",
 	DefExpTime:       "15m",
 	DefDownloadCount: 1,
 }
