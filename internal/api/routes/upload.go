@@ -9,7 +9,9 @@ package routes
 
 import (
 	"fmt"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/matteoepitech/flick/internal/api/code"
+	"github.com/matteoepitech/flick/internal/api/database"
 	"github.com/matteoepitech/flick/internal/api/logging"
 	"github.com/matteoepitech/flick/internal/api/metadata"
 	"github.com/matteoepitech/flick/internal/api/path"
@@ -19,11 +21,45 @@ import (
 	"os"
 )
 
+// resolveUploaderID: Validate the mandatory X-Flick-User-ID header against the
+// anonymous_users and users tables, and return the uploader UUID. The uploader
+// is required: a missing, malformed or unknown id is an error.
+//
+// Params:
+// - r (*http.Request): The upload request.
+// - queries (*database.Queries): The database queries.
+//
+// Returns:
+// - result1 (string): The validated uploader UUID.
+// - result2 (error): An error if the header is missing, invalid or unknown.
+func resolveUploaderID(r *http.Request, queries *database.Queries) (string, error) {
+	uploaderID := r.Header.Get("X-Flick-User-ID")
+	if uploaderID == "" {
+		return "", fmt.Errorf("missing uploader id")
+	}
+
+	var userUUID pgtype.UUID
+	if err := userUUID.Scan(uploaderID); err != nil {
+		return "", fmt.Errorf("invalid user id %q: %w", uploaderID, err)
+	}
+
+	if _, err := queries.GetAnonymousUserByID(r.Context(), userUUID); err == nil {
+		return uploaderID, nil
+	}
+	if _, err := queries.GetUserByID(r.Context(), userUUID); err == nil {
+		return uploaderID, nil
+	}
+	return "", fmt.Errorf("unknown user id %q", uploaderID)
+}
+
 // UploadFileHandler: Build the upload file handler.
+//
+// Params:
+// - queries (*database.Queries): The database queries.
 //
 // Returns:
 // - http.HandlerFunc: The handler function.
-func UploadFileHandler() http.HandlerFunc {
+func UploadFileHandler(queries *database.Queries) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
@@ -49,7 +85,18 @@ func UploadFileHandler() http.HandlerFunc {
 		}
 		defer file.Close()
 
+		uploaderID, err := resolveUploaderID(r, queries)
+		if err != nil {
+			logging.LogInfoError("Cannot identify uploader: %v", err)
+			WriteError(w, http.StatusBadRequest, "Invalid or unknown user")
+			return
+		}
+
 		m := new(metadata.Metadata)
+		if !metadata.SetUploaderID(m, uploaderID) {
+			WriteError(w, http.StatusBadRequest, "Invalid or unknown user")
+			return
+		}
 
 		// SetExpiration / SetMaxDownloadCount log the precise reason themselves.
 		if !metadata.SetExpiration(m, r.URL.Query().Get("expiration")) {

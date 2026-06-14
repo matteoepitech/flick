@@ -96,6 +96,11 @@ func (ns NullUserRole) Value() (driver.Value, error) {
 	return string(ns.UserRole), nil
 }
 
+type AnonymousUser struct {
+	ID        pgtype.UUID        `json:"id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
 type Group struct {
 	ID        pgtype.UUID        `json:"id"`
 	Name      string             `json:"name"`

@@ -114,6 +114,10 @@ func RunUpload(cmd *cobra.Command, args []string, exp string, mdc string) error 
 			}
 		}
 	}
+	creds, err := config.EnsureCredentials()
+	if err != nil {
+		return fmt.Errorf("Failure: Cannot identify on the server: %w", err)
+	}
 
 	fmt.Printf("Uploading the file %s... (%d bytes)\n", stat.Name(), stat.Size())
 
@@ -153,6 +157,7 @@ func RunUpload(cmd *cobra.Command, args []string, exp string, mdc string) error 
 	}
 
 	req.Header.Set("Content-Type", writer.FormDataContentType())
+	req.Header.Set("X-Flick-User-ID", creds.UserID)
 	req.ContentLength = int64(body.Len())
 
 	if err := doUploadRequest(req, exp); err != nil {

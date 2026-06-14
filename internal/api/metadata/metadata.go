@@ -24,6 +24,7 @@ type Metadata struct {
 	Expiration           string `json:"expiration"`
 	CurrentDownloadCount int32  `json:"current_download_count"`
 	MaxDownloadCount     int32  `json:"max_download_count"`
+	UploaderID           string `json:"uploader_id,omitempty"`
 }
 
 // createMetadataFile: Creates the metadata file containing the expiration date.
@@ -102,6 +103,26 @@ func SetMaxDownloadCount(metadata *Metadata, maxDownloadCount string) bool {
 	}
 
 	metadata.MaxDownloadCount = int32(mdc)
+	return true
+}
+
+// SetUploaderID: Defines the uploader id. The uploader is mandatory, so an empty
+// id is rejected. The id is expected to be already validated against the
+// database by the caller.
+//
+// Params:
+// - metadata (*Metadata): The metadata to modify.
+// - uploaderID (string): The validated uploader UUID.
+//
+// Returns:
+// - result1 (bool): Return true if the metadata has been changed, else false.
+func SetUploaderID(metadata *Metadata, uploaderID string) bool {
+	if uploaderID == "" {
+		logging.LogInfoError("Uploader id is required")
+		return false
+	}
+
+	metadata.UploaderID = uploaderID
 	return true
 }
 

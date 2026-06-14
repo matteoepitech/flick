@@ -44,8 +44,14 @@ CREATE TABLE sessions (
 CREATE INDEX sessions_user_id_idx ON sessions(user_id);
 CREATE INDEX sessions_expires_at_idx ON sessions(expires_at);
 
+CREATE TABLE anonymous_users (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 
 -- migrate:down
+DROP TABLE anonymous_users;
 DROP TABLE user_groups;
 DROP TABLE groups;
 DROP TABLE users;

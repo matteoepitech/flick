@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/matteoepitech/flick/internal/api/code"
 	"github.com/matteoepitech/flick/internal/api/database"
+	"github.com/matteoepitech/flick/internal/api/identification"
 	"github.com/matteoepitech/flick/internal/api/logging"
 	"github.com/matteoepitech/flick/internal/api/path"
 	"github.com/matteoepitech/flick/internal/api/routes"
@@ -65,7 +66,8 @@ func Run(ctx context.Context) error {
 	defer pool.Close()
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/v1/upload", routes.UploadFileHandler())
+	mux.HandleFunc("/api/v1/upload", routes.UploadFileHandler(queries))
+	mux.HandleFunc("/api/v1/identify", identification.IdentifyHandler(queries))
 	mux.HandleFunc("/api/v1/download", routes.DownloadFileHandler())
 	mux.HandleFunc("/api/v1/configure", routes.SendServerConfig())
 	mux.HandleFunc("/api/v1/stats", routes.SendStats(queries))

@@ -16,6 +16,20 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
+-- Name: public; Type: SCHEMA; Schema: -; Owner: -
+--
+
+-- *not* creating schema, since initdb creates it
+
+
+--
+-- Name: SCHEMA public; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON SCHEMA public IS '';
+
+
+--
 -- Name: group_role; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -39,6 +53,16 @@ CREATE TYPE public.user_role AS ENUM (
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
+
+--
+-- Name: anonymous_users; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.anonymous_users (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
 
 --
 -- Name: groups; Type: TABLE; Schema: public; Owner: -
@@ -96,6 +120,14 @@ CREATE TABLE public.users (
     role public.user_role DEFAULT 'user'::public.user_role NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL
 );
+
+
+--
+-- Name: anonymous_users anonymous_users_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.anonymous_users
+    ADD CONSTRAINT anonymous_users_pkey PRIMARY KEY (id);
 
 
 --
