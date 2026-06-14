@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/matteoepitech/flick/internal/cli/config"
+	"github.com/matteoepitech/flick/internal/cli/network"
 	"github.com/schollz/progressbar/v3"
 	"github.com/spf13/cobra"
 	"github.com/tiagomelo/go-clipboard/clipboard"
@@ -33,7 +34,7 @@ import (
 // Returns:
 // - result1 (error): An error occured.
 func doUploadRequest(req *http.Request, exp string) error {
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := network.SharedClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("Failure: Cannot access the server: %w", err)
 	}

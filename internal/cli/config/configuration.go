@@ -15,6 +15,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/matteoepitech/flick/internal/cli/network"
 )
 
 // Configuration structure type
@@ -68,7 +70,7 @@ func (c Configuration) APIBaseURL() string {
 // - result1 (*ServerLimits): The server limits.
 // - result2 (error): If something occured.
 func GetServerLimits() (*ServerLimits, error) {
-	resp, err := http.Get(Conf.APIBaseURL() + "/user-configure")
+	resp, err := network.SharedClient.Get(Conf.APIBaseURL() + "/user-configure")
 	if err != nil {
 		return nil, fmt.Errorf("Failed to fetch server configuration: %w", err)
 	}
@@ -159,7 +161,7 @@ func (c Configuration) SaveConfigurationFile() error {
 // Returns:
 // - result1 (error): If something occured.
 func (c *Configuration) ReplaceUsingServerConfiguration() error {
-	resp, err := http.Get(c.APIBaseURL() + "/user-configure")
+	resp, err := network.SharedClient.Get(c.APIBaseURL() + "/user-configure")
 	if err != nil {
 		return fmt.Errorf("Failed to fetch server configuration: %w", err)
 	}

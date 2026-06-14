@@ -18,6 +18,7 @@ import (
 	"strconv"
 
 	"github.com/matteoepitech/flick/internal/cli/config"
+	"github.com/matteoepitech/flick/internal/cli/network"
 	"github.com/schollz/progressbar/v3"
 	"github.com/spf13/cobra"
 )
@@ -30,7 +31,7 @@ import (
 // Returns:
 // - result1 (error): An error occured.
 func doDownloadRequest(req *http.Request) error {
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := network.SharedClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("Failure: Cannot access the server: %w", err)
 	}

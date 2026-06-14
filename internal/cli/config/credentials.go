@@ -14,6 +14,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+
+	"github.com/matteoepitech/flick/internal/cli/network"
 )
 
 // Credentials structure type, stored at ~/.flick/credentials.json
@@ -100,7 +102,7 @@ func saveCredentials(creds Credentials) error {
 // - result1 (*Credentials): The new credentials.
 // - result2 (error): If something occured.
 func identifyOnServer() (*Credentials, error) {
-	resp, err := http.Post(Conf.APIBaseURL()+"/identify", "application/json", nil)
+	resp, err := network.SharedClient.Post(Conf.APIBaseURL()+"/identify", "application/json", nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to identify on the server: %w", err)
 	}
