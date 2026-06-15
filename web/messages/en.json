@@ -135,9 +135,13 @@
     "cancel": "Cancel",
     "submit": "Generate code",
     "submitting": "Uploading…",
-    "uploadProgress": "{name} — {percent}%",
+    "uploadProgress": "{name} · {percent}%",
     "uploadError": "Upload failed. Please retry.",
-    "comingSoon": "Not available"
+    "comingSoon": "Not available",
+    "dropOrFolder": "or a whole",
+    "dropBrowseFolder": "folder",
+    "folderMeta": "{count, plural, =1 {# file} other {# files}} · {size}",
+    "batchLabel": "{count, plural, =1 {# item} other {# items}}"
   },
   "SendSuccess": {
     "back": "New transfer",
@@ -166,7 +170,9 @@
     "downloadAll": "Download all",
     "loading": "Fetching…",
     "notFound": "This code does not exist or has expired.",
-    "error": "Could not fetch the file. Please retry."
+    "error": "Could not fetch the file. Please retry.",
+    "downloadFolder": "Download folder",
+    "folderFiles": "{count, plural, =1 {# file} other {# files}}"
   },
   "Login": {
     "back": "Back",

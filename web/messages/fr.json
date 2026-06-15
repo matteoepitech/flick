@@ -135,9 +135,13 @@
     "cancel": "Annuler",
     "submit": "Générer le code",
     "submitting": "Envoi en cours…",
-    "uploadProgress": "{name} — {percent}%",
+    "uploadProgress": "{name} · {percent}%",
     "uploadError": "Échec de l'envoi. Réessayez.",
-    "comingSoon": "Non disponible"
+    "comingSoon": "Non disponible",
+    "dropOrFolder": "ou un",
+    "dropBrowseFolder": "dossier",
+    "folderMeta": "{count, plural, =1 {# fichier} other {# fichiers}} · {size}",
+    "batchLabel": "{count, plural, =1 {# élément} other {# éléments}}"
   },
   "SendSuccess": {
     "back": "Nouvel envoi",
@@ -166,7 +170,9 @@
     "downloadAll": "Tout télécharger",
     "loading": "Récupération…",
     "notFound": "Ce code n'existe pas ou a expiré.",
-    "error": "Impossible de récupérer le fichier. Réessayez."
+    "error": "Impossible de récupérer le fichier. Réessayez.",
+    "downloadFolder": "Télécharger le dossier",
+    "folderFiles": "{count, plural, =1 {# fichier} other {# fichiers}}"
   },
   "Login": {
     "back": "Retour",

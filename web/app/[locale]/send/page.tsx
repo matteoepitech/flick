@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowUpRight, ChevronLeft, FileText, Upload, X } from "lucide-react"
+import { ArrowUpRight, ChevronLeft, FileText, Folder, Upload, X } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useEffect, useRef, useState, type ChangeEvent, type DragEvent, type FormEvent } from "react"
 
@@ -9,13 +9,24 @@ import { Card } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
-import { ApiError, fetchServerLimits, uploadFile } from "@/lib/api"
+import { ApiError, fetchServerLimits, uploadFile, type UploadEntry } from "@/lib/api"
 import { Link, useRouter } from "@/i18n/navigation"
 import { cn } from "@/lib/utils"
 
 const MAX_FILES = 5
 
 type Expiration = "1h" | "2h" | "3h" | "4h"
+
+// UploadItem: one entry in the staging list. A loose file is a single-entry
+// item; a folder keeps every file with its relative path so it can be zipped
+// with its structure intact, just like the CLI.
+interface UploadItem {
+  id: string
+  name: string
+  isFolder: boolean
+  entries: UploadEntry[]
+  size: number
+}
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return "0 o"
@@ -24,12 +35,78 @@ function formatBytes(bytes: number): string {
   return `${(bytes / 1024 ** i).toFixed(i === 0 ? 0 : 1)} ${units[i]}`
 }
 
+let itemCounter = 0
+function nextId(): string {
+  itemCounter += 1
+  return `item-${itemCounter}`
+}
+
+function fileItem(file: File): UploadItem {
+  // A folder picked through <input webkitdirectory> yields files carrying a
+  // webkitRelativePath; treat those as a folder item grouped below instead.
+  return { id: nextId(), name: file.name, isFolder: false, entries: [{ path: file.name, file }], size: file.size }
+}
+
+function folderItem(name: string, entries: UploadEntry[]): UploadItem {
+  const size = entries.reduce((total, entry) => total + entry.file.size, 0)
+  return { id: nextId(), name, isFolder: true, entries, size }
+}
+
+// fileFromEntry / walkDirectory: read a dropped FileSystemEntry tree into flat
+// UploadEntry list, preserving each file's path relative to the dropped folder.
+function fileFromEntry(entry: FileSystemFileEntry): Promise<File> {
+  return new Promise((resolve, reject) => entry.file(resolve, reject))
+}
+
+async function walkDirectory(dir: FileSystemDirectoryEntry, prefix: string, out: UploadEntry[]): Promise<void> {
+  const reader = dir.createReader()
+  const readBatch = () =>
+    new Promise<FileSystemEntry[]>((resolve, reject) => reader.readEntries(resolve, reject))
+
+  // readEntries returns the directory in batches; keep reading until it drains.
+  for (let batch = await readBatch(); batch.length > 0; batch = await readBatch()) {
+    for (const child of batch) {
+      const childPath = `${prefix}/${child.name}`
+      if (child.isFile) {
+        const file = await fileFromEntry(child as FileSystemFileEntry)
+        out.push({ path: childPath, file })
+      } else if (child.isDirectory) {
+        await walkDirectory(child as FileSystemDirectoryEntry, childPath, out)
+      }
+    }
+  }
+}
+
+async function itemsFromDataTransfer(list: DataTransferItemList): Promise<UploadItem[]> {
+  // webkitGetAsEntry() must be called synchronously while the event is live, so
+  // collect every entry first, then traverse the directories asynchronously.
+  const entries: FileSystemEntry[] = []
+  for (let i = 0; i < list.length; i++) {
+    const entry = list[i].webkitGetAsEntry()
+    if (entry) entries.push(entry)
+  }
+
+  const items: UploadItem[] = []
+  for (const entry of entries) {
+    if (entry.isFile) {
+      const file = await fileFromEntry(entry as FileSystemFileEntry)
+      items.push(fileItem(file))
+    } else if (entry.isDirectory) {
+      const collected: UploadEntry[] = []
+      await walkDirectory(entry as FileSystemDirectoryEntry, entry.name, collected)
+      if (collected.length > 0) items.push(folderItem(entry.name, collected))
+    }
+  }
+  return items
+}
+
 export default function SendPage() {
   const t = useTranslations("Send")
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
+  const folderInputRef = useRef<HTMLInputElement>(null)
 
-  const [files, setFiles] = useState<File[]>([])
+  const [items, setItems] = useState<UploadItem[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const [expiration, setExpiration] = useState<Expiration>("1h")
   const [maxDownloadCount, setMaxDownloadCount] = useState<number>(1)
@@ -53,58 +130,92 @@ export default function SendPage() {
     return () => controller.abort()
   }, [])
 
-  function addFiles(incoming: FileList | File[]) {
+  // webkitdirectory / directory are non-standard attributes React won't type, so
+  // set them imperatively to let the second input pick a whole folder.
+  useEffect(() => {
+    const input = folderInputRef.current
+    if (input) {
+      input.setAttribute("webkitdirectory", "")
+      input.setAttribute("directory", "")
+    }
+  }, [])
+
+  function addItems(incoming: UploadItem[]) {
     let hasError = false
-    const validFiles = Array.from(incoming).filter((file) => {
-      if (file.size > maxFileSize) {
-        setError(t("fileTooLarge", { name: file.name, size: formatBytes(maxFileSize) }))
+    const valid = incoming.filter((item) => {
+      if (item.size > maxFileSize) {
+        setError(t("fileTooLarge", { name: item.name, size: formatBytes(maxFileSize) }))
         hasError = true
         return false
       }
       return true
     })
 
-    if (validFiles.length > 0 && !hasError) {
-      setError(null) // clear possible previous error if we successfully add files without new errors
+    if (valid.length > 0 && !hasError) {
+      setError(null) // clear possible previous error if we successfully add items without new errors
     }
 
-    setFiles((current) => {
-      const next = [...current, ...validFiles]
-      return next.slice(0, MAX_FILES)
-    })
+    setItems((current) => [...current, ...valid].slice(0, MAX_FILES))
   }
 
   function handleBrowseChange(event: ChangeEvent<HTMLInputElement>) {
-    if (event.target.files) addFiles(event.target.files)
+    const files = Array.from(event.target.files ?? [])
+    if (files.length > 0) addItems(files.map(fileItem))
     event.target.value = ""
   }
 
-  function handleDrop(event: DragEvent<HTMLDivElement>) {
-    event.preventDefault()
-    setIsDragging(false)
-    if (event.dataTransfer.files.length) addFiles(event.dataTransfer.files)
+  function handleFolderChange(event: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files ?? [])
+    if (files.length > 0) {
+      // Every file from a directory input carries its webkitRelativePath, e.g.
+      // "myfolder/sub/a.txt"; the first segment is the folder name.
+      const top = files[0].webkitRelativePath.split("/")[0] || "folder"
+      const entries: UploadEntry[] = files.map((file) => ({
+        path: file.webkitRelativePath || file.name,
+        file,
+      }))
+      addItems([folderItem(top, entries)])
+    }
+    event.target.value = ""
   }
 
-  function removeFile(index: number) {
-    setFiles((current) => current.filter((_, i) => i !== index))
+  async function handleDrop(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault()
+    setIsDragging(false)
+
+    const list = event.dataTransfer.items
+    if (list && list.length > 0 && typeof list[0].webkitGetAsEntry === "function") {
+      // Entry API lets us walk dropped folders; fall back to flat files below.
+      addItems(await itemsFromDataTransfer(list))
+    } else if (event.dataTransfer.files.length > 0) {
+      addItems(Array.from(event.dataTransfer.files).map(fileItem))
+    }
+  }
+
+  function removeItem(id: string) {
+    setItems((current) => current.filter((item) => item.id !== id))
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (files.length === 0) return
+    if (items.length === 0) return
     setSubmitting(true)
     setError(null)
 
     try {
-      const codes: string[] = []
-      for (const file of files) {
-        const code = await uploadFile(file, expiration, maxDownloadCount, ({ loaded, total }) => {
-          setProgress({ name: file.name, percent: Math.round((loaded / total) * 100) })
-        })
-        codes.push(code)
-      }
+      // Everything the user staged goes into one archive, so a whole batch of
+      // files and folders shares a single code. Each item already carries the
+      // right relative paths, so the receiver gets them grouped back as items.
+      const entries = items.flatMap((item) => item.entries)
+      const name = items.length === 1 ? items[0].name : "flick-files"
+      const label = items.length === 1 ? items[0].name : t("batchLabel", { count: items.length })
+
+      const code = await uploadFile({ name, entries }, expiration, maxDownloadCount, ({ loaded, total }) => {
+        setProgress({ name: label, percent: Math.round((loaded / total) * 100) })
+      })
+
       const params = new URLSearchParams()
-      for (const code of codes) params.append("code", code)
+      params.set("code", code)
       params.set("exp", expiration)
       router.push(`/send/success?${params.toString()}`)
     } catch (err) {
@@ -122,7 +233,7 @@ export default function SendPage() {
     { value: "4h", label: t("expiration4h") },
   ]
 
-  const canSubmit = files.length > 0 && !submitting
+  const canSubmit = items.length > 0 && !submitting
 
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-col items-center px-6 py-16">
@@ -158,6 +269,7 @@ export default function SendPage() {
           )}
         >
           <input ref={inputRef} type="file" multiple className="hidden" onChange={handleBrowseChange} />
+          <input ref={folderInputRef} type="file" multiple className="hidden" onChange={handleFolderChange} />
 
           <span className="flex h-14 w-14 items-center justify-center rounded-xl bg-muted text-muted-foreground">
             <Upload className="h-6 w-6" />
@@ -174,29 +286,41 @@ export default function SendPage() {
               >
                 {t("dropBrowse")}
               </button>{" "}
-              — {t("dropLimits", { maxFiles: MAX_FILES, maxSize: formatBytes(maxFileSize) })}
+              {t("dropOrFolder")}{" "}
+              <button
+                type="button"
+                onClick={() => folderInputRef.current?.click()}
+                className="font-medium text-primary underline-offset-2 hover:underline"
+              >
+                {t("dropBrowseFolder")}
+              </button>{" "}
+              · {t("dropLimits", { maxFiles: MAX_FILES, maxSize: formatBytes(maxFileSize) })}
             </p>
           </div>
         </div>
 
-        {files.length > 0 && (
+        {items.length > 0 && (
           <Card className="p-2">
             <ul className="flex flex-col">
-              {files.map((file, index) => (
+              {items.map((item) => (
                 <li
-                  key={`${file.name}-${index}`}
+                  key={item.id}
                   className="flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-muted/50"
                 >
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-                    <FileText className="h-4 w-4" />
+                    {item.isFolder ? <Folder className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{file.name}</p>
-                    <p className="text-xs text-muted-foreground">{formatBytes(file.size)}</p>
+                    <p className="truncate text-sm font-medium">{item.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {item.isFolder
+                        ? t("folderMeta", { count: item.entries.length, size: formatBytes(item.size) })
+                        : formatBytes(item.size)}
+                    </p>
                   </div>
                   <button
                     type="button"
-                    onClick={() => removeFile(index)}
+                    onClick={() => removeItem(item.id)}
                     aria-label={t("remove")}
                     className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                   >

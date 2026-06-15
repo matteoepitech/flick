@@ -1,12 +1,20 @@
 "use client"
 
-import { ChevronLeft, Download, FileText, Loader2 } from "lucide-react"
+import { ChevronLeft, Download, FileText, Folder, Loader2 } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { use, useEffect, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { CodeNotFoundError, type DownloadedFile, downloadByCode, triggerBlobDownload } from "@/lib/api"
+import {
+  buildFolderArchive,
+  CodeNotFoundError,
+  type DownloadedFile,
+  type DownloadItem,
+  downloadByCode,
+  groupDownloadItems,
+  triggerBlobDownload,
+} from "@/lib/api"
 import { Link } from "@/i18n/navigation"
 
 function formatBytes(bytes: number): string {
@@ -18,7 +26,7 @@ function formatBytes(bytes: number): string {
 
 type State =
   | { status: "loading" }
-  | { status: "ready"; files: DownloadedFile[] }
+  | { status: "ready"; files: DownloadedFile[]; archiveName: string }
   | { status: "not_found" }
   | { status: "error" }
 
@@ -34,7 +42,7 @@ export default function ReceiveCodePage({ params }: { params: Promise<{ code: st
     setState({ status: "loading" })
 
     downloadByCode(code, controller.signal)
-      .then((files) => setState({ status: "ready", files }))
+      .then(({ files, archiveName }) => setState({ status: "ready", files, archiveName }))
       .catch((err: unknown) => {
         if (err instanceof DOMException && err.name === "AbortError") return
         if (err instanceof CodeNotFoundError) {
@@ -79,47 +87,84 @@ export default function ReceiveCodePage({ params }: { params: Promise<{ code: st
           <p className="rounded-lg bg-destructive/10 px-4 py-3 text-center text-sm text-destructive">{t("error")}</p>
         )}
 
-        {state.status === "ready" && (
-          <div className="flex flex-col gap-4">
-            <Card className="p-2">
-              <ul className="flex flex-col">
-                {state.files.map((file, index) => (
-                  <li key={`${file.name}-${index}`} className="flex items-center gap-3 rounded-lg px-3 py-2.5">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-                      <FileText className="h-4 w-4" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{file.name}</p>
-                      <p className="text-xs text-muted-foreground">{formatBytes(file.size)}</p>
-                    </div>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => triggerBlobDownload(file.blob, file.name)}
-                    >
-                      <Download className="size-4" />
-                      {t("download")}
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            </Card>
-
-            {state.files.length > 1 && (
-              <Button
-                type="button"
-                size="lg"
-                className="h-12 w-full"
-                onClick={() => state.files.forEach((file) => triggerBlobDownload(file.blob, file.name))}
-              >
-                <Download className="size-5" />
-                {t("downloadAll")}
-              </Button>
-            )}
-          </div>
-        )}
+        {state.status === "ready" && <ReadyView files={state.files} archiveName={state.archiveName} />}
       </div>
     </main>
+  )
+}
+
+function ReadyView({ files, archiveName }: { files: DownloadedFile[]; archiveName: string }) {
+  const t = useTranslations("ReceiveCode")
+  // Which download is currently zipping (item name, or "*" for "download all").
+  const [busy, setBusy] = useState<string | null>(null)
+  const items = groupDownloadItems(files)
+
+  // A folder is re-zipped so it extracts straight back into its directory (the
+  // browser's `download` attribute strips any "/" from a filename, so handing
+  // out each entry individually would flatten the folder); a loose file is
+  // handed over as-is.
+  async function downloadItem(item: DownloadItem) {
+    if (!item.isFolder) {
+      triggerBlobDownload(item.entries[0].blob, item.name)
+      return
+    }
+    setBusy(item.name)
+    try {
+      const { blob, name } = await buildFolderArchive(item.entries, item.name)
+      triggerBlobDownload(blob, name)
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function downloadAll() {
+    setBusy("*")
+    try {
+      const { blob, name } = await buildFolderArchive(files, archiveName)
+      triggerBlobDownload(blob, name)
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <Card className="p-2">
+        <ul className="flex flex-col">
+          {items.map((item) => (
+            <li key={item.name} className="flex items-center gap-3 rounded-lg px-3 py-2.5">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                {item.isFolder ? <Folder className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">{item.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {item.isFolder
+                    ? `${t("folderFiles", { count: item.entries.length })} · ${formatBytes(item.size)}`
+                    : formatBytes(item.size)}
+                </p>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={busy === item.name}
+                onClick={() => downloadItem(item)}
+              >
+                {busy === item.name ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+                {t("download")}
+              </Button>
+            </li>
+          ))}
+        </ul>
+      </Card>
+
+      {items.length > 1 && (
+        <Button type="button" size="lg" className="h-12 w-full" disabled={busy !== null} onClick={downloadAll}>
+          {busy === "*" ? <Loader2 className="size-5 animate-spin" /> : <Download className="size-5" />}
+          {t("downloadAll")}
+        </Button>
+      )}
+    </div>
   )
 }

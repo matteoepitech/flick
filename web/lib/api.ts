@@ -55,8 +55,73 @@ export interface UploadProgress {
   total: number
 }
 
+// Anonymous uploader id, the web counterpart of the CLI's credentials file: it
+// lets the server attribute uploads from visitors who are not signed in.
+const UPLOADER_ID_KEY = "flick.uploaderId"
+// Mirrors the key written by lib/auth.ts; read directly to avoid an import cycle.
+const SESSION_KEY = "flick.session"
+
+// identify: Ask the server to create an anonymous user and return its UUID. The
+// API replies 201 with { "user_id": "<uuid>" } (see the CLI's /identify call).
+export async function identify(signal?: AbortSignal): Promise<string> {
+  const url = apiUrl("/identify")
+
+  const res = await fetch(url.toString(), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    signal,
+  })
+  if (!res.ok) {
+    throw new ApiError(res.status, parseErrorMessage(await res.text().catch(() => ""), res.statusText))
+  }
+
+  const data = (await res.json()) as { user_id?: string }
+  if (!data.user_id) throw new ApiError(res.status, "Invalid identify response")
+  return data.user_id
+}
+
+// ensureUploaderId: Resolve the X-Flick-User-ID the server requires on upload. A
+// signed-in visitor uploads under their account id; everyone else reuses (or
+// creates once) an anonymous id kept in localStorage, just like the CLI keeps
+// its credentials file.
+export async function ensureUploaderId(signal?: AbortSignal): Promise<string> {
+  if (typeof window !== "undefined") {
+    const rawSession = window.localStorage.getItem(SESSION_KEY)
+    if (rawSession) {
+      try {
+        const parsed = JSON.parse(rawSession) as { user?: { id?: string } }
+        if (parsed.user?.id) return parsed.user.id
+      } catch {
+        // Malformed session: fall through to the anonymous id below.
+      }
+    }
+
+    const existing = window.localStorage.getItem(UPLOADER_ID_KEY)
+    if (existing) return existing
+  }
+
+  const id = await identify(signal)
+  if (typeof window !== "undefined") window.localStorage.setItem(UPLOADER_ID_KEY, id)
+  return id
+}
+
+// UploadEntry: one file to store in the archive, keyed by its path relative to
+// the upload root. A loose file uses just its name ("photo.png"); a folder
+// keeps its structure ("myfolder/sub/a.txt"), exactly like the CLI.
+export interface UploadEntry {
+  path: string
+  file: File
+}
+
+// Upload: a single archive the user wants to send. `name` is the base name used
+// for the .zip (the file name, or the folder name for a directory upload).
+export interface Upload {
+  name: string
+  entries: UploadEntry[]
+}
+
 export async function uploadFile(
-  file: File,
+  upload: Upload,
   expiration: string,
   maxDownloadCount: number,
   onProgress?: (progress: UploadProgress) => void,
@@ -66,18 +131,25 @@ export async function uploadFile(
   url.searchParams.set("expiration", expiration)
   url.searchParams.set("maxDownloadCount", String(maxDownloadCount))
 
+  // The server requires a known uploader (X-Flick-User-ID), exactly like the CLI.
+  const uploaderId = await ensureUploaderId(signal)
+
   // Like the CLI, the web always uploads a zip archive: the server stores it
-  // compressed and the client (CLI or web) extracts it on download.
+  // compressed and the client (CLI or web) extracts it on download. A folder is
+  // stored with its full directory structure so it comes back intact.
   const zip = new JSZip()
-  zip.file(file.name, file)
+  for (const entry of upload.entries) {
+    zip.file(entry.path, entry.file)
+  }
   const archive = await zip.generateAsync({ type: "blob", compression: "DEFLATE" })
 
   const form = new FormData()
-  form.append("file", archive, `${file.name}.zip`)
+  form.append("file", archive, `${upload.name}.zip`)
 
   return new Promise<string>((resolve, reject) => {
     const xhr = new XMLHttpRequest()
     xhr.open("POST", url.toString())
+    xhr.setRequestHeader("X-Flick-User-ID", uploaderId)
 
     xhr.upload.addEventListener("progress", (event) => {
       if (event.lengthComputable && onProgress) {
@@ -101,12 +173,28 @@ export async function uploadFile(
 }
 
 export interface DownloadedFile {
+  // path: the full relative path inside the archive, e.g. "myfolder/sub/a.txt".
+  // Preserved so a folder can be re-zipped with its structure intact.
+  path: string
+  // name: the basename of path, used for display and single-file downloads.
   name: string
   blob: Blob
   size: number
 }
 
-export async function downloadByCode(code: string, signal?: AbortSignal): Promise<DownloadedFile[]> {
+function basename(path: string): string {
+  const i = path.lastIndexOf("/")
+  return i === -1 ? path : path.slice(i + 1)
+}
+
+export interface DownloadResult {
+  files: DownloadedFile[]
+  // archiveName: base name (no ".zip") taken from the uploaded archive, used to
+  // name the folder and its re-zipped download. Falls back to "flick-download".
+  archiveName: string
+}
+
+export async function downloadByCode(code: string, signal?: AbortSignal): Promise<DownloadResult> {
   const url = apiUrl("/download")
   url.searchParams.set("code", code)
 
@@ -117,21 +205,89 @@ export async function downloadByCode(code: string, signal?: AbortSignal): Promis
 
   const form = await res.formData()
   const files: DownloadedFile[] = []
+  let archiveName = "flick-download"
 
   // Every part is a zip archive (see uploadFile): extract its entries so the
-  // user gets the real files back, not the .zip wrapper.
+  // user gets the real files back, not the .zip wrapper. A folder upload keeps
+  // its directory structure in the entry paths (e.g. "myfolder/sub/a.txt").
   for (const value of form.getAll("file")) {
     if (!(value instanceof File)) continue
+
+    // The part filename is "<original name>.zip" (folder or file name); keep it
+    // so the folder download is named after what was actually sent.
+    if (value.name) archiveName = value.name.replace(/\.zip$/i, "")
 
     const zip = await JSZip.loadAsync(value)
     for (const entry of Object.values(zip.files)) {
       if (entry.dir) continue
       const blob = await entry.async("blob")
-      files.push({ name: entry.name, blob, size: blob.size })
+      files.push({ path: entry.name, name: basename(entry.name), blob, size: blob.size })
     }
   }
 
-  return files
+  return { files, archiveName }
+}
+
+// hasFolderStructure: true when any downloaded entry lives inside a directory,
+// meaning the user sent a folder rather than loose files.
+export function hasFolderStructure(files: DownloadedFile[]): boolean {
+  return files.some((file) => file.path.includes("/"))
+}
+
+// DownloadItem: one top-level entry inside a code, mirroring how the send page
+// stages uploads. A folder groups every file under it; a loose file is a single
+// entry. Both render the same way, only the icon and subtitle differ.
+export interface DownloadItem {
+  name: string
+  isFolder: boolean
+  entries: DownloadedFile[]
+  size: number
+}
+
+// groupDownloadItems: Rebuild the top-level items from the flat entry list. Each
+// first path segment becomes one item: a folder when it has nested files, a
+// plain file otherwise. So a code holding "report.pdf" and "photos/a.jpg" shows
+// one file and one folder side by side, like the upload list.
+export function groupDownloadItems(files: DownloadedFile[]): DownloadItem[] {
+  const order: string[] = []
+  const groups = new Map<string, DownloadedFile[]>()
+
+  for (const file of files) {
+    const top = file.path.split("/")[0]
+    const group = groups.get(top)
+    if (group) {
+      group.push(file)
+    } else {
+      groups.set(top, [file])
+      order.push(top)
+    }
+  }
+
+  return order.map((name) => {
+    const entries = groups.get(name) ?? []
+    return {
+      name,
+      isFolder: entries.some((entry) => entry.path.includes("/")),
+      entries,
+      size: entries.reduce((total, entry) => total + entry.size, 0),
+    }
+  })
+}
+
+// buildFolderArchive: Re-zip the downloaded entries into a single archive that
+// preserves their relative paths, so the browser delivers the whole folder in
+// one download (and it extracts straight back into that folder) instead of
+// flattening every file. Returns the blob and the suggested filename.
+export async function buildFolderArchive(
+  files: DownloadedFile[],
+  archiveName: string
+): Promise<{ blob: Blob; name: string }> {
+  const zip = new JSZip()
+  for (const file of files) {
+    zip.file(file.path, file.blob)
+  }
+  const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" })
+  return { blob, name: `${archiveName}.zip` }
 }
 
 export async function loadUserConfiguration(

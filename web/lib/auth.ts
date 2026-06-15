@@ -30,7 +30,7 @@ export function clearSession(): void {
 }
 
 // verifySession: Confirm a stored session still maps to a real account on the
-// server. A definite auth rejection (401 — unknown token or deleted user) clears
+// server. A definite auth rejection (401, unknown token or deleted user) clears
 // the session and returns false, so a ghost session can't keep someone "logged
 // in" after the account is gone. Transient/network errors keep the session to
 // avoid logging users out when the API is briefly unreachable.

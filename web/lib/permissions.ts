@@ -38,7 +38,7 @@ export const SECTION_PATHS: Record<DashboardSection, string> = {
   settings: "/dashboard/settings",
 }
 
-// landingPath: Where to send a user inside the dashboard — their first allowed
+// landingPath: Where to send a user inside the dashboard, their first allowed
 // section, or home if they have no access at all.
 export function landingPath(user: AuthUser | null): string {
   const first = visibleSections(user)[0]
