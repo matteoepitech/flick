@@ -1,7 +1,8 @@
 "use client"
 
-import { ArrowUpRight, LayoutDashboard, Settings, Users } from "lucide-react"
+import { ArrowUpRight, LayoutDashboard, Settings, Users, UsersRound } from "lucide-react"
 import { usePathname } from "next/navigation"
+import { useEffect, useState } from "react"
 
 import { Link } from "@/i18n/navigation"
 import {
@@ -16,22 +17,37 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
+import { type AuthUser } from "@/lib/api"
+import { loadSession } from "@/lib/auth"
+import { type DashboardSection, visibleSections } from "@/lib/permissions"
 
 type NavItem = {
   href: string
   label: string
   icon: React.ComponentType<{ className?: string }>
+  section: DashboardSection
   separatedAbove?: boolean
 }
 
-const adminItems: NavItem[] = [
-  { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
-  { href: "/dashboard/users", label: "Users", icon: Users },
-  { href: "/dashboard/settings", label: "Settings", icon: Settings, separatedAbove: true },
+// Every dashboard entry maps to a section so it can be filtered by the user's
+// role. Admins see the administration items; maintainers see only their group.
+const navItems: NavItem[] = [
+  { href: "/dashboard", label: "Overview", icon: LayoutDashboard, section: "overview" },
+  { href: "/dashboard/users", label: "Users", icon: Users, section: "users" },
+  { href: "/dashboard/group", label: "My group", icon: UsersRound, section: "group" },
+  { href: "/dashboard/settings", label: "Settings", icon: Settings, section: "settings", separatedAbove: true },
 ]
 
 export function DashboardSidebar() {
   const pathname = usePathname()
+  const [user, setUser] = useState<AuthUser | null>(null)
+
+  useEffect(() => {
+    setUser(loadSession()?.user ?? null)
+  }, [])
+
+  const allowed = visibleSections(user)
+  const items = navItems.filter((item) => allowed.includes(item.section))
 
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === "/dashboard" || /\/[^/]+\/dashboard$/.test(pathname)
@@ -50,10 +66,10 @@ export function DashboardSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Administration</SidebarGroupLabel>
+          <SidebarGroupLabel>{user?.role === "admin" ? "Administration" : "Group"}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="gap-2">
-              {adminItems.map((item) => (
+              {items.map((item) => (
                 <SidebarMenuItem
                   key={item.href}
                   className={item.separatedAbove ? "mt-2 border-t border-sidebar-border pt-2" : ""}

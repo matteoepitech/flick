@@ -7,7 +7,8 @@ import { useEffect, useState } from "react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Button } from "@/components/ui/button"
 import { type AuthSession } from "@/lib/api"
-import { loadSession } from "@/lib/auth"
+import { loadSession, verifySession } from "@/lib/auth"
+import { canAccessDashboard } from "@/lib/permissions"
 import { Link, usePathname } from "@/i18n/navigation"
 
 export default function SiteHeader() {
@@ -17,9 +18,19 @@ export default function SiteHeader() {
   const [session, setSession] = useState<AuthSession | null>(null)
 
   // Re-read the session on every navigation so the header reflects login/logout
-  // without a full page reload.
+  // without a full page reload, and drop it if the server no longer knows the
+  // account (e.g. a deleted user) so a ghost session can't linger.
   useEffect(() => {
-    setSession(loadSession())
+    const stored = loadSession()
+    setSession(stored)
+    if (!stored) return
+
+    const controller = new AbortController()
+    verifySession(stored, controller.signal).then((valid) => {
+      if (!valid) setSession(null)
+    })
+
+    return () => controller.abort()
   }, [pathname])
 
   if (pathname.startsWith("/dashboard")) {
@@ -37,12 +48,14 @@ export default function SiteHeader() {
         </Link>
 
         <nav className="flex items-center gap-4">
-          <Button asChild variant="ghost">
-            <Link href="/dashboard">
-              <LayoutDashboard className="h-4 w-4" />
-              {t("dashboard")}
-            </Link>
-          </Button>
+          {canAccessDashboard(session?.user ?? null) && (
+            <Button asChild variant="ghost">
+              <Link href="/dashboard">
+                <LayoutDashboard className="h-4 w-4" />
+                {t("dashboard")}
+              </Link>
+            </Button>
+          )}
           <Button asChild>
             <Link href="/send">
               <ArrowUpRight className="h-4 w-4" />

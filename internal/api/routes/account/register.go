@@ -31,6 +31,7 @@ type RegisterResponse struct {
 	ID        pgtype.UUID        `json:"id"`
 	Username  string             `json:"username"`
 	Email     string             `json:"email"`
+	Role      database.UserRole  `json:"role"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
@@ -87,6 +88,7 @@ func RegisterHandler(queries *database.Queries) http.HandlerFunc {
 			ID:        user.ID,
 			Username:  user.Username,
 			Email:     user.Email,
+			Role:      user.Role,
 			CreatedAt: user.CreatedAt,
 		})
 	}

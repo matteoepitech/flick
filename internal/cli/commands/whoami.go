@@ -70,7 +70,7 @@ func RunWhoami(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to encode request: %w", err)
 	}
 
-	req, err := http.NewRequest(http.MethodGet, config.Conf.APIBaseURL()+"/whoami", bytes.NewReader(body))
+	req, err := http.NewRequest(http.MethodPost, config.Conf.APIBaseURL()+"/whoami", bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}

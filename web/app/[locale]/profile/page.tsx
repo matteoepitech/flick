@@ -7,7 +7,7 @@ import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { type AuthSession } from "@/lib/api"
-import { clearSession, loadSession } from "@/lib/auth"
+import { clearSession, loadSession, verifySession } from "@/lib/auth"
 import { Link, useRouter } from "@/i18n/navigation"
 
 export default function ProfilePage() {
@@ -20,8 +20,18 @@ export default function ProfilePage() {
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
-    setSession(loadSession())
+    const stored = loadSession()
+    setSession(stored)
     setReady(true)
+    if (!stored) return
+
+    // Drop a ghost session whose account no longer exists on the server.
+    const controller = new AbortController()
+    verifySession(stored, controller.signal).then((valid) => {
+      if (!valid) setSession(null)
+    })
+
+    return () => controller.abort()
   }, [])
 
   function handleLogout() {

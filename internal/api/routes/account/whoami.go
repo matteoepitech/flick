@@ -37,7 +37,7 @@ type WhoamiResponse struct {
 // - result1 (http.HandlerFunc): The handler function.
 func WhoamiHandler(queries *database.Queries) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
+		if r.Method != http.MethodPost {
 			routes.WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
 			return
 		}
@@ -83,6 +83,7 @@ func WhoamiHandler(queries *database.Queries) http.HandlerFunc {
 				ID:        user.ID,
 				Username:  user.Username,
 				Email:     user.Email,
+				Role:      user.Role,
 				CreatedAt: user.CreatedAt,
 			},
 		})

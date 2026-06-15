@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts"
 
+import { SectionGuard } from "@/components/section-guard"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   ChartContainer,
@@ -79,6 +80,7 @@ export default function DashboardPage() {
   ]
 
   return (
+    <SectionGuard section="overview">
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-semibold tracking-tight">Overview</h2>
@@ -124,5 +126,6 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
     </div>
+    </SectionGuard>
   )
 }

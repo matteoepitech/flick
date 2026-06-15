@@ -235,10 +235,20 @@ export async function fetchStats(signal?: AbortSignal): Promise<StatsSnapshot> {
   return { timestamp, activeCodes, totalUploads, totalDownloads, userCount, storageBytes }
 }
 
+// Global account role, mirrors the API's user_role enum.
+export type UserRole = "admin" | "user"
+
+// Role a user holds inside a group, mirrors the API's group_role enum. Carried
+// on the session so the dashboard can show maintainers their group view. The API
+// does not expose group memberships yet, so this stays undefined for now.
+export type GroupRole = "member" | "maintainer" | "owner"
+
 export interface AuthUser {
   id: string
   username: string
   email: string
+  role: UserRole
+  groupRole?: GroupRole
   createdAt?: string
 }
 
@@ -281,10 +291,10 @@ export async function loginUser(email: string, password: string, signal?: AbortS
     throw new ApiError(res.status, parseErrorMessage(await res.text().catch(() => ""), res.statusText))
   }
 
-  // The server replies with { token, expires_at, user: { id, username, email, created_at } }.
+  // The server replies with { token, expires_at, user: { id, username, email, role, created_at } }.
   const data = (await res.json()) as {
     token?: string
-    user?: { id?: string; username?: string; email?: string; created_at?: string }
+    user?: { id?: string; username?: string; email?: string; role?: string; created_at?: string }
   }
   if (!data.token || !data.user) {
     throw new ApiError(res.status, "Invalid login response")
@@ -296,8 +306,42 @@ export async function loginUser(email: string, password: string, signal?: AbortS
       id: data.user.id ?? "",
       username: data.user.username ?? "",
       email: data.user.email ?? "",
+      role: data.user.role === "admin" ? "admin" : "user",
       createdAt: data.user.created_at,
     },
+  }
+}
+
+// whoami: Resolve the account a session token belongs to. Throws an ApiError
+// with status 401 when the token is unknown or its user no longer exists, which
+// callers use to purge a stale session. Uses POST because fetch() cannot send a
+// body on a GET request.
+export async function whoami(token: string, signal?: AbortSignal): Promise<AuthUser> {
+  const url = apiUrl("/whoami")
+
+  const res = await fetch(url.toString(), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+    signal,
+  })
+  if (!res.ok) {
+    throw new ApiError(res.status, parseErrorMessage(await res.text().catch(() => ""), res.statusText))
+  }
+
+  const data = (await res.json()) as {
+    user?: { id?: string; username?: string; email?: string; role?: string; created_at?: string }
+  }
+  if (!data.user) {
+    throw new ApiError(res.status, "Invalid whoami response")
+  }
+
+  return {
+    id: data.user.id ?? "",
+    username: data.user.username ?? "",
+    email: data.user.email ?? "",
+    role: data.user.role === "admin" ? "admin" : "user",
+    createdAt: data.user.created_at,
   }
 }
 

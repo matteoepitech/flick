@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ApiError, loginUser } from "@/lib/api"
 import { saveSession } from "@/lib/auth"
+import { canAccessDashboard, landingPath } from "@/lib/permissions"
 import { Link, useRouter } from "@/i18n/navigation"
 
 export default function LoginPage() {
@@ -34,7 +35,8 @@ export default function LoginPage() {
     try {
       const session = await loginUser(email.trim(), password)
       saveSession(session)
-      router.push("/dashboard")
+      // Admins and maintainers land in the dashboard; everyone else goes home.
+      router.push(canAccessDashboard(session.user) ? landingPath(session.user) : "/")
     } catch (err) {
       console.error(err)
       setError(err instanceof ApiError && err.message ? err.message : t("error"))
