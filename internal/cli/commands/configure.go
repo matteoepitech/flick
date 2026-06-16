@@ -8,7 +8,10 @@
 package commands
 
 import (
+	"bufio"
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/matteoepitech/flick/internal/api/utils"
 	"github.com/matteoepitech/flick/internal/cli/config"
@@ -27,15 +30,24 @@ func init() {
 	rootCmd.AddCommand(configureCmd)
 }
 
-// needChanges: Check function to see if there is any changes.
+// getAnswer: Get the answer of the user.
 //
-// Params:
-// - input (string): The input of the changes.
+// Returns:
+// - result1 (string): The input.
+func getAnswer() string {
+	reader := bufio.NewReader(os.Stdin)
+	changeServer, _ := reader.ReadString('\n')
+	changeServer = strings.TrimSpace(changeServer)
+	return changeServer
+}
+
+// needChanges: Check function to see if there is any changes.
 //
 // Returns:
 // - result1 (bool): True or false.
-func needChanges(input string) bool {
-	return input == "y" || input == "Y"
+func needChanges() bool {
+	input := strings.ToLower(getAnswer())
+	return input == "y" || input == "yes"
 }
 
 // RunConfigure: Configure the CLI default settings.
@@ -47,22 +59,18 @@ func needChanges(input string) bool {
 // Returns:
 // - error: An error if occurred.
 func RunConfigure(cmd *cobra.Command, args []string) error {
-	var changeServer string
-	var changeDefExpTime string
 	var serverURL string
 	var DefExpTime string
 
-	fmt.Printf("Change the default Flick server? (y/n): ")
-	fmt.Scan(&changeServer)
-	if needChanges(changeServer) {
-		fmt.Printf("Enter the remote Flick server URL (e.g. https://flick.example.com): ")
+	fmt.Printf("Change the default Flick server? [y/N]: ")
+	if needChanges() {
+		fmt.Printf("Enter the remote Flick server URL (e.g. https://flick.d3l.tech): ")
 		fmt.Scan(&serverURL)
 		config.Conf.ServerURL = config.NormalizeServerURL(serverURL) // TODO: verify input
 	}
 
-	fmt.Printf("Change the default expiration time? (y/n): ")
-	fmt.Scan(&changeDefExpTime)
-	if needChanges(changeDefExpTime) {
+	fmt.Printf("Change the default expiration time? [y/n]: ")
+	if needChanges() {
 		fmt.Printf("Enter the default expiration time: ")
 		fmt.Scan(&DefExpTime)
 		config.Conf.DefExpTime = DefExpTime // TODO: verify input

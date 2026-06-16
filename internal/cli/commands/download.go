@@ -294,7 +294,7 @@ func RunDownload(cmd *cobra.Command, args []string) error {
 	}
 	printDownloadInfo(info)
 
-	fmt.Printf("%s [y/n]: ", "Download these files?")
+	fmt.Printf("%s [y/N]: ", "Download these files?")
 	line, _ := reader.ReadString('\n')
 	answer := strings.ToLower(strings.TrimSpace(line))
 	if answer != "y" && answer != "yes" {
