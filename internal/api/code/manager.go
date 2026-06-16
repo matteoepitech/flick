@@ -13,6 +13,7 @@ import (
 
 	"github.com/matteoepitech/flick/internal/api/metadata"
 	"github.com/matteoepitech/flick/internal/api/path"
+	"github.com/matteoepitech/flick/internal/api/utils"
 	"github.com/matteoepitech/flick/internal/api/utils/data"
 	"github.com/patrickmn/go-cache"
 )
@@ -39,11 +40,11 @@ func InitCodeCache() error {
 // - code (string): The code to add.
 // - exp (string): The expiration string. ("1d", "1h", ...)
 func AddCodeToList(code string, exp string) {
-	time, err := time.ParseDuration(exp)
+	expTime, err := utils.ParseExpirationTime(exp)
 	if err != nil {
 		return
 	}
-	Cache.Set(code, struct{}{}, time)
+	Cache.Set(code, struct{}{}, time.Until(expTime))
 	SaveCacheManagerFile(path.GetCacheFile())
 }
 

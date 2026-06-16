@@ -1,11 +1,11 @@
 /*
 ** FLICK PROJECT, 2026
-** flick/internal/api/routes/upload
+** flick/internal/api/routes/files/upload
 ** File description:
 ** Upload route handler
  */
 
-package routes
+package files
 
 import (
 	"fmt"
@@ -15,10 +15,12 @@ import (
 	"github.com/matteoepitech/flick/internal/api/logging"
 	"github.com/matteoepitech/flick/internal/api/metadata"
 	"github.com/matteoepitech/flick/internal/api/path"
+	"github.com/matteoepitech/flick/internal/api/routes"
 	"github.com/matteoepitech/flick/internal/api/serverconfig"
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 )
 
 // resolveUploaderID: Validate the mandatory X-Flick-User-ID header against the
@@ -62,7 +64,7 @@ func resolveUploaderID(r *http.Request, queries *database.Queries) (string, erro
 func UploadFileHandler(queries *database.Queries) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
-			WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
+			routes.WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
 			return
 		}
 
@@ -73,39 +75,38 @@ func UploadFileHandler(queries *database.Queries) http.HandlerFunc {
 		err := r.ParseMultipartForm(100 << 20)
 		if err != nil {
 			logging.LogInfoError("Cannot parse multipart form: %v", err)
-			WriteError(w, http.StatusBadRequest, "Payload too large or invalid request")
+			routes.WriteError(w, http.StatusBadRequest, "Payload too large or invalid request")
 			return
 		}
 
-		file, header, err := r.FormFile("file")
-		if err != nil {
-			logging.LogInfoError("Cannot parse uploaded file: %v", err)
-			WriteError(w, http.StatusBadRequest, "Cannot parse the file")
+		if r.MultipartForm == nil || len(r.MultipartForm.File["file"]) == 0 {
+			logging.LogInfoError("No file part in upload")
+			routes.WriteError(w, http.StatusBadRequest, "Cannot parse the file")
 			return
 		}
-		defer file.Close()
+		headers := r.MultipartForm.File["file"]
 
 		uploaderID, err := resolveUploaderID(r, queries)
 		if err != nil {
 			logging.LogInfoError("Cannot identify uploader: %v", err)
-			WriteError(w, http.StatusBadRequest, "Invalid or unknown user")
+			routes.WriteError(w, http.StatusBadRequest, "Invalid or unknown user")
 			return
 		}
 
 		m := new(metadata.Metadata)
 		if !metadata.SetUploaderID(m, uploaderID) {
-			WriteError(w, http.StatusBadRequest, "Invalid or unknown user")
+			routes.WriteError(w, http.StatusBadRequest, "Invalid or unknown user")
 			return
 		}
 
 		// SetExpiration / SetMaxDownloadCount log the precise reason themselves.
 		if !metadata.SetExpiration(m, r.URL.Query().Get("expiration")) {
-			WriteError(w, http.StatusBadRequest, "Invalid expiration time")
+			routes.WriteError(w, http.StatusBadRequest, "Invalid expiration time")
 			return
 		}
 
 		if !metadata.SetMaxDownloadCount(m, r.URL.Query().Get("maxDownloadCount")) {
-			WriteError(w, http.StatusBadRequest, "Invalid max download count")
+			routes.WriteError(w, http.StatusBadRequest, "Invalid max download count")
 			return
 		}
 
@@ -123,27 +124,41 @@ func UploadFileHandler(queries *database.Queries) http.HandlerFunc {
 
 		if err := os.MkdirAll(path.GetDataDir()+codeDir, 0755); err != nil {
 			logging.LogInfoError("Cannot create directory for code %q: %v", codeDir, err)
-			WriteError(w, http.StatusInternalServerError, "Cannot save the file")
+			routes.WriteError(w, http.StatusInternalServerError, "Cannot save the file")
 			return
 		}
 		metadata.CreateMetadataFile(*m, path.GetDataDir()+codeDir+"/", codeDir)
 
-		dst, err := os.Create(path.GetDataDir() + codeDir + "/" + header.Filename)
-		if err != nil {
-			logging.LogInfoError("Cannot create destination file %q for code %q: %v", header.Filename, codeDir, err)
-			WriteError(w, http.StatusInternalServerError, "Cannot save the file")
-			return
-		}
-		defer dst.Close()
+		for _, header := range headers {
+			name := filepath.Base(header.Filename)
 
-		fileBytes, err := io.Copy(dst, file)
-		if err != nil {
-			logging.LogInfoError("Cannot write uploaded file %q for code %q: %v", header.Filename, codeDir, err)
-			WriteError(w, http.StatusInternalServerError, "Error while copying the file")
-			return
+			file, err := header.Open()
+			if err != nil {
+				logging.LogInfoError("Cannot open uploaded file %q for code %q: %v", name, codeDir, err)
+				routes.WriteError(w, http.StatusBadRequest, "Cannot parse the file")
+				return
+			}
+
+			dst, err := os.Create(path.GetDataDir() + codeDir + "/" + name)
+			if err != nil {
+				file.Close()
+				logging.LogInfoError("Cannot create destination file %q for code %q: %v", name, codeDir, err)
+				routes.WriteError(w, http.StatusInternalServerError, "Cannot save the file")
+				return
+			}
+
+			fileBytes, err := io.Copy(dst, file)
+			file.Close()
+			dst.Close()
+			if err != nil {
+				logging.LogInfoError("Cannot write uploaded file %q for code %q: %v", name, codeDir, err)
+				routes.WriteError(w, http.StatusInternalServerError, "Error while copying the file")
+				return
+			}
+			logging.LogInfoSuccess("Received file %q with code %q (%d bytes)", name, codeDir, fileBytes)
 		}
-		logging.LogInfoSuccess("Received file %q with code %q (%d bytes)", header.Filename, codeDir, fileBytes)
+
 		fmt.Fprintf(w, "%s", codeDir)
-		IncUploads()
+		routes.IncUploads()
 	}
 }

@@ -13,8 +13,6 @@ import { ApiError, fetchServerLimits, uploadFile, type UploadEntry } from "@/lib
 import { Link, useRouter } from "@/i18n/navigation"
 import { cn } from "@/lib/utils"
 
-const MAX_FILES = 5
-
 type Expiration = "1h" | "2h" | "3h" | "4h"
 
 // UploadItem: one entry in the staging list. A loose file is a single-entry
@@ -141,21 +139,31 @@ export default function SendPage() {
   }, [])
 
   function addItems(incoming: UploadItem[]) {
-    let hasError = false
-    const valid = incoming.filter((item) => {
-      if (item.size > maxFileSize) {
-        setError(t("fileTooLarge", { name: item.name, size: formatBytes(maxFileSize) }))
-        hasError = true
-        return false
-      }
-      return true
-    })
+    // No cap on the number of files: everything is zipped into a single archive,
+    // so what bounds the browser's memory is the total byte size, not the count.
+    // We guard the cumulative size against the server's max upload size, which is
+    // exactly what that one archive must fit under anyway.
+    let running = items.reduce((total, item) => total + item.size, 0)
+    let rejected = false
+    const valid: UploadItem[] = []
 
-    if (valid.length > 0 && !hasError) {
+    for (const item of incoming) {
+      if (running + item.size > maxFileSize) {
+        setError(t("totalTooLarge", { size: formatBytes(maxFileSize) }))
+        rejected = true
+        break
+      }
+      running += item.size
+      valid.push(item)
+    }
+
+    if (valid.length > 0 && !rejected) {
       setError(null) // clear possible previous error if we successfully add items without new errors
     }
 
-    setItems((current) => [...current, ...valid].slice(0, MAX_FILES))
+    if (valid.length > 0) {
+      setItems((current) => [...current, ...valid])
+    }
   }
 
   function handleBrowseChange(event: ChangeEvent<HTMLInputElement>) {
@@ -203,14 +211,12 @@ export default function SendPage() {
     setError(null)
 
     try {
-      // Everything the user staged goes into one archive, so a whole batch of
-      // files and folders shares a single code. Each item already carries the
-      // right relative paths, so the receiver gets them grouped back as items.
-      const entries = items.flatMap((item) => item.entries)
-      const name = items.length === 1 ? items[0].name : "flick-files"
+      // Every staged item is packed into one combined archive under a single
+      // code; folders keep their structure, loose files sit at the archive root.
+      const uploads = items.map((item) => ({ name: item.name, isFolder: item.isFolder, entries: item.entries }))
       const label = items.length === 1 ? items[0].name : t("batchLabel", { count: items.length })
 
-      const code = await uploadFile({ name, entries }, expiration, maxDownloadCount, ({ loaded, total }) => {
+      const code = await uploadFile(uploads, expiration, maxDownloadCount, ({ loaded, total }) => {
         setProgress({ name: label, percent: Math.round((loaded / total) * 100) })
       })
 
@@ -294,7 +300,7 @@ export default function SendPage() {
               >
                 {t("dropBrowseFolder")}
               </button>{" "}
-              · {t("dropLimits", { maxFiles: MAX_FILES, maxSize: formatBytes(maxFileSize) })}
+              · {t("dropLimits", { maxSize: formatBytes(maxFileSize) })}
             </p>
           </div>
         </div>

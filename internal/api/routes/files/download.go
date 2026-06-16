@@ -1,11 +1,11 @@
 /*
 ** FLICK PROJECT, 2026
-** flick/internal/api/routes/download
+** flick/internal/api/routes/files/download
 ** File description:
 ** Download route handler
  */
 
-package routes
+package files
 
 import (
 	"io"
@@ -18,6 +18,7 @@ import (
 	"github.com/matteoepitech/flick/internal/api/logging"
 	"github.com/matteoepitech/flick/internal/api/metadata"
 	"github.com/matteoepitech/flick/internal/api/path"
+	"github.com/matteoepitech/flick/internal/api/routes"
 )
 
 // onDownloadFinished: When a download is done we do this.
@@ -95,19 +96,19 @@ func doDownloadMultipartForm(writer *multipart.Writer, entries []os.DirEntry, pa
 func DownloadFileHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
-			WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
+			routes.WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
 			return
 		}
 
 		code := r.URL.Query().Get("code")
 		if code == "" {
-			WriteError(w, http.StatusBadRequest, "Missing code parameter")
+			routes.WriteError(w, http.StatusBadRequest, "Missing code parameter")
 			return
 		}
 
 		if codepkg.IsCodeAlreadyExistInList(code) == false {
 			logging.LogInfoError("Code %q is expired or does not exist", code)
-			WriteError(w, http.StatusNotFound, "Code not found")
+			routes.WriteError(w, http.StatusNotFound, "Code not found")
 			return
 		}
 
@@ -115,7 +116,7 @@ func DownloadFileHandler() http.HandlerFunc {
 		entries, err := os.ReadDir(codePath)
 		if err != nil {
 			logging.LogInfoError("Cannot read data directory for code %q: %v", code, err)
-			WriteError(w, http.StatusInternalServerError, "Cannot read the files")
+			routes.WriteError(w, http.StatusInternalServerError, "Cannot read the files")
 			return
 		}
 
@@ -144,7 +145,7 @@ func DownloadFileHandler() http.HandlerFunc {
 		err = doDownloadMultipartForm(writer, filteredEntries, codePath)
 		if err != nil {
 			writer.Close()
-			WriteError(w, http.StatusInternalServerError, "Error transmitting the files")
+			routes.WriteError(w, http.StatusInternalServerError, "Error transmitting the files")
 			return
 		}
 
@@ -156,6 +157,6 @@ func DownloadFileHandler() http.HandlerFunc {
 		}
 
 		onDownloadFinished(code)
-		IncDownloads()
+		routes.IncDownloads()
 	}
 }

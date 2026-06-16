@@ -22,6 +22,7 @@ import (
 	"github.com/matteoepitech/flick/internal/api/path"
 	"github.com/matteoepitech/flick/internal/api/routes"
 	"github.com/matteoepitech/flick/internal/api/routes/account"
+	"github.com/matteoepitech/flick/internal/api/routes/files"
 )
 
 // Constants
@@ -66,9 +67,10 @@ func Run(ctx context.Context) error {
 	defer pool.Close()
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/v1/upload", routes.UploadFileHandler(queries))
+	mux.HandleFunc("/api/v1/upload", files.UploadFileHandler(queries))
 	mux.HandleFunc("/api/v1/identify", identification.IdentifyHandler(queries))
-	mux.HandleFunc("/api/v1/download", routes.DownloadFileHandler())
+	mux.HandleFunc("/api/v1/download", files.DownloadFileHandler())
+	mux.HandleFunc("/api/v1/download/info", files.DownloadInfoHandler())
 	mux.HandleFunc("/api/v1/configure", routes.SendServerConfig())
 	mux.HandleFunc("/api/v1/stats", routes.SendStats(queries))
 	mux.HandleFunc("/api/v1/user-configure", routes.SendServerUserConfig())

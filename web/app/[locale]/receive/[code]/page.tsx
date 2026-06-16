@@ -7,12 +7,10 @@ import { use, useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import {
-  buildFolderArchive,
   CodeNotFoundError,
-  type DownloadedFile,
-  type DownloadItem,
+  type DownloadInfo,
   downloadByCode,
-  groupDownloadItems,
+  fetchDownloadInfo,
   triggerBlobDownload,
 } from "@/lib/api"
 import { Link } from "@/i18n/navigation"
@@ -26,7 +24,7 @@ function formatBytes(bytes: number): string {
 
 type State =
   | { status: "loading" }
-  | { status: "ready"; files: DownloadedFile[]; archiveName: string }
+  | { status: "ready"; info: DownloadInfo }
   | { status: "not_found" }
   | { status: "error" }
 
@@ -37,12 +35,15 @@ export default function ReceiveCodePage({ params }: { params: Promise<{ code: st
 
   const [state, setState] = useState<State>({ status: "loading" })
 
+  // Listing the files does NOT consume the single-use download, so it's safe to
+  // fetch on load (and to abort on unmount / re-run under StrictMode). The actual
+  // consuming transfer only happens later, when the user clicks "download".
   useEffect(() => {
     const controller = new AbortController()
     setState({ status: "loading" })
 
-    downloadByCode(code, controller.signal)
-      .then(({ files, archiveName }) => setState({ status: "ready", files, archiveName }))
+    fetchDownloadInfo(code, controller.signal)
+      .then((info) => setState({ status: "ready", info }))
       .catch((err: unknown) => {
         if (err instanceof DOMException && err.name === "AbortError") return
         if (err instanceof CodeNotFoundError) {
@@ -87,43 +88,29 @@ export default function ReceiveCodePage({ params }: { params: Promise<{ code: st
           <p className="rounded-lg bg-destructive/10 px-4 py-3 text-center text-sm text-destructive">{t("error")}</p>
         )}
 
-        {state.status === "ready" && <ReadyView files={state.files} archiveName={state.archiveName} />}
+        {state.status === "ready" && <ReadyView info={state.info} code={code} />}
       </div>
     </main>
   )
 }
 
-function ReadyView({ files, archiveName }: { files: DownloadedFile[]; archiveName: string }) {
+function ReadyView({ info, code }: { info: DownloadInfo; code: string }) {
   const t = useTranslations("ReceiveCode")
-  // Which download is currently zipping (item name, or "*" for "download all").
-  const [busy, setBusy] = useState<string | null>(null)
-  const items = groupDownloadItems(files)
+  const [busy, setBusy] = useState(false)
+  const items = info.items
 
-  // A folder is re-zipped so it extracts straight back into its directory (the
-  // browser's `download` attribute strips any "/" from a filename, so handing
-  // out each entry individually would flatten the folder); a loose file is
-  // handed over as-is.
-  async function downloadItem(item: DownloadItem) {
-    if (!item.isFolder) {
-      triggerBlobDownload(item.entries[0].blob, item.name)
-      return
-    }
-    setBusy(item.name)
-    try {
-      const { blob, name } = await buildFolderArchive(item.entries, item.name)
-      triggerBlobDownload(blob, name)
-    } finally {
-      setBusy(null)
-    }
-  }
-
+  // ONE click = ONE GET = ONE consumed download. The server returns a multipart
+  // body; each part is the stored <uuid>.zip, which we save as-is.
   async function downloadAll() {
-    setBusy("*")
+    if (busy) return
+    setBusy(true)
     try {
-      const { blob, name } = await buildFolderArchive(files, archiveName)
-      triggerBlobDownload(blob, name)
+      const archives = await downloadByCode(code)
+      for (const archive of archives) triggerBlobDownload(archive.blob, archive.name)
+    } catch (err) {
+      console.error(err)
     } finally {
-      setBusy(null)
+      setBusy(false)
     }
   }
 
@@ -140,31 +127,19 @@ function ReadyView({ files, archiveName }: { files: DownloadedFile[]; archiveNam
                 <p className="truncate text-sm font-medium">{item.name}</p>
                 <p className="text-xs text-muted-foreground">
                   {item.isFolder
-                    ? `${t("folderFiles", { count: item.entries.length })} · ${formatBytes(item.size)}`
+                    ? `${t("folderFiles", { count: item.fileCount })} · ${formatBytes(item.size)}`
                     : formatBytes(item.size)}
                 </p>
               </div>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={busy === item.name}
-                onClick={() => downloadItem(item)}
-              >
-                {busy === item.name ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
-                {t("download")}
-              </Button>
             </li>
           ))}
         </ul>
       </Card>
 
-      {items.length > 1 && (
-        <Button type="button" size="lg" className="h-12 w-full" disabled={busy !== null} onClick={downloadAll}>
-          {busy === "*" ? <Loader2 className="size-5 animate-spin" /> : <Download className="size-5" />}
-          {t("downloadAll")}
-        </Button>
-      )}
+      <Button type="button" size="lg" className="h-12 w-full" disabled={busy} onClick={downloadAll}>
+        {busy ? <Loader2 className="size-5 animate-spin" /> : <Download className="size-5" />}
+        {items.length > 1 ? t("downloadAll") : t("download")}
+      </Button>
     </div>
   )
 }

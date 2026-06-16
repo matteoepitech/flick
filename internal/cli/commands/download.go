@@ -9,7 +9,9 @@ package commands
 
 import (
 	"archive/zip"
+	"bufio"
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"mime"
@@ -20,11 +22,25 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/matteoepitech/flick/internal/api/utils"
 	"github.com/matteoepitech/flick/internal/cli/config"
 	"github.com/matteoepitech/flick/internal/cli/network"
 	"github.com/schollz/progressbar/v3"
 	"github.com/spf13/cobra"
 )
+
+// downloadInfoItem: one item behind a code.
+type downloadInfoItem struct {
+	Name      string `json:"name"`
+	IsFolder  bool   `json:"isFolder"`
+	FileCount int    `json:"fileCount"`
+	Size      int64  `json:"size"`
+}
+
+// downloadInfoResponse: the listing returned by the /download/info endpoint.
+type downloadInfoResponse struct {
+	Items []downloadInfoItem `json:"items"`
+}
 
 // doDownloadRequest: Do the download request on the server.
 //
@@ -182,6 +198,78 @@ func writeZipEntry(f *zip.File, target string) error {
 	return err
 }
 
+// humanSize: Format a byte count into a short human-readable string.
+//
+// Params:
+// - bytes (int64): The size in bytes.
+//
+// Returns:
+// - result1 (string): The formatted size (e.g. "1.5 MB").
+func humanSize(bytes int64) string {
+	const unit = 1024
+	if bytes < unit {
+		return fmt.Sprintf("%d B", bytes)
+	}
+	div, exp := int64(unit), 0
+	for n := bytes / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
+}
+
+// fetchDownloadInfo: List what is behind a code without consuming the download.
+//
+// Params:
+// - code (string): The code to inspect.
+//
+// Returns:
+// - result1 (downloadInfoResponse): The listing behind the code.
+// - result2 (error): An error if occured.
+func fetchDownloadInfo(code string) (downloadInfoResponse, error) {
+	var info downloadInfoResponse
+
+	req, err := http.NewRequest("GET", config.Conf.APIBaseURL()+"/download/info?code="+code, nil)
+	if err != nil {
+		return info, fmt.Errorf("Failure: Cannot create the request for the server.")
+	}
+
+	resp, err := network.SharedClient.Do(req)
+	if err != nil {
+		return info, fmt.Errorf("Failure: Cannot access the server: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		body, _ := io.ReadAll(resp.Body)
+		return info, fmt.Errorf("Failure: %s", serverErrorMessage(body, resp.Status))
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&info); err != nil {
+		return info, fmt.Errorf("Failure: Invalid response from the server")
+	}
+	return info, nil
+}
+
+// printDownloadInfo: Show the files behind a code before the consuming download.
+//
+// Params:
+// - info (downloadInfoResponse): The listing to print.
+func printDownloadInfo(info downloadInfoResponse) {
+	if len(info.Items) == 0 {
+		fmt.Println("This code holds no files.")
+		return
+	}
+	fmt.Println("\nThis code contains:")
+	for _, item := range info.Items {
+		if item.IsFolder {
+			fmt.Printf("  • "+utils.Blue+"%s/ (%d files, %s)\n"+utils.Reset, item.Name, item.FileCount, humanSize(item.Size))
+		} else {
+			fmt.Printf("  • "+utils.Dim+"%s (%s)\n"+utils.Reset, item.Name, humanSize(item.Size))
+		}
+	}
+}
+
 // RunDownload: Run the download command.
 //
 // Params:
@@ -190,15 +278,31 @@ func writeZipEntry(f *zip.File, target string) error {
 // Returns:
 // - result1 (error): An error if occured.
 func RunDownload(cmd *cobra.Command, args []string) error {
-	var code string
+	reader := bufio.NewReader(os.Stdin)
 
 	fmt.Printf("Specify the code: ")
-	fmt.Scan(&code)
+	codeLine, _ := reader.ReadString('\n')
+	code := strings.TrimSpace(codeLine)
+	if code == "" {
+		return fmt.Errorf("Failure: No code provided.")
+	}
 	fmt.Printf("Searching the code %s...\n", code)
 
-	body := &bytes.Buffer{}
+	info, err := fetchDownloadInfo(code)
+	if err != nil {
+		return err
+	}
+	printDownloadInfo(info)
 
-	req, err := http.NewRequest("GET", config.Conf.APIBaseURL()+"/download?code="+code, body)
+	fmt.Printf("%s [y/n]: ", "Download these files?")
+	line, _ := reader.ReadString('\n')
+	answer := strings.ToLower(strings.TrimSpace(line))
+	if answer != "y" && answer != "yes" {
+		fmt.Println("Aborted.")
+		return nil
+	}
+
+	req, err := http.NewRequest("GET", config.Conf.APIBaseURL()+"/download?code="+code, &bytes.Buffer{})
 	if err != nil {
 		return fmt.Errorf("Failure: Cannot create the request for the server.")
 	}

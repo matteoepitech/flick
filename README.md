@@ -17,7 +17,7 @@ Upload a file, get a simple code like `ocean-tiger-42`, share it. That's it.
 <img src="https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL">
 <img src="https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white" alt="Docker">
 
-<br><br>
+<br>
 
 <picture>
     <source srcset="https://fonts.gstatic.com/s/e/notoemoji/latest/26a1/512.webp" type="image/webp">

@@ -113,15 +113,27 @@ export interface UploadEntry {
   file: File
 }
 
-// Upload: a single archive the user wants to send. `name` is the base name used
-// for the .zip (the file name, or the folder name for a directory upload).
+// Upload: a single item the user staged (a loose file or a folder). `name` is its
+// display name; `isFolder` tells us whether its entries keep a directory prefix.
 export interface Upload {
   name: string
+  isFolder: boolean
   entries: UploadEntry[]
 }
 
+// randomArchiveName: the name under which the whole upload is stored and later
+// handed back on download. A random uuid keeps unrelated uploads from colliding
+// on disk and is exactly what the receiver saves (e.g. "<uuid>.zip").
+function randomArchiveName(): string {
+  const id =
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
+  return `${id}.zip`
+}
+
 export async function uploadFile(
-  upload: Upload,
+  items: Upload[],
   expiration: string,
   maxDownloadCount: number,
   onProgress?: (progress: UploadProgress) => void,
@@ -134,17 +146,50 @@ export async function uploadFile(
   // The server requires a known uploader (X-Flick-User-ID), exactly like the CLI.
   const uploaderId = await ensureUploaderId(signal)
 
-  // Like the CLI, the web always uploads a zip archive: the server stores it
-  // compressed and the client (CLI or web) extracts it on download. A folder is
-  // stored with its full directory structure so it comes back intact.
+  // Everything the user staged goes into ONE archive, stored and served as-is:
+  // the download just hands this single zip back (no client unzip/rezip) and the
+  // info endpoint reads inside it to list each item. A loose file sits at the
+  // archive root; a folder keeps its full structure. The archive name is a random
+  // uuid, so two unrelated uploads can never collide on disk.
   const zip = new JSZip()
-  for (const entry of upload.entries) {
-    zip.file(entry.path, entry.file)
-  }
-  const archive = await zip.generateAsync({ type: "blob", compression: "DEFLATE" })
+  const usedTop = new Set<string>()
 
+  // Keep top-level names unique so two staged items never overwrite each other:
+  // files keep their extension when suffixed ("report (2).pdf"), folders don't.
+  const dedupTop = (name: string, keepExt: boolean): string => {
+    if (!usedTop.has(name)) {
+      usedTop.add(name)
+      return name
+    }
+    const dot = keepExt ? name.lastIndexOf(".") : -1
+    const base = dot > 0 ? name.slice(0, dot) : name
+    const ext = dot > 0 ? name.slice(dot) : ""
+    for (let n = 2; ; n++) {
+      const candidate = `${base} (${n})${ext}`
+      if (!usedTop.has(candidate)) {
+        usedTop.add(candidate)
+        return candidate
+      }
+    }
+  }
+
+  for (const item of items) {
+    if (item.isFolder) {
+      const top = dedupTop(item.name, false)
+      for (const entry of item.entries) {
+        // entry.path is "<folder>/<rest>"; re-root it under the deduped name.
+        const slash = entry.path.indexOf("/")
+        const rest = slash === -1 ? entry.path : entry.path.slice(slash + 1)
+        zip.file(`${top}/${rest}`, entry.file)
+      }
+    } else {
+      zip.file(dedupTop(item.name, true), item.entries[0].file)
+    }
+  }
+
+  const archive = await zip.generateAsync({ type: "blob", compression: "DEFLATE" })
   const form = new FormData()
-  form.append("file", archive, `${upload.name}.zip`)
+  form.append("file", archive, randomArchiveName())
 
   return new Promise<string>((resolve, reject) => {
     const xhr = new XMLHttpRequest()
@@ -172,29 +217,18 @@ export async function uploadFile(
   })
 }
 
-export interface DownloadedFile {
-  // path: the full relative path inside the archive, e.g. "myfolder/sub/a.txt".
-  // Preserved so a folder can be re-zipped with its structure intact.
-  path: string
-  // name: the basename of path, used for display and single-file downloads.
+// DownloadedArchive: one stored item pulled back from the server (the combined
+// <uuid>.zip), which the browser saves as-is.
+export interface DownloadedArchive {
   name: string
   blob: Blob
-  size: number
 }
 
-function basename(path: string): string {
-  const i = path.lastIndexOf("/")
-  return i === -1 ? path : path.slice(i + 1)
-}
-
-export interface DownloadResult {
-  files: DownloadedFile[]
-  // archiveName: base name (no ".zip") taken from the uploaded archive, used to
-  // name the folder and its re-zipped download. Falls back to "flick-download".
-  archiveName: string
-}
-
-export async function downloadByCode(code: string, signal?: AbortSignal): Promise<DownloadResult> {
+// downloadByCode: Pull a code's stored archive(s) in ONE request (this consumes
+// the single-use download). The server replies with a multipart/form-data body
+// (the same shape the CLI reads): each "file" part is a stored zip, returned
+// untouched so the caller saves it.
+export async function downloadByCode(code: string, signal?: AbortSignal): Promise<DownloadedArchive[]> {
   const url = apiUrl("/download")
   url.searchParams.set("code", code)
 
@@ -204,90 +238,53 @@ export async function downloadByCode(code: string, signal?: AbortSignal): Promis
   if (!res.ok) throw new ApiError(res.status, parseErrorMessage(await res.text().catch(() => ""), res.statusText))
 
   const form = await res.formData()
-  const files: DownloadedFile[] = []
-  let archiveName = "flick-download"
-
-  // Every part is a zip archive (see uploadFile): extract its entries so the
-  // user gets the real files back, not the .zip wrapper. A folder upload keeps
-  // its directory structure in the entry paths (e.g. "myfolder/sub/a.txt").
+  const archives: DownloadedArchive[] = []
   for (const value of form.getAll("file")) {
     if (!(value instanceof File)) continue
-
-    // The part filename is "<original name>.zip" (folder or file name); keep it
-    // so the folder download is named after what was actually sent.
-    if (value.name) archiveName = value.name.replace(/\.zip$/i, "")
-
-    const zip = await JSZip.loadAsync(value)
-    for (const entry of Object.values(zip.files)) {
-      if (entry.dir) continue
-      const blob = await entry.async("blob")
-      files.push({ path: entry.name, name: basename(entry.name), blob, size: blob.size })
-    }
+    archives.push({ name: value.name, blob: value })
   }
-
-  return { files, archiveName }
+  return archives
 }
 
-// hasFolderStructure: true when any downloaded entry lives inside a directory,
-// meaning the user sent a folder rather than loose files.
-export function hasFolderStructure(files: DownloadedFile[]): boolean {
-  return files.some((file) => file.path.includes("/"))
+// triggerBlobDownload: Save a blob under filename via a temporary <a download>.
+export function triggerBlobDownload(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
-// DownloadItem: one top-level entry inside a code, mirroring how the send page
-// stages uploads. A folder groups every file under it; a loose file is a single
-// entry. Both render the same way, only the icon and subtitle differ.
-export interface DownloadItem {
+// DownloadInfoItem: one item behind a code (a loose file or a folder), listed
+// without transmitting any content.
+export interface DownloadInfoItem {
   name: string
   isFolder: boolean
-  entries: DownloadedFile[]
+  fileCount: number
   size: number
 }
 
-// groupDownloadItems: Rebuild the top-level items from the flat entry list. Each
-// first path segment becomes one item: a folder when it has nested files, a
-// plain file otherwise. So a code holding "report.pdf" and "photos/a.jpg" shows
-// one file and one folder side by side, like the upload list.
-export function groupDownloadItems(files: DownloadedFile[]): DownloadItem[] {
-  const order: string[] = []
-  const groups = new Map<string, DownloadedFile[]>()
-
-  for (const file of files) {
-    const top = file.path.split("/")[0]
-    const group = groups.get(top)
-    if (group) {
-      group.push(file)
-    } else {
-      groups.set(top, [file])
-      order.push(top)
-    }
-  }
-
-  return order.map((name) => {
-    const entries = groups.get(name) ?? []
-    return {
-      name,
-      isFolder: entries.some((entry) => entry.path.includes("/")),
-      entries,
-      size: entries.reduce((total, entry) => total + entry.size, 0),
-    }
-  })
+export interface DownloadInfo {
+  items: DownloadInfoItem[]
 }
 
-// buildFolderArchive: Re-zip the downloaded entries into a single archive that
-// preserves their relative paths, so the browser delivers the whole folder in
-// one download (and it extracts straight back into that folder) instead of
-// flattening every file. Returns the blob and the suggested filename.
-export async function buildFolderArchive(
-  files: DownloadedFile[],
-  archiveName: string
-): Promise<{ blob: Blob; name: string }> {
-  const zip = new JSZip()
-  for (const file of files) {
-    zip.file(file.path, file.blob)
-  }
-  const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" })
-  return { blob, name: `${archiveName}.zip` }
+// fetchDownloadInfo: List the items behind a code WITHOUT consuming a download.
+// The receive page uses this on load so merely opening the page never burns the
+// single-use code; the real (consuming) transfer happens later via downloadByCode.
+export async function fetchDownloadInfo(code: string, signal?: AbortSignal): Promise<DownloadInfo> {
+  const url = apiUrl("/download/info")
+  url.searchParams.set("code", code)
+
+  const res = await fetch(url.toString(), { method: "GET", signal })
+
+  if (res.status === 404) throw new CodeNotFoundError(code)
+  if (!res.ok) throw new ApiError(res.status, parseErrorMessage(await res.text().catch(() => ""), res.statusText))
+
+  const data = (await res.json()) as { items?: DownloadInfoItem[] }
+  return { items: data.items ?? [] }
 }
 
 export async function loadUserConfiguration(
@@ -499,15 +496,4 @@ export async function whoami(token: string, signal?: AbortSignal): Promise<AuthU
     role: data.user.role === "admin" ? "admin" : "user",
     createdAt: data.user.created_at,
   }
-}
-
-export function triggerBlobDownload(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement("a")
-  a.href = url
-  a.download = filename
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
 }

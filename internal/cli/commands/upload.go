@@ -10,6 +10,7 @@ package commands
 import (
 	"archive/zip"
 	"bytes"
+	"crypto/rand"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -62,15 +63,32 @@ func doUploadRequest(req *http.Request, exp string) error {
 	return nil
 }
 
-// archiveToTemp: Build a zip archive of src into a temporary file and return its path.
+// archiveRoot: Choose the base against which src's entries are named inside the
+// archive. A local relative path keeps its full structure, so "dir1/a.txt" and
+// "dir2/a.txt" stay distinct.
 //
 // Params:
-// - src (string): The file or directory to archive.
+// - src (string): The file or directory path passed on the command line.
+//
+// Returns:
+// - result1 (string): The base directory to compute archive-relative paths from.
+func archiveRoot(src string) string {
+	if filepath.IsLocal(src) {
+		return "."
+	}
+	return filepath.Dir(src)
+}
+
+// archiveToTemp: Build a single zip archive of every src into a temporary file
+// and return its path.
+//
+// Params:
+// - srcs ([]string): The files and/or directories to archive together.
 //
 // Returns:
 // - result1 (string): The path to the temporary zip file.
 // - result2 (error): An error if occured.
-func archiveToTemp(src string) (string, error) {
+func archiveToTemp(srcs []string) (string, error) {
 	tmp, err := os.CreateTemp("", "flick-upload-*.zip")
 	if err != nil {
 		return "", fmt.Errorf("Failure: Cannot create temp archive: %w", err)
@@ -78,12 +96,13 @@ func archiveToTemp(src string) (string, error) {
 	defer tmp.Close()
 
 	zw := zip.NewWriter(tmp)
-	root := filepath.Dir(src)
-
-	if err := addToZip(zw, root, src); err != nil {
-		zw.Close()
-		os.Remove(tmp.Name())
-		return "", fmt.Errorf("Failure: Cannot build archive: %w", err)
+	for _, src := range srcs {
+		root := archiveRoot(src)
+		if err := addToZip(zw, root, src); err != nil {
+			zw.Close()
+			os.Remove(tmp.Name())
+			return "", fmt.Errorf("Failure: Cannot build archive: %w", err)
+		}
 	}
 
 	if err := zw.Close(); err != nil {
@@ -141,6 +160,21 @@ func addToZip(zw *zip.Writer, root string, path string) error {
 	return err
 }
 
+// randomArchiveName: A random uuid-style name for the uploaded archive.
+//
+// Returns:
+// - result1 (string): The "<uuid>.zip" archive name.
+func randomArchiveName() string {
+	var b [16]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		return fmt.Sprintf("flick-%d.zip", time.Now().UnixNano())
+	}
+
+	b[6] = (b[6] & 0x0f) | 0x40 // version 4
+	b[8] = (b[8] & 0x3f) | 0x80 // variant 10
+	return fmt.Sprintf("%x-%x-%x-%x-%x.zip", b[0:4], b[4:6], b[6:8], b[8:10], b[10:16])
+}
+
 // RunUpload: Run the upload command.
 //
 // Params:
@@ -156,9 +190,11 @@ func RunUpload(cmd *cobra.Command, args []string, exp string, mdc string) error 
 		return fmt.Errorf("Failure: Internal CLI error.")
 	}
 
-	stat, err := os.Stat(args[0])
-	if err != nil {
-		return fmt.Errorf("Failure: Cannot get that file.")
+	// Validate every path up front so we fail before touching the network.
+	for _, arg := range args {
+		if _, err := os.Stat(arg); err != nil {
+			return fmt.Errorf("Failure: Cannot get that file: %s", arg)
+		}
 	}
 
 	serverLimits, err := config.GetServerLimits()
@@ -197,7 +233,7 @@ func RunUpload(cmd *cobra.Command, args []string, exp string, mdc string) error 
 		return fmt.Errorf("Failure: Cannot identify on the server: %w", err)
 	}
 
-	archivePath, err := archiveToTemp(args[0])
+	archivePath, err := archiveToTemp(args)
 	if err != nil {
 		return err
 	}
@@ -218,11 +254,15 @@ func RunUpload(cmd *cobra.Command, args []string, exp string, mdc string) error 
 		return fmt.Errorf("Failure: The upload is too large. The server only accepts up to %d MB.", serverLimits.MaxFileSizeMb)
 	}
 
-	fmt.Printf("Uploading %s... (%d bytes archived)\n", stat.Name(), archiveStat.Size())
+	label := filepath.Base(args[0])
+	if len(args) > 1 {
+		label = fmt.Sprintf("%d items", len(args))
+	}
+	fmt.Printf("Uploading %s... (%d bytes archived)\n", label, archiveStat.Size())
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
-	part, err := writer.CreateFormFile("file", stat.Name()+".zip")
+	part, err := writer.CreateFormFile("file", randomArchiveName())
 	if err != nil {
 		return fmt.Errorf("Failure: Cannot create the form file: %w", err)
 	}
