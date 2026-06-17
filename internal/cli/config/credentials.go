@@ -42,7 +42,7 @@ func credentialsPath() (string, error) {
 // Returns:
 // - result1 (*Credentials): The credentials, nil if the file does not exist.
 // - result2 (error): If something occured.
-func loadCredentials() (*Credentials, error) {
+func LoadCredentials() (*Credentials, error) {
 	credentialsFile, err := credentialsPath()
 	if err != nil {
 		return nil, err
@@ -130,7 +130,7 @@ func identifyOnServer() (*Credentials, error) {
 // - result1 (*Credentials): The credentials.
 // - result2 (error): If something occured.
 func EnsureCredentials() (*Credentials, error) {
-	creds, err := loadCredentials()
+	creds, err := LoadCredentials()
 	if err != nil {
 		return nil, err
 	}
