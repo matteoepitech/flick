@@ -28,6 +28,16 @@ UPDATE users
 SET role = $2
 WHERE email = $1;
 
+-- name: UpdateUser :one
+UPDATE users
+SET username = COALESCE(sqlc.narg('username'), username),
+    email    = COALESCE(sqlc.narg('email'), email),
+    password_hash = COALESCE(sqlc.narg('password_hash'), password_hash),
+    role     = COALESCE(sqlc.narg('role'), role),
+    blocked  = COALESCE(sqlc.narg('blocked'), blocked)
+WHERE id = sqlc.arg('id')
+RETURNING *;
+
 -- name: ListUsers :many
 SELECT * FROM users
 ORDER BY created_at DESC;

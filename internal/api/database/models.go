@@ -173,6 +173,7 @@ type User struct {
 	Email        string             `json:"email"`
 	PasswordHash string             `json:"password_hash"`
 	Role         UserRole           `json:"role"`
+	Blocked      bool               `json:"blocked"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 }
 

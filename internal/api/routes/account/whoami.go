@@ -76,6 +76,11 @@ func WhoamiHandler(queries *database.Queries) http.HandlerFunc {
 			return
 		}
 
+		if user.Blocked {
+			routes.WriteError(w, http.StatusForbidden, "Account blocked")
+			return
+		}
+
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(WhoamiResponse{

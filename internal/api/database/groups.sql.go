@@ -127,7 +127,7 @@ func (q *Queries) ListGroupsForUser(ctx context.Context, userID pgtype.UUID) ([]
 }
 
 const listUsersInGroup = `-- name: ListUsersInGroup :many
-SELECT u.id, u.username, u.email, u.password_hash, u.role, u.created_at FROM users u
+SELECT u.id, u.username, u.email, u.password_hash, u.role, u.blocked, u.created_at FROM users u
 JOIN user_groups ug ON ug.user_id = u.id
 WHERE ug.group_id = $1
 ORDER BY u.username
@@ -148,6 +148,7 @@ func (q *Queries) ListUsersInGroup(ctx context.Context, groupID pgtype.UUID) ([]
 			&i.Email,
 			&i.PasswordHash,
 			&i.Role,
+			&i.Blocked,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err

@@ -33,6 +33,7 @@ type RegisterResponse struct {
 	Email     string             `json:"email"`
 	Role      database.UserRole  `json:"role"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	Blocked   bool               `json:"blocked"`
 }
 
 // RegisterHandler: Register function route.
@@ -66,7 +67,7 @@ func RegisterHandler(queries *database.Queries) http.HandlerFunc {
 		user, err := queries.CreateUser(r.Context(), database.CreateUserParams{
 			Username:     request.Username,
 			Email:        request.Email,
-			PasswordHash: hashPassword(request.Password),
+			PasswordHash: HashPassword(request.Password),
 		})
 		if err != nil {
 			var pgErr *pgconn.PgError

@@ -9,29 +9,37 @@ import { Button } from "@/components/ui/button"
 import { type AuthSession } from "@/lib/api"
 import { loadSession, verifySession } from "@/lib/auth"
 import { canAccessDashboard } from "@/lib/permissions"
-import { Link, usePathname } from "@/i18n/navigation"
+import { Link, usePathname, useRouter } from "@/i18n/navigation"
 
 export default function SiteHeader() {
   const t = useTranslations("Header")
   const pathname = usePathname()
+  const router = useRouter()
 
   const [session, setSession] = useState<AuthSession | null>(null)
 
   // Re-read the session on every navigation so the header reflects login/logout
-  // without a full page reload, and drop it if the server no longer knows the
-  // account (e.g. a deleted user) so a ghost session can't linger.
+  // without a full page reload, drop it if the server no longer knows the
+  // account (e.g. a deleted user), and send blocked users to the blocked page.
   useEffect(() => {
     const stored = loadSession()
     setSession(stored)
     if (!stored) return
 
     const controller = new AbortController()
-    verifySession(stored, controller.signal).then((valid) => {
-      if (!valid) setSession(null)
+    verifySession(stored, controller.signal).then((status) => {
+      if (status === "invalid") {
+        setSession(null)
+      } else if (status === "blocked") {
+        // A blocked user keeps read-only access to their own profile (and the
+        // blocked page); everywhere else sends them back to the blocked page.
+        const allowed = pathname.startsWith("/blocked") || pathname.startsWith("/profile")
+        if (!allowed) router.replace("/blocked")
+      }
     })
 
     return () => controller.abort()
-  }, [pathname])
+  }, [pathname, router])
 
   if (pathname.startsWith("/dashboard")) {
     return null

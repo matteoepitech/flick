@@ -33,7 +33,7 @@ const (
 //
 // Returns:
 // - result1 (string): Final password hashed, encoded as "salt$hash".
-func hashPassword(password string) string {
+func HashPassword(password string) string {
 	salt := make([]byte, saltLen)
 	rand.Read(salt)
 	hash := argon2.IDKey([]byte(password), salt, argonTime, argonMemory, argonThreads, argonKeyLen)

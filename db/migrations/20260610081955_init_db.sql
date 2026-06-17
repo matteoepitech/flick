@@ -23,6 +23,7 @@ CREATE TABLE users (
     email          TEXT        NOT NULL UNIQUE,
     password_hash  TEXT        NOT NULL,
     role           USER_ROLE   NOT NULL DEFAULT 'user',
+    blocked        BOOLEAN     NOT NULL DEFAULT false,
     created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

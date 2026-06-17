@@ -29,7 +29,7 @@ WITH first_user AS (
 INSERT INTO users (username, email, password_hash, role)
 SELECT $1, $2, $3, (CASE WHEN first_user.is_first THEN 'admin' ELSE 'user' END)::user_role
 FROM first_user
-RETURNING id, username, email, password_hash, role, created_at
+RETURNING id, username, email, password_hash, role, blocked, created_at
 `
 
 type CreateUserParams struct {
@@ -47,6 +47,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.Email,
 		&i.PasswordHash,
 		&i.Role,
+		&i.Blocked,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -63,7 +64,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id pgtype.UUID) error {
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, username, email, password_hash, role, created_at FROM users
+SELECT id, username, email, password_hash, role, blocked, created_at FROM users
 WHERE email = $1
 `
 
@@ -76,13 +77,14 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.Email,
 		&i.PasswordHash,
 		&i.Role,
+		&i.Blocked,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, username, email, password_hash, role, created_at FROM users
+SELECT id, username, email, password_hash, role, blocked, created_at FROM users
 WHERE id = $1
 `
 
@@ -95,13 +97,14 @@ func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
 		&i.Email,
 		&i.PasswordHash,
 		&i.Role,
+		&i.Blocked,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, username, email, password_hash, role, created_at FROM users
+SELECT id, username, email, password_hash, role, blocked, created_at FROM users
 ORDER BY created_at DESC
 `
 
@@ -120,6 +123,7 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 			&i.Email,
 			&i.PasswordHash,
 			&i.Role,
+			&i.Blocked,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -162,4 +166,46 @@ type SetUserRoleByIDParams struct {
 func (q *Queries) SetUserRoleByID(ctx context.Context, arg SetUserRoleByIDParams) error {
 	_, err := q.db.Exec(ctx, setUserRoleByID, arg.ID, arg.Role)
 	return err
+}
+
+const updateUser = `-- name: UpdateUser :one
+UPDATE users
+SET username = COALESCE($1, username),
+    email    = COALESCE($2, email),
+    password_hash = COALESCE($3, password_hash),
+    role     = COALESCE($4, role),
+    blocked  = COALESCE($5, blocked)
+WHERE id = $6
+RETURNING id, username, email, password_hash, role, blocked, created_at
+`
+
+type UpdateUserParams struct {
+	Username     *string     `json:"username"`
+	Email        *string     `json:"email"`
+	PasswordHash *string     `json:"password_hash"`
+	Role         *UserRole   `json:"role"`
+	Blocked      *bool       `json:"blocked"`
+	ID           pgtype.UUID `json:"id"`
+}
+
+func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
+	row := q.db.QueryRow(ctx, updateUser,
+		arg.Username,
+		arg.Email,
+		arg.PasswordHash,
+		arg.Role,
+		arg.Blocked,
+		arg.ID,
+	)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Role,
+		&i.Blocked,
+		&i.CreatedAt,
+	)
+	return i, err
 }

@@ -1,4 +1,11 @@
-import { ApiError, whoami, type AuthSession } from "@/lib/api"
+import { ApiError, isAccountBlocked, whoami, type AuthSession } from "@/lib/api"
+
+// Result of re-checking a stored session against the server.
+// - "valid":   the account exists and is usable.
+// - "invalid": the token/account is gone (session cleared); send to login.
+// - "blocked": the account was blocked by an admin (session kept so we can tell
+//              the user what happened); send to the blocked page.
+export type SessionStatus = "valid" | "invalid" | "blocked"
 
 // The signed-in session (user + token) is kept in localStorage. The API stores
 // sessions server-side; this only remembers which token belongs to this browser.
@@ -34,15 +41,20 @@ export function clearSession(): void {
 // the session and returns false, so a ghost session can't keep someone "logged
 // in" after the account is gone. Transient/network errors keep the session to
 // avoid logging users out when the API is briefly unreachable.
-export async function verifySession(session: AuthSession, signal?: AbortSignal): Promise<boolean> {
+export async function verifySession(session: AuthSession, signal?: AbortSignal): Promise<SessionStatus> {
   try {
     await whoami(session.token, signal)
-    return true
+    return "valid"
   } catch (err) {
+    // Blocked by an admin: keep the session so the blocked page can show context.
+    if (isAccountBlocked(err)) {
+      return "blocked"
+    }
     if (err instanceof ApiError && err.status === 401) {
       clearSession()
-      return false
+      return "invalid"
     }
-    return true
+    // Transient/network error: keep the user logged in to avoid false logouts.
+    return "valid"
   }
 }

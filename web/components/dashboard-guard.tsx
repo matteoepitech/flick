@@ -25,9 +25,13 @@ export function DashboardGuard({ children }: { children: React.ReactNode }) {
     let cancelled = false
     const controller = new AbortController()
 
-    verifySession(session, controller.signal).then((valid) => {
+    verifySession(session, controller.signal).then((status) => {
       if (cancelled) return
-      if (!valid) {
+      if (status === "blocked") {
+        router.replace("/blocked")
+        return
+      }
+      if (status === "invalid") {
         router.replace("/login")
         return
       }

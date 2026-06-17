@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ApiError, loginUser } from "@/lib/api"
+import { ApiError, isAccountBlocked, loginUser } from "@/lib/api"
 import { saveSession } from "@/lib/auth"
 import { canAccessDashboard, landingPath } from "@/lib/permissions"
 import { Link, useRouter } from "@/i18n/navigation"
@@ -35,10 +35,22 @@ export default function LoginPage() {
     try {
       const session = await loginUser(email.trim(), password)
       saveSession(session)
+      // A blocked account still logs in (so it keeps a session for the profile
+      // page) but is sent straight to the blocked page.
+      if (session.user.blocked) {
+        router.replace("/blocked")
+        return
+      }
       // Admins and maintainers land in the dashboard; everyone else goes home.
       router.push(canAccessDashboard(session.user) ? landingPath(session.user) : "/")
     } catch (err) {
       console.error(err)
+      // A blocked account is rejected at login: send them to the blocked page
+      // rather than showing a raw credentials error.
+      if (isAccountBlocked(err)) {
+        router.replace("/blocked")
+        return
+      }
       setError(err instanceof ApiError && err.message ? err.message : t("error"))
       setSubmitting(false)
     }

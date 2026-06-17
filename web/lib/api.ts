@@ -37,6 +37,16 @@ export class ApiError extends Error {
   }
 }
 
+// Error message the API returns (HTTP 403, body { "error": "Account blocked" })
+// on any authenticated endpoint when the account has been blocked by an admin.
+export const ACCOUNT_BLOCKED_CODE = "Account blocked"
+
+// isAccountBlocked: True when an error is the API's "account blocked" rejection,
+// as opposed to other 403s (e.g. "admin privileges required").
+export function isAccountBlocked(err: unknown): boolean {
+  return err instanceof ApiError && err.status === 403 && err.message === ACCOUNT_BLOCKED_CODE
+}
+
 // parseErrorMessage: Extracts the human-readable message from a server error
 // body. The API returns `{"error": "..."}`; falls back to the raw text.
 function parseErrorMessage(body: string, fallback: string): string {
@@ -402,12 +412,18 @@ export interface AuthUser {
   email: string
   role: UserRole
   groupRole?: GroupRole
+  blocked: boolean
   createdAt?: string
 }
 
 export interface AuthSession {
   user: AuthUser
   token: string
+}
+
+// coerceRole: Defensive coercion of an unknown role value coming from the API.
+export function coerceRole(value: unknown): UserRole {
+  return value === "admin" ? "admin" : "user"
 }
 
 export async function registerUser(
@@ -428,7 +444,22 @@ export async function registerUser(
     throw new ApiError(res.status, parseErrorMessage(await res.text().catch(() => ""), res.statusText))
   }
 
-  return (await res.json()) as AuthUser
+  const data = (await res.json()) as {
+    id?: string
+    username?: string
+    email?: string
+    role?: unknown
+    blocked?: unknown
+    created_at?: string
+  }
+  return {
+    id: data.id ?? "",
+    username: data.username ?? "",
+    email: data.email ?? "",
+    role: coerceRole(data.role),
+    blocked: data.blocked === true,
+    createdAt: data.created_at,
+  }
 }
 
 export async function loginUser(email: string, password: string, signal?: AbortSignal): Promise<AuthSession> {
@@ -444,10 +475,17 @@ export async function loginUser(email: string, password: string, signal?: AbortS
     throw new ApiError(res.status, parseErrorMessage(await res.text().catch(() => ""), res.statusText))
   }
 
-  // The server replies with { token, expires_at, user: { id, username, email, role, created_at } }.
+  // The server replies with { token, expires_at, user: { id, username, email, role, blocked, created_at } }.
   const data = (await res.json()) as {
     token?: string
-    user?: { id?: string; username?: string; email?: string; role?: string; created_at?: string }
+    user?: {
+      id?: string
+      username?: string
+      email?: string
+      role?: unknown
+      blocked?: unknown
+      created_at?: string
+    }
   }
   if (!data.token || !data.user) {
     throw new ApiError(res.status, "Invalid login response")
@@ -459,7 +497,8 @@ export async function loginUser(email: string, password: string, signal?: AbortS
       id: data.user.id ?? "",
       username: data.user.username ?? "",
       email: data.user.email ?? "",
-      role: data.user.role === "admin" ? "admin" : "user",
+      role: coerceRole(data.user.role),
+      blocked: data.user.blocked === true,
       createdAt: data.user.created_at,
     },
   }
@@ -501,7 +540,14 @@ export async function whoami(token: string, signal?: AbortSignal): Promise<AuthU
   }
 
   const data = (await res.json()) as {
-    user?: { id?: string; username?: string; email?: string; role?: string; created_at?: string }
+    user?: {
+      id?: string
+      username?: string
+      email?: string
+      role?: unknown
+      blocked?: unknown
+      created_at?: string
+    }
   }
   if (!data.user) {
     throw new ApiError(res.status, "Invalid whoami response")
@@ -511,7 +557,84 @@ export async function whoami(token: string, signal?: AbortSignal): Promise<AuthU
     id: data.user.id ?? "",
     username: data.user.username ?? "",
     email: data.user.email ?? "",
-    role: data.user.role === "admin" ? "admin" : "user",
+    role: coerceRole(data.user.role),
+    blocked: data.user.blocked === true,
     createdAt: data.user.created_at,
   }
+}
+
+export interface AdminUser {
+  id: string
+  username: string
+  email: string
+  role: UserRole
+  blocked: boolean
+  createdAt?: string
+}
+
+// toAdminUser: Maps a raw API user object (snake_case) to AdminUser.
+function toAdminUser(raw: unknown): AdminUser {
+  const obj = (raw ?? {}) as Record<string, unknown>
+  return {
+    id: typeof obj.id === "string" ? obj.id : "",
+    username: typeof obj.username === "string" ? obj.username : "",
+    email: typeof obj.email === "string" ? obj.email : "",
+    role: coerceRole(obj.role),
+    blocked: obj.blocked === true,
+    createdAt: typeof obj.created_at === "string" ? obj.created_at : undefined,
+  }
+}
+
+// listUsers: Admin-only fetch of every user. Requires an admin session token.
+export async function listUsers(token: string, signal?: AbortSignal): Promise<AdminUser[]> {
+  const url = apiUrl("/admin/users")
+
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}` },
+    signal,
+  })
+  if (!res.ok) {
+    throw new ApiError(res.status, parseErrorMessage(await res.text().catch(() => ""), res.statusText))
+  }
+
+  const data = (await res.json()) as unknown
+  if (!Array.isArray(data)) {
+    throw new ApiError(res.status, "Invalid users response")
+  }
+  return data.map(toAdminUser)
+}
+
+// UserUpdate: The partial PATCH payload. Only provided fields are changed.
+export interface UserUpdate {
+  username?: string
+  email?: string
+  password?: string
+  role?: UserRole
+  blocked?: boolean
+}
+
+// updateUser: Admin-only partial update (PATCH) of a single user.
+export async function updateUser(
+  token: string,
+  id: string,
+  changes: UserUpdate,
+  signal?: AbortSignal
+): Promise<AdminUser> {
+  const url = apiUrl(`/admin/users/${id}`)
+
+  const res = await fetch(url.toString(), {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(changes),
+    signal,
+  })
+  if (!res.ok) {
+    throw new ApiError(res.status, parseErrorMessage(await res.text().catch(() => ""), res.statusText))
+  }
+
+  return toAdminUser(await res.json())
 }

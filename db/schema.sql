@@ -130,6 +130,7 @@ CREATE TABLE public.users (
     email text NOT NULL,
     password_hash text NOT NULL,
     role public.user_role DEFAULT 'user'::public.user_role NOT NULL,
+    blocked boolean DEFAULT false NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 

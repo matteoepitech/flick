@@ -9,6 +9,10 @@ package files
 
 import (
 	"fmt"
+	"io"
+	"net/http"
+	"os"
+
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/matteoepitech/flick/internal/api/code"
 	"github.com/matteoepitech/flick/internal/api/database"
@@ -17,9 +21,6 @@ import (
 	"github.com/matteoepitech/flick/internal/api/path"
 	"github.com/matteoepitech/flick/internal/api/routes"
 	"github.com/matteoepitech/flick/internal/api/serverconfig"
-	"io"
-	"net/http"
-	"os"
 	"path/filepath"
 )
 
@@ -33,25 +34,28 @@ import (
 //
 // Returns:
 // - result1 (string): The validated uploader UUID.
-// - result2 (error): An error if the header is missing, invalid or unknown.
-func resolveUploaderID(r *http.Request, queries *database.Queries) (string, error) {
+// - result2 (bool): True when the uploader is a registered but blocked account.
+// - result3 (error): An error if the header is missing, invalid or unknown.
+func resolveUploaderID(r *http.Request, queries *database.Queries) (string, bool, error) {
 	uploaderID := r.Header.Get("X-Flick-User-ID")
 	if uploaderID == "" {
-		return "", fmt.Errorf("missing uploader id")
+		return "", false, fmt.Errorf("missing uploader id")
 	}
 
 	var userUUID pgtype.UUID
 	if err := userUUID.Scan(uploaderID); err != nil {
-		return "", fmt.Errorf("invalid user id %q: %w", uploaderID, err)
+		return "", false, fmt.Errorf("invalid user id %q: %w", uploaderID, err)
 	}
 
 	if _, err := queries.GetAnonymousUserByID(r.Context(), userUUID); err == nil {
-		return uploaderID, nil
+		return uploaderID, false, nil
 	}
-	if _, err := queries.GetUserByID(r.Context(), userUUID); err == nil {
-		return uploaderID, nil
+
+	if user, err := queries.GetUserByID(r.Context(), userUUID); err == nil {
+		return uploaderID, user.Blocked, nil
 	}
-	return "", fmt.Errorf("unknown user id %q", uploaderID)
+
+	return "", false, fmt.Errorf("unknown user id %q", uploaderID)
 }
 
 // UploadFileHandler: Build the upload file handler.
@@ -86,10 +90,14 @@ func UploadFileHandler(queries *database.Queries) http.HandlerFunc {
 		}
 		headers := r.MultipartForm.File["file"]
 
-		uploaderID, err := resolveUploaderID(r, queries)
+		uploaderID, blocked, err := resolveUploaderID(r, queries)
 		if err != nil {
 			logging.LogInfoError("Cannot identify uploader: %v", err)
 			routes.WriteError(w, http.StatusBadRequest, "Invalid or unknown user")
+			return
+		}
+		if blocked {
+			routes.WriteError(w, http.StatusForbidden, "Account blocked")
 			return
 		}
 
