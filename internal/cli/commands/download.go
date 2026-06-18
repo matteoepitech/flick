@@ -26,6 +26,7 @@ import (
 	"github.com/matteoepitech/flick/internal/cli/config"
 	"github.com/matteoepitech/flick/internal/cli/network"
 	"github.com/matteoepitech/flick/internal/utils/checksum"
+	"github.com/matteoepitech/flick/internal/utils/encryption"
 	"github.com/schollz/progressbar/v3"
 	"github.com/spf13/cobra"
 )
@@ -40,17 +41,20 @@ type downloadInfoItem struct {
 
 // downloadInfoResponse: the listing returned by the /download/info endpoint.
 type downloadInfoResponse struct {
-	Items []downloadInfoItem `json:"items"`
+	Items     []downloadInfoItem `json:"items"`
+	Encrypted bool               `json:"encrypted"`
 }
 
 // doDownloadRequest: Do the download request on the server.
 //
 // Params:
 // - req (*http.Request): The request HTTP.
+// - key (encryption.Key): The key used to decrypt the archive when decrypt is true.
+// - decrypt (bool): Whether the downloaded archive must be decrypted before extraction.
 //
 // Returns:
 // - result1 (error): An error occured.
-func doDownloadRequest(req *http.Request) error {
+func doDownloadRequest(req *http.Request, key encryption.Key, decrypt bool) error {
 	resp, err := network.SharedClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("Failure: Cannot access the server: %w", err)
@@ -99,7 +103,7 @@ func doDownloadRequest(req *http.Request) error {
 			continue
 		}
 
-		if err := downloadArchive(part, bar, expectedChecksum); err != nil {
+		if err := downloadArchive(part, bar, expectedChecksum, key, decrypt); err != nil {
 			return err
 		}
 	}
@@ -113,17 +117,18 @@ func doDownloadRequest(req *http.Request) error {
 // - part (io.Reader): The multipart file stream carrying the zip.
 // - bar (*progressbar.ProgressBar): The progress bar to feed while downloading.
 // - expectedChecksum (string): The archive's BLAKE3 digest announced by the server, or empty to skip integrity verification.
+// - key (encryption.Key): The key used to decrypt the archive when decrypt is true.
+// - decrypt (bool): Whether the archive is end-to-end encrypted and must be decrypted before extraction.
 //
 // Returns:
 // - result1 (error): An error if occured.
-func downloadArchive(part io.Reader, bar *progressbar.ProgressBar, expectedChecksum string) error {
+func downloadArchive(part io.Reader, bar *progressbar.ProgressBar, expectedChecksum string, key encryption.Key, decrypt bool) error {
 	tmp, err := os.CreateTemp("", "flick-download-*.zip")
 	if err != nil {
 		return fmt.Errorf("Failure: Cannot create temp archive: %w", err)
 	}
 	defer os.Remove(tmp.Name())
 
-	// Hash the bytes as we stream them in, so verification costs no extra read.
 	hasher := checksum.New()
 	proxyReader := io.TeeReader(part, io.MultiWriter(bar, hasher))
 	if _, err := io.Copy(tmp, proxyReader); err != nil {
@@ -139,7 +144,51 @@ func downloadArchive(part io.Reader, bar *progressbar.ProgressBar, expectedCheck
 		}
 	}
 
-	return extractZip(tmp.Name(), ".")
+	zipPath := tmp.Name()
+	if decrypt {
+		decPath, err := decryptToTemp(tmp.Name(), key)
+		if err != nil {
+			return err
+		}
+		defer os.Remove(decPath)
+		zipPath = decPath
+	}
+
+	return extractZip(zipPath, ".")
+}
+
+// decryptToTemp: Decrypt the archive at srcPath into a new temporary file under
+// key, returning that file's path. The caller is responsible for removing it.
+//
+// Params:
+// - srcPath (string): The ciphertext archive to decrypt.
+// - key (encryption.Key): The key recovered from the share code.
+//
+// Returns:
+// - result1 (string): The path to the temporary plaintext archive.
+// - result2 (error): An error if occured.
+func decryptToTemp(srcPath string, key encryption.Key) (string, error) {
+	src, err := os.Open(srcPath)
+	if err != nil {
+		return "", fmt.Errorf("Failure: Cannot open the download: %w", err)
+	}
+	defer src.Close()
+
+	tmp, err := os.CreateTemp("", "flick-decrypt-*.zip")
+	if err != nil {
+		return "", fmt.Errorf("Failure: Cannot create temp archive: %w", err)
+	}
+
+	if err := encryption.Decrypt(tmp, src, key); err != nil {
+		tmp.Close()
+		os.Remove(tmp.Name())
+		return "", fmt.Errorf("Failure: Cannot decrypt the archive: %w", err)
+	}
+	if err := tmp.Close(); err != nil {
+		os.Remove(tmp.Name())
+		return "", fmt.Errorf("Failure: Cannot finalize the decrypted archive: %w", err)
+	}
+	return tmp.Name(), nil
 }
 
 // extractZip: Extract a zip archive into dest.
@@ -295,15 +344,28 @@ func RunDownload(cmd *cobra.Command, args []string) error {
 
 	fmt.Printf("Specify the code: ")
 	codeLine, _ := reader.ReadString('\n')
-	code := strings.TrimSpace(codeLine)
-	if code == "" {
+	input := strings.TrimSpace(codeLine)
+	if input == "" {
 		return fmt.Errorf("Failure: No code provided.")
+	}
+
+	// An encrypted Flick carries its decryption key after a "#", e.g.
+	// "ocean-tiger-42#<key>". Only the code is ever sent to the server.
+	code, key, hasKey, err := splitCode(input)
+	if err != nil {
+		return err
 	}
 	fmt.Printf("Searching the code %s...\n", code)
 
 	info, err := fetchDownloadInfo(code)
 	if err != nil {
 		return err
+	}
+	if info.Encrypted && !hasKey {
+		return fmt.Errorf("Failure: This Flick is end-to-end encrypted. Use the full code including the part after #.")
+	}
+	if info.Encrypted {
+		fmt.Println(utils.Dim + "This content is end-to-end encrypted; it will be decrypted locally." + utils.Reset)
 	}
 	printDownloadInfo(info)
 
@@ -320,5 +382,30 @@ func RunDownload(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("Failure: Cannot create the request for the server.")
 	}
 
-	return doDownloadRequest(req)
+	return doDownloadRequest(req, key, info.Encrypted)
+}
+
+// splitCode: Separate a share code from its optional decryption key. A code of
+// the form "code#key" yields the bare code plus the decoded key; a plain code
+// yields the code with no key.
+//
+// Params:
+// - input (string): The code typed by the user, possibly with a "#key" suffix.
+//
+// Returns:
+// - result1 (string): The bare share code to send to the server.
+// - result2 (encryption.Key): The decoded key, valid only when result3 is true.
+// - result3 (bool): True when a key was present in the input.
+// - result4 (error): An error if the key part is malformed.
+func splitCode(input string) (string, encryption.Key, bool, error) {
+	i := strings.IndexByte(input, '#')
+	if i == -1 {
+		return input, encryption.Key{}, false, nil
+	}
+
+	key, err := encryption.DecodeKey(input[i+1:])
+	if err != nil {
+		return "", encryption.Key{}, false, fmt.Errorf("Failure: Invalid decryption key in the code: %w", err)
+	}
+	return input[:i], key, true, nil
 }

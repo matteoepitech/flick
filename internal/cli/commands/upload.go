@@ -21,9 +21,11 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/matteoepitech/flick/internal/api/utils"
 	"github.com/matteoepitech/flick/internal/cli/config"
 	"github.com/matteoepitech/flick/internal/cli/network"
 	"github.com/matteoepitech/flick/internal/utils/checksum"
+	"github.com/matteoepitech/flick/internal/utils/encryption"
 	"github.com/schollz/progressbar/v3"
 	"github.com/spf13/cobra"
 	"github.com/tiagomelo/go-clipboard/clipboard"
@@ -34,10 +36,11 @@ import (
 // Params:
 // - req (*http.Request): The request HTTP.
 // - exp (string): The expiration of this upload, shown next to the code.
+// - keyFragment (string): The base64url encryption key to append to the code.
 //
 // Returns:
 // - result1 (error): An error occured.
-func doUploadRequest(req *http.Request, exp string) error {
+func doUploadRequest(req *http.Request, exp string, keyFragment string) error {
 	resp, err := network.SharedClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("Failure: Cannot access the server: %w", err)
@@ -53,15 +56,55 @@ func doUploadRequest(req *http.Request, exp string) error {
 		return fmt.Errorf("Failure: %s", serverErrorMessage(body, resp.Status))
 	}
 
-	bodyString := string(body)
-	fmt.Printf("\nCode: %s \033[33m[%s left]\033[0m\n", bodyString, exp)
+	shareCode := string(body)
+	if keyFragment != "" {
+		shareCode += "#" + keyFragment
+	}
+	fmt.Printf("\nCode: %s "+utils.Yellow+"[%s left]\n"+utils.Reset, shareCode, exp)
+	if keyFragment != "" {
+		fmt.Println(utils.Dim + "Encrypted: share the whole code, the part after # is the decryption key." + utils.Reset)
+	}
 
 	c := clipboard.New(clipboard.ClipboardOptions{Primary: true})
-	if err := c.CopyText(bodyString); err != nil {
+	if err := c.CopyText(shareCode); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+// encryptToTemp: Encrypt the archive at srcPath into a new temporary file under
+// key, returning that file's path. The caller is responsible for removing it.
+//
+// Params:
+// - srcPath (string): The plaintext archive to encrypt.
+// - key (encryption.Key): The single-use key to encrypt with.
+//
+// Returns:
+// - result1 (string): The path to the temporary ciphertext file.
+// - result2 (error): An error if occured.
+func encryptToTemp(srcPath string, key encryption.Key) (string, error) {
+	src, err := os.Open(srcPath)
+	if err != nil {
+		return "", fmt.Errorf("Failure: Cannot open the archive: %w", err)
+	}
+	defer src.Close()
+
+	tmp, err := os.CreateTemp("", "flick-upload-*.enc")
+	if err != nil {
+		return "", fmt.Errorf("Failure: Cannot create encrypted temp file: %w", err)
+	}
+
+	if err := encryption.Encrypt(tmp, src, key); err != nil {
+		tmp.Close()
+		os.Remove(tmp.Name())
+		return "", fmt.Errorf("Failure: Cannot encrypt the archive: %w", err)
+	}
+	if err := tmp.Close(); err != nil {
+		os.Remove(tmp.Name())
+		return "", fmt.Errorf("Failure: Cannot finalize the encrypted archive: %w", err)
+	}
+	return tmp.Name(), nil
 }
 
 // archiveRoot: Choose the base against which src's entries are named inside the
@@ -183,10 +226,11 @@ func randomArchiveName() string {
 // - args ([]string): The differents arguments of this command.
 // - exp (string): The expiration of this upload.
 // - mdc (string): The Max Download Count of this upload.
+// - encrypt (bool): Encrypt the archive end-to-end before uploading.
 //
 // Returns:
 // - result1 (error): An error if occured.
-func RunUpload(cmd *cobra.Command, args []string, exp string, mdc string) error {
+func RunUpload(cmd *cobra.Command, args []string, exp string, mdc string, encrypt bool) error {
 	if len(args) < 1 {
 		return fmt.Errorf("Failure: Internal CLI error.")
 	}
@@ -240,12 +284,28 @@ func RunUpload(cmd *cobra.Command, args []string, exp string, mdc string) error 
 	}
 	defer os.Remove(archivePath)
 
-	archiveChecksum, err := checksum.HashFile(archivePath)
+	uploadPath := archivePath
+	var keyFragment string
+	if encrypt {
+		key, err := encryption.NewKey()
+		if err != nil {
+			return fmt.Errorf("Failure: Cannot generate an encryption key: %w", err)
+		}
+		encPath, err := encryptToTemp(archivePath, key)
+		if err != nil {
+			return err
+		}
+		defer os.Remove(encPath)
+		uploadPath = encPath
+		keyFragment = encryption.EncodeKey(key)
+	}
+
+	archiveChecksum, err := checksum.HashFile(uploadPath)
 	if err != nil {
 		return fmt.Errorf("Failure: Cannot checksum the archive: %w", err)
 	}
 
-	archive, err := os.Open(archivePath)
+	archive, err := os.Open(uploadPath)
 	if err != nil {
 		return fmt.Errorf("Failure: Cannot open the archive: %w", err)
 	}
@@ -297,9 +357,12 @@ func RunUpload(cmd *cobra.Command, args []string, exp string, mdc string) error 
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	req.Header.Set("X-Flick-User-ID", creds.UserID)
 	req.Header.Set("X-Flick-Checksum", archiveChecksum)
+	if keyFragment != "" {
+		req.Header.Set("X-Flick-Encrypted", "true")
+	}
 	req.ContentLength = int64(body.Len())
 
-	if err := doUploadRequest(req, exp); err != nil {
+	if err := doUploadRequest(req, exp, keyFragment); err != nil {
 		return err
 	}
 	fmt.Println("Code copied to clipboard.")

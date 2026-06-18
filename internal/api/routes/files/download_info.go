@@ -16,6 +16,7 @@ import (
 
 	codepkg "github.com/matteoepitech/flick/internal/api/code"
 	"github.com/matteoepitech/flick/internal/api/logging"
+	"github.com/matteoepitech/flick/internal/api/metadata"
 	"github.com/matteoepitech/flick/internal/api/path"
 	"github.com/matteoepitech/flick/internal/api/routes"
 )
@@ -30,7 +31,8 @@ type downloadInfoItem struct {
 
 // downloadInfoResponse: the listing returned by the info endpoint.
 type downloadInfoResponse struct {
-	Items []downloadInfoItem `json:"items"`
+	Items     []downloadInfoItem `json:"items"`
+	Encrypted bool               `json:"encrypted,omitempty"`
 }
 
 // DownloadInfoHandler: List the files behind a code without consuming a download.
@@ -63,6 +65,29 @@ func DownloadInfoHandler() http.HandlerFunc {
 		if err != nil {
 			logging.LogInfoError("Cannot list files for code %q: %v", code, err)
 			routes.WriteError(w, http.StatusInternalServerError, "Cannot read the files")
+			return
+		}
+
+		// Check if this is encrypted or not
+		if meta, err := metadata.LoadMetadata(path.GetDataDir(), code); err == nil && meta.Encrypted {
+			var total int64
+			for _, entry := range entries {
+				if entry.Name() == metadataFilename {
+					continue
+				}
+				if info, err := entry.Info(); err == nil {
+					total += info.Size()
+				}
+			}
+
+			resp := downloadInfoResponse{
+				Encrypted: true,
+				Items:     []downloadInfoItem{{Name: "encrypted content", FileCount: 1, Size: total}},
+			}
+			w.Header().Set("Content-Type", "application/json")
+			if err := json.NewEncoder(w).Encode(resp); err != nil {
+				logging.LogInfoError("Cannot encode info response for code %q: %v", code, err)
+			}
 			return
 		}
 

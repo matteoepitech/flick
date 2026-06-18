@@ -173,7 +173,9 @@
     "notFound": "Ce code n'existe pas ou a expiré.",
     "error": "Impossible de récupérer le fichier. Réessayez.",
     "downloadFolder": "Télécharger le dossier",
-    "folderFiles": "{count, plural, =1 {# fichier} other {# fichiers}}"
+    "folderFiles": "{count, plural, =1 {# fichier} other {# fichiers}}",
+    "encrypted": "Chiffré de bout en bout",
+    "encryptedHint": "Ce fichier est chiffré de bout en bout, il ne peut donc pas être téléchargé depuis le web. Utilisez le CLI Flick avec le code complet, y compris la partie après #."
   },
   "Login": {
     "back": "Retour",

@@ -123,6 +123,8 @@ func UploadFileHandler(queries *database.Queries) http.HandlerFunc {
 			return
 		}
 
+		metadata.SetEncrypted(m, r.Header.Get("X-Flick-Encrypted") == "true")
+
 		// Generate a code until we found one correct.
 		var codeDir string
 		for {

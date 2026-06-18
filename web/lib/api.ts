@@ -313,6 +313,9 @@ export interface DownloadInfoItem {
 
 export interface DownloadInfo {
   items: DownloadInfoItem[]
+  // True when the upload is end-to-end encrypted. The browser has no key and no
+  // way to decrypt, so the receive page blocks the download and points to the CLI.
+  encrypted: boolean
 }
 
 // fetchDownloadInfo: List the items behind a code WITHOUT consuming a download.
@@ -327,8 +330,8 @@ export async function fetchDownloadInfo(code: string, signal?: AbortSignal): Pro
   if (res.status === 404) throw new CodeNotFoundError(code)
   if (!res.ok) throw new ApiError(res.status, parseErrorMessage(await res.text().catch(() => ""), res.statusText))
 
-  const data = (await res.json()) as { items?: DownloadInfoItem[] }
-  return { items: data.items ?? [] }
+  const data = (await res.json()) as { items?: DownloadInfoItem[]; encrypted?: boolean }
+  return { items: data.items ?? [], encrypted: data.encrypted === true }
 }
 
 export async function loadUserConfiguration(

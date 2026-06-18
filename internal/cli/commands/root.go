@@ -27,6 +27,7 @@ var rootCmd = &cobra.Command{
 func init() {
 	rootCmd.Flags().String("exp", config.Conf.DefExpTime, "Expiration duration")
 	rootCmd.Flags().String("mdc", strconv.FormatInt(int64(config.Conf.DefDownloadCount), 10), "Max download count")
+	rootCmd.Flags().BoolP("encrypt", "e", false, "Encrypt the upload end-to-end")
 }
 
 // Execute: Execute the root command.
@@ -55,6 +56,7 @@ func runCLI(cmd *cobra.Command, args []string) error {
 
 	exp, _ := cmd.Flags().GetString("exp")
 	mdc, _ := cmd.Flags().GetString("mdc")
+	encrypt, _ := cmd.Flags().GetBool("encrypt")
 
 	for _, sub := range cmd.Commands() {
 		if sub.Name() == args[0] {
@@ -62,5 +64,5 @@ func runCLI(cmd *cobra.Command, args []string) error {
 		}
 
 	}
-	return RunUpload(cmd, args, exp, mdc)
+	return RunUpload(cmd, args, exp, mdc, encrypt)
 }

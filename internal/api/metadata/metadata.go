@@ -27,6 +27,7 @@ type Metadata struct {
 	MaxDownloadCount     int32  `json:"max_download_count"`
 	UploaderID           string `json:"uploader_id,omitempty"`
 	Checksum             string `json:"checksum,omitempty"`
+	Encrypted            bool   `json:"encrypted,omitempty"`
 }
 
 // LoadMetadata: Read and decode the metadata file of a given code.
@@ -169,6 +170,16 @@ func SetChecksum(metadata *Metadata, sum string) bool {
 
 	metadata.Checksum = sum
 	return true
+}
+
+// SetEncrypted: Record whether the uploaded archive is end-to-end encrypted, as
+// declared by the client through the X-Flick-Encrypted header.
+//
+// Params:
+// - metadata (*Metadata): The metadata to modify.
+// - encrypted (bool): True when the client encrypted the archive before upload.
+func SetEncrypted(metadata *Metadata, encrypted bool) {
+	metadata.Encrypted = encrypted
 }
 
 // CheckExpirationToRemove: Will check and remove every expired files/folders.

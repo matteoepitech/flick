@@ -173,7 +173,9 @@
     "notFound": "This code does not exist or has expired.",
     "error": "Could not fetch the file. Please retry.",
     "downloadFolder": "Download folder",
-    "folderFiles": "{count, plural, =1 {# file} other {# files}}"
+    "folderFiles": "{count, plural, =1 {# file} other {# files}}",
+    "encrypted": "End-to-end encrypted",
+    "encryptedHint": "This file is end-to-end encrypted, so it cannot be downloaded from the web. Use the Flick CLI with the full code, including the part after #."
   },
   "Login": {
     "back": "Back",

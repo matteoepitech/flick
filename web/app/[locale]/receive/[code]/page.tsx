@@ -1,6 +1,6 @@
 "use client"
 
-import { ChevronLeft, Download, FileText, Folder, Loader2 } from "lucide-react"
+import { ChevronLeft, Download, FileText, Folder, Loader2, Lock } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { use, useEffect, useState } from "react"
 
@@ -31,7 +31,10 @@ type State =
 export default function ReceiveCodePage({ params }: { params: Promise<{ code: string }> }) {
   const t = useTranslations("ReceiveCode")
   const { code: rawCode } = use(params)
-  const code = decodeURIComponent(rawCode)
+  // A pasted code may carry a "#key" suffix for encrypted uploads. The key is
+  // useless in the browser (it cannot decrypt), so drop it: we look up and
+  // display only the bare code, and never send the key anywhere.
+  const code = decodeURIComponent(rawCode).split("#")[0]
 
   const [state, setState] = useState<State>({ status: "loading" })
 
@@ -121,10 +124,16 @@ function ReadyView({ info, code }: { info: DownloadInfo; code: string }) {
           {items.map((item) => (
             <li key={item.name} className="flex items-center gap-3 rounded-lg px-3 py-2.5">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-                {item.isFolder ? <Folder className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+                {info.encrypted ? (
+                  <Lock className="h-4 w-4" />
+                ) : item.isFolder ? (
+                  <Folder className="h-4 w-4" />
+                ) : (
+                  <FileText className="h-4 w-4" />
+                )}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{item.name}</p>
+                <p className="truncate text-sm font-medium">{info.encrypted ? t("encrypted") : item.name}</p>
                 <p className="text-xs text-muted-foreground">
                   {item.isFolder
                     ? `${t("folderFiles", { count: item.fileCount })} · ${formatBytes(item.size)}`
@@ -136,10 +145,17 @@ function ReadyView({ info, code }: { info: DownloadInfo; code: string }) {
         </ul>
       </Card>
 
-      <Button type="button" size="lg" className="h-12 w-full" disabled={busy} onClick={downloadAll}>
-        {busy ? <Loader2 className="size-5 animate-spin" /> : <Download className="size-5" />}
-        {items.length > 1 ? t("downloadAll") : t("download")}
-      </Button>
+      {info.encrypted ? (
+        <p className="flex items-start gap-2 rounded-lg bg-muted px-4 py-3 text-sm text-muted-foreground">
+          <Lock className="mt-0.5 size-4 shrink-0" />
+          {t("encryptedHint")}
+        </p>
+      ) : (
+        <Button type="button" size="lg" className="h-12 w-full" disabled={busy} onClick={downloadAll}>
+          {busy ? <Loader2 className="size-5 animate-spin" /> : <Download className="size-5" />}
+          {items.length > 1 ? t("downloadAll") : t("download")}
+        </Button>
+      )}
     </div>
   )
 }
