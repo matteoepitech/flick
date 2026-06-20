@@ -43,7 +43,10 @@ export function clearSession(): void {
 // avoid logging users out when the API is briefly unreachable.
 export async function verifySession(session: AuthSession, signal?: AbortSignal): Promise<SessionStatus> {
   try {
-    await whoami(session.token, signal)
+    // Refresh the stored user from the server so changes since login (being
+    // added to a group, role changes, ...) are reflected without a re-login.
+    const user = await whoami(session.token, signal)
+    saveSession({ token: session.token, user })
     return "valid"
   } catch (err) {
     // Blocked by an admin: keep the session so the blocked page can show context.

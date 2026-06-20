@@ -23,8 +23,11 @@ import (
 	"github.com/matteoepitech/flick/internal/api/routes"
 	"github.com/matteoepitech/flick/internal/api/routes/account"
 	"github.com/matteoepitech/flick/internal/api/routes/account/oauth"
-	"github.com/matteoepitech/flick/internal/api/routes/admin"
 	"github.com/matteoepitech/flick/internal/api/routes/files"
+	"github.com/matteoepitech/flick/internal/api/routes/groups"
+	groupsadmin "github.com/matteoepitech/flick/internal/api/routes/groups/admin"
+	"github.com/matteoepitech/flick/internal/api/routes/users"
+	usersadmin "github.com/matteoepitech/flick/internal/api/routes/users/admin"
 )
 
 // Constants
@@ -82,8 +85,13 @@ func Run(ctx context.Context) error {
 	mux.HandleFunc("/api/v1/device/code", oauth.DeviceCodeHandler(queries))
 	mux.HandleFunc("/api/v1/device/token", oauth.DeviceTokenHandler(queries))
 	mux.HandleFunc("/api/v1/device/approve", oauth.DeviceApproveHandler(queries))
-	mux.HandleFunc("GET /api/v1/admin/users", admin.ListUsersHandler(queries))
-	mux.HandleFunc("PATCH /api/v1/admin/users/{id}", admin.UpdateUserHandler(queries))
+	mux.HandleFunc("/api/v1/users/search", users.SearchUsersHandler(queries))
+	mux.HandleFunc("/api/v1/admin/users", usersadmin.ListUsersHandler(queries))
+	mux.HandleFunc("/api/v1/admin/users/{id}", usersadmin.UpdateUserHandler(queries))
+	mux.HandleFunc("/api/v1/admin/groups", groupsadmin.GroupsHandler(queries))
+	mux.HandleFunc("/api/v1/admin/groups/{id}", groupsadmin.GroupHandler(queries))
+	mux.HandleFunc("/api/v1/admin/groups/{id}/members", groups.GroupMembersHandler(queries))
+	mux.HandleFunc("/api/v1/admin/groups/{id}/members/{userId}", groups.GroupMemberHandler(queries))
 	routes.WriteDefaultConfig()
 
 	server := &http.Server{

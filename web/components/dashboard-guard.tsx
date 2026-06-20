@@ -35,7 +35,10 @@ export function DashboardGuard({ children }: { children: React.ReactNode }) {
         router.replace("/login")
         return
       }
-      if (!canAccessDashboard(session.user)) {
+      // verifySession refreshes the stored session, so re-read it to gate on the
+      // latest memberships rather than the copy loaded before the round-trip.
+      const fresh = loadSession() ?? session
+      if (!canAccessDashboard(fresh.user)) {
         router.replace("/")
         return
       }

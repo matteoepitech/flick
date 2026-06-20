@@ -45,3 +45,9 @@ ORDER BY created_at DESC;
 -- name: DeleteUser :exec
 DELETE FROM users
 WHERE id = $1;
+
+-- name: SearchUsers :many
+SELECT id, username, email FROM users
+WHERE username ILIKE $1 OR email ILIKE $1
+ORDER BY username
+LIMIT 10;

@@ -40,7 +40,32 @@ JOIN user_groups ug ON ug.user_id = u.id
 WHERE ug.group_id = $1
 ORDER BY u.username;
 
+-- name: ListGroupsForUserWithRole :many
+SELECT g.id, g.name, g.created_at, ug.role AS group_role
+FROM groups g
+JOIN user_groups ug ON ug.group_id = g.id
+WHERE ug.user_id = $1
+ORDER BY g.name;
+
+-- name: ListGroupMembers :many
+SELECT u.id, u.username, u.email, u.role, u.blocked, u.created_at, ug.role AS group_role
+FROM users u
+JOIN user_groups ug ON ug.user_id = u.id
+WHERE ug.group_id = $1
+ORDER BY u.username;
+
+-- name: GetRoleInGroup :one
+SELECT role FROM user_groups
+WHERE user_id = $1 AND group_id = $2;
+
+
 -- name: SetRoleInGroup :exec
 UPDATE user_groups ug
 SET role = $3
 WHERE ug.user_id = $1 AND ug.group_id = $2;
+
+-- name: UpdateGroupName :one
+UPDATE groups
+SET name = $2
+WHERE id = $1
+RETURNING *;

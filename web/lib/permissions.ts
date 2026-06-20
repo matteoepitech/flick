@@ -2,21 +2,22 @@ import type { AuthUser } from "@/lib/api"
 
 // Dashboard sections gated by role. Admins manage the whole instance;
 // maintainers only get a single view scoped to their group.
-export type DashboardSection = "overview" | "users" | "settings" | "group"
+export type DashboardSection = "overview" | "users" | "groups" | "settings" | "group"
 
 // visibleSections: The dashboard sections a user is allowed to see.
 //
-// - Admins (global role) see everything.
-// - Maintainers/owners (group role) only see their group page.
-// - Everyone else gets nothing and is kept out of the dashboard.
-//
-// The API does not expose group memberships yet, so `groupRole` is currently
-// always undefined: in practice only admins reach the dashboard for now.
+// - Admins (global role) get the instance-wide administration sections.
+// - Anyone who belongs to at least one group also gets the "My groups" page,
+//   where they see their groups and (as a maintainer/owner) manage members.
+// - A user with neither admin rights nor any group gets nothing and is kept out
+//   of the dashboard.
 export function visibleSections(user: AuthUser | null): DashboardSection[] {
   if (!user) return []
-  if (user.role === "admin") return ["overview", "users", "settings"]
-  if (user.groupRole === "maintainer" || user.groupRole === "owner") return ["group"]
-  return []
+
+  const sections: DashboardSection[] = []
+  if (user.role === "admin") sections.push("overview", "users", "groups", "settings")
+  if (user.groups.length > 0) sections.push("group")
+  return sections
 }
 
 // canAccessDashboard: Whether a user may open the dashboard at all.
@@ -34,6 +35,7 @@ export function canSee(user: AuthUser | null, section: DashboardSection): boolea
 export const SECTION_PATHS: Record<DashboardSection, string> = {
   overview: "/dashboard",
   users: "/dashboard/users",
+  groups: "/dashboard/groups",
   group: "/dashboard/group",
   settings: "/dashboard/settings",
 }

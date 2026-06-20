@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowUpRight, LayoutDashboard, Settings, Users, UsersRound } from "lucide-react"
+import { ArrowUpRight, Boxes, LayoutDashboard, Settings, Users, UsersRound } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
 
@@ -34,7 +34,8 @@ type NavItem = {
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard, section: "overview" },
   { href: "/dashboard/users", label: "Users", icon: Users, section: "users" },
-  { href: "/dashboard/group", label: "My group", icon: UsersRound, section: "group" },
+  { href: "/dashboard/groups", label: "Groups", icon: Boxes, section: "groups" },
+  { href: "/dashboard/group", label: "My groups", icon: UsersRound, section: "group" },
   { href: "/dashboard/settings", label: "Settings", icon: Settings, section: "settings", separatedAbove: true },
 ]
 
@@ -51,7 +52,10 @@ export function DashboardSidebar() {
 
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === "/dashboard" || /\/[^/]+\/dashboard$/.test(pathname)
-    return pathname.endsWith(href)
+    // Match the section page itself or any of its sub-routes (e.g. a group
+    // detail page), while keeping "/dashboard/group" distinct from
+    // "/dashboard/groups" thanks to the trailing slash.
+    return pathname.endsWith(href) || pathname.includes(href + "/")
   }
 
   return (

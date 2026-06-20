@@ -334,9 +334,7 @@ export async function fetchDownloadInfo(code: string, signal?: AbortSignal): Pro
   return { items: data.items ?? [], encrypted: data.encrypted === true }
 }
 
-export async function loadUserConfiguration(
-  signal?: AbortSignal
-): Promise<Record<string, string | number | boolean>> {
+export async function loadUserConfiguration(signal?: AbortSignal): Promise<Record<string, string | number | boolean>> {
   const url = apiUrl("/user-configure")
 
   const res = await fetch(url.toString(), { method: "GET", signal })
@@ -351,9 +349,7 @@ export async function loadUserConfiguration(
   return data as Record<string, string | number | boolean>
 }
 
-export async function loadConfiguration(
-  signal?: AbortSignal
-): Promise<Record<string, string | number | boolean>> {
+export async function loadConfiguration(signal?: AbortSignal): Promise<Record<string, string | number | boolean>> {
   const url = apiUrl("/configure")
 
   const res = await fetch(url.toString(), { method: "GET", signal })
@@ -429,8 +425,7 @@ export async function fetchStats(signal?: AbortSignal): Promise<StatsSnapshot> {
   const totalDownloads = typeof obj.totalDownloads === "number" ? obj.totalDownloads : 0
   const userCount = typeof obj.userCount === "number" ? obj.userCount : 0
   const storageBytes = typeof obj.storageBytes === "number" ? obj.storageBytes : 0
-  const timestamp =
-    typeof obj.timestamp === "string" ? obj.timestamp : new Date().toISOString()
+  const timestamp = typeof obj.timestamp === "string" ? obj.timestamp : new Date().toISOString()
 
   return { timestamp, activeCodes, totalUploads, totalDownloads, userCount, storageBytes }
 }
@@ -443,12 +438,21 @@ export type UserRole = "admin" | "user"
 // does not expose group memberships yet, so this stays undefined for now.
 export type GroupRole = "member" | "maintainer" | "owner"
 
+// A group the signed-in user belongs to, with their role inside it. Carried on
+// the session so the dashboard can show a member their groups and gate the
+// "My groups" tab.
+export interface GroupMembership {
+  id: string
+  name: string
+  role: GroupRole
+}
+
 export interface AuthUser {
   id: string
   username: string
   email: string
   role: UserRole
-  groupRole?: GroupRole
+  groups: GroupMembership[]
   blocked: boolean
   createdAt?: string
 }
@@ -461,6 +465,21 @@ export interface AuthSession {
 // coerceRole: Defensive coercion of an unknown role value coming from the API.
 export function coerceRole(value: unknown): UserRole {
   return value === "admin" ? "admin" : "user"
+}
+
+// parseGroupMemberships: Maps the raw `groups` array from a login/whoami user
+// payload (snake_case) to GroupMembership[]. Tolerates a missing/invalid value
+// by returning an empty array.
+function parseGroupMemberships(value: unknown): GroupMembership[] {
+  if (!Array.isArray(value)) return []
+  return value.map((raw) => {
+    const obj = (raw ?? {}) as Record<string, unknown>
+    return {
+      id: typeof obj.id === "string" ? obj.id : "",
+      name: typeof obj.name === "string" ? obj.name : "",
+      role: coerceGroupRole(obj.role),
+    }
+  })
 }
 
 export async function registerUser(
@@ -494,6 +513,7 @@ export async function registerUser(
     username: data.username ?? "",
     email: data.email ?? "",
     role: coerceRole(data.role),
+    groups: [],
     blocked: data.blocked === true,
     createdAt: data.created_at,
   }
@@ -512,7 +532,7 @@ export async function loginUser(email: string, password: string, signal?: AbortS
     throw new ApiError(res.status, parseErrorMessage(await res.text().catch(() => ""), res.statusText))
   }
 
-  // The server replies with { token, expires_at, user: { id, username, email, role, blocked, created_at } }.
+  // The server replies with { token, expires_at, user: { id, username, email, role, blocked, created_at, groups } }.
   const data = (await res.json()) as {
     token?: string
     user?: {
@@ -522,6 +542,7 @@ export async function loginUser(email: string, password: string, signal?: AbortS
       role?: unknown
       blocked?: unknown
       created_at?: string
+      groups?: unknown
     }
   }
   if (!data.token || !data.user) {
@@ -535,6 +556,7 @@ export async function loginUser(email: string, password: string, signal?: AbortS
       username: data.user.username ?? "",
       email: data.user.email ?? "",
       role: coerceRole(data.user.role),
+      groups: parseGroupMemberships(data.user.groups),
       blocked: data.user.blocked === true,
       createdAt: data.user.created_at,
     },
@@ -584,6 +606,7 @@ export async function whoami(token: string, signal?: AbortSignal): Promise<AuthU
       role?: unknown
       blocked?: unknown
       created_at?: string
+      groups?: unknown
     }
   }
   if (!data.user) {
@@ -595,6 +618,7 @@ export async function whoami(token: string, signal?: AbortSignal): Promise<AuthU
     username: data.user.username ?? "",
     email: data.user.email ?? "",
     role: coerceRole(data.user.role),
+    groups: parseGroupMemberships(data.user.groups),
     blocked: data.user.blocked === true,
     createdAt: data.user.created_at,
   }
@@ -674,4 +698,252 @@ export async function updateUser(
   }
 
   return toAdminUser(await res.json())
+}
+
+export interface AdminGroup {
+  id: string
+  name: string
+  createdAt?: string
+}
+
+// toAdminGroup: Maps a raw API group object (snake_case) to AdminGroup.
+function toAdminGroup(raw: unknown): AdminGroup {
+  const obj = (raw ?? {}) as Record<string, unknown>
+  return {
+    id: typeof obj.id === "string" ? obj.id : "",
+    name: typeof obj.name === "string" ? obj.name : "",
+    createdAt: typeof obj.created_at === "string" ? obj.created_at : undefined,
+  }
+}
+
+// listGroups: Admin-only fetch of every group. Requires an admin session token.
+export async function listGroups(token: string, signal?: AbortSignal): Promise<AdminGroup[]> {
+  const url = apiUrl("/admin/groups")
+
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}` },
+    signal,
+  })
+  if (!res.ok) {
+    throw new ApiError(res.status, parseErrorMessage(await res.text().catch(() => ""), res.statusText))
+  }
+
+  const data = (await res.json()) as unknown
+  if (!Array.isArray(data)) {
+    throw new ApiError(res.status, "Invalid groups response")
+  }
+  return data.map(toAdminGroup)
+}
+
+// createGroup: Admin-only creation of a group. The API replies 201 with the
+// created group { id, name, created_at }.
+export async function createGroup(token: string, name: string, signal?: AbortSignal): Promise<AdminGroup> {
+  const url = apiUrl("/admin/groups")
+
+  const res = await fetch(url.toString(), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ name }),
+    signal,
+  })
+  if (!res.ok) {
+    throw new ApiError(res.status, parseErrorMessage(await res.text().catch(() => ""), res.statusText))
+  }
+
+  return toAdminGroup(await res.json())
+}
+
+// deleteGroup: Admin-only deletion of a group by id. The API replies 204 with
+// no body on success.
+export async function deleteGroup(token: string, id: string, signal?: AbortSignal): Promise<void> {
+  const url = apiUrl(`/admin/groups/${id}`)
+
+  const res = await fetch(url.toString(), {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+    signal,
+  })
+  if (!res.ok) {
+    throw new ApiError(res.status, parseErrorMessage(await res.text().catch(() => ""), res.statusText))
+  }
+}
+
+// renameGroup: Admin-only rename of a group. The API replies 200 with the
+// updated group.
+export async function renameGroup(token: string, id: string, name: string, signal?: AbortSignal): Promise<AdminGroup> {
+  const url = apiUrl(`/admin/groups/${id}`)
+
+  const res = await fetch(url.toString(), {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ name }),
+    signal,
+  })
+  if (!res.ok) {
+    throw new ApiError(res.status, parseErrorMessage(await res.text().catch(() => ""), res.statusText))
+  }
+
+  return toAdminGroup(await res.json())
+}
+
+// A member of a group: a user plus the role they hold inside that group.
+export interface GroupMember {
+  id: string
+  username: string
+  email: string
+  role: UserRole
+  blocked: boolean
+  createdAt?: string
+  groupRole: GroupRole
+}
+
+// coerceGroupRole: Defensive coercion of an unknown group role from the API.
+export function coerceGroupRole(value: unknown): GroupRole {
+  return value === "owner" ? "owner" : value === "maintainer" ? "maintainer" : "member"
+}
+
+// toGroupMember: Maps a raw API member object (snake_case) to GroupMember.
+function toGroupMember(raw: unknown): GroupMember {
+  const obj = (raw ?? {}) as Record<string, unknown>
+  return {
+    id: typeof obj.id === "string" ? obj.id : "",
+    username: typeof obj.username === "string" ? obj.username : "",
+    email: typeof obj.email === "string" ? obj.email : "",
+    role: coerceRole(obj.role),
+    blocked: obj.blocked === true,
+    createdAt: typeof obj.created_at === "string" ? obj.created_at : undefined,
+    groupRole: coerceGroupRole(obj.group_role),
+  }
+}
+
+// listGroupMembers: Fetch the members of a group, with each member's role inside
+// the group. Allowed for a global admin or a maintainer/owner of the group.
+export async function listGroupMembers(token: string, groupId: string, signal?: AbortSignal): Promise<GroupMember[]> {
+  const url = apiUrl(`/admin/groups/${groupId}/members`)
+
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}` },
+    signal,
+  })
+  if (!res.ok) {
+    throw new ApiError(res.status, parseErrorMessage(await res.text().catch(() => ""), res.statusText))
+  }
+
+  const data = (await res.json()) as unknown
+  if (!Array.isArray(data)) {
+    throw new ApiError(res.status, "Invalid members response")
+  }
+  return data.map(toGroupMember)
+}
+
+// addGroupMember: Add a user to a group. The API replies 204 with no body.
+export async function addGroupMember(
+  token: string,
+  groupId: string,
+  userId: string,
+  signal?: AbortSignal
+): Promise<void> {
+  const url = apiUrl(`/admin/groups/${groupId}/members`)
+
+  const res = await fetch(url.toString(), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ user_id: userId }),
+    signal,
+  })
+  if (!res.ok) {
+    throw new ApiError(res.status, parseErrorMessage(await res.text().catch(() => ""), res.statusText))
+  }
+}
+
+// removeGroupMember: Remove a user from a group. The API replies 204 with no body.
+export async function removeGroupMember(
+  token: string,
+  groupId: string,
+  userId: string,
+  signal?: AbortSignal
+): Promise<void> {
+  const url = apiUrl(`/admin/groups/${groupId}/members/${userId}`)
+
+  const res = await fetch(url.toString(), {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+    signal,
+  })
+  if (!res.ok) {
+    throw new ApiError(res.status, parseErrorMessage(await res.text().catch(() => ""), res.statusText))
+  }
+}
+
+// setMemberRole: Change a member's role inside a group (admin-only). The API
+// replies 204 with no body.
+export async function setMemberRole(
+  token: string,
+  groupId: string,
+  userId: string,
+  role: GroupRole,
+  signal?: AbortSignal
+): Promise<void> {
+  const url = apiUrl(`/admin/groups/${groupId}/members/${userId}`)
+
+  const res = await fetch(url.toString(), {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ role }),
+    signal,
+  })
+  if (!res.ok) {
+    throw new ApiError(res.status, parseErrorMessage(await res.text().catch(() => ""), res.statusText))
+  }
+}
+
+// A minimal user match returned by the search endpoint.
+export interface UserSearchResult {
+  id: string
+  username: string
+  email: string
+}
+
+// searchUsers: Find users by username or email. Available to any authenticated
+// user (used by group maintainers to pick someone to add). Returns an empty list
+// for queries shorter than two characters.
+export async function searchUsers(token: string, q: string, signal?: AbortSignal): Promise<UserSearchResult[]> {
+  const url = apiUrl("/users/search")
+  url.searchParams.set("q", q)
+
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}` },
+    signal,
+  })
+  if (!res.ok) {
+    throw new ApiError(res.status, parseErrorMessage(await res.text().catch(() => ""), res.statusText))
+  }
+
+  const data = (await res.json()) as unknown
+  if (!Array.isArray(data)) {
+    throw new ApiError(res.status, "Invalid search response")
+  }
+  return data.map((raw) => {
+    const obj = (raw ?? {}) as Record<string, unknown>
+    return {
+      id: typeof obj.id === "string" ? obj.id : "",
+      username: typeof obj.username === "string" ? obj.username : "",
+      email: typeof obj.email === "string" ? obj.email : "",
+    }
+  })
 }

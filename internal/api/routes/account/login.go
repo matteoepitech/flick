@@ -122,6 +122,7 @@ func LoginHandler(queries *database.Queries) http.HandlerFunc {
 				Role:      user.Role,
 				CreatedAt: user.CreatedAt,
 				Blocked:   user.Blocked,
+				Groups:    userGroupMemberships(r.Context(), queries, user.ID),
 			},
 		})
 	}

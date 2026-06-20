@@ -1,6 +1,6 @@
 /*
 ** FLICK PROJECT, 2026
-** flick/internal/api/routes/admin/users
+** flick/internal/api/routes/users/admin/users
 ** File description:
 ** Admin-side user management. A single PATCH route applies partial updates so
 ** every management action (block, change role, rename, ...) goes through one
@@ -44,23 +44,6 @@ type AdminUserResponse struct {
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
-// writeAuthError: Writes the standard client-facing message for a RequireAdmin
-// failure, keyed on the HTTP status, so internal error details never leak.
-//
-// Params:
-// - w (http.ResponseWriter): The response writer.
-// - status (int): The status returned by RequireAdmin.
-func writeAuthError(w http.ResponseWriter, status int) {
-	switch status {
-	case http.StatusUnauthorized:
-		routes.WriteError(w, http.StatusUnauthorized, "Invalid token")
-	case http.StatusForbidden:
-		routes.WriteError(w, http.StatusForbidden, "Admin privileges required")
-	default:
-		routes.WriteError(w, http.StatusInternalServerError, "Cannot authorize request")
-	}
-}
-
 // ListUsersHandler: Returns every user (admin-only) for the management UI.
 // The password hash is never included in the response.
 //
@@ -71,8 +54,8 @@ func writeAuthError(w http.ResponseWriter, status int) {
 // - result1 (http.HandlerFunc): The handler function.
 func ListUsersHandler(queries *database.Queries) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if _, status, err := RequireAdmin(r.Context(), queries, TokenFromHeader(r)); err != nil {
-			writeAuthError(w, status)
+		if _, status, err := account.RequireAdmin(r.Context(), queries, account.TokenFromHeader(r)); err != nil {
+			routes.WriteError(w, status, err.Error())
 			return
 		}
 
@@ -129,14 +112,14 @@ func UpdateUserHandler(queries *database.Queries) http.HandlerFunc {
 			return
 		}
 
-		admin, status, err := RequireAdmin(r.Context(), queries, TokenFromHeader(r))
+		adminUser, status, err := account.RequireAdmin(r.Context(), queries, account.TokenFromHeader(r))
 		if err != nil {
-			writeAuthError(w, status)
+			routes.WriteError(w, status, err.Error())
 			return
 		}
 
 		// check to ensure that the admin doesn't lock himself..
-		if admin.ID == targetID {
+		if adminUser.ID == targetID {
 			if request.Blocked != nil && *request.Blocked {
 				routes.WriteError(w, http.StatusForbidden, "You cannot block your own account")
 				return

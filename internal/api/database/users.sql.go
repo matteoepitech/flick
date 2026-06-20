@@ -136,6 +136,39 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 	return items, nil
 }
 
+const searchUsers = `-- name: SearchUsers :many
+SELECT id, username, email FROM users
+WHERE username ILIKE $1 OR email ILIKE $1
+ORDER BY username
+LIMIT 10
+`
+
+type SearchUsersRow struct {
+	ID       pgtype.UUID `json:"id"`
+	Username string      `json:"username"`
+	Email    string      `json:"email"`
+}
+
+func (q *Queries) SearchUsers(ctx context.Context, username string) ([]SearchUsersRow, error) {
+	rows, err := q.db.Query(ctx, searchUsers, username)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SearchUsersRow
+	for rows.Next() {
+		var i SearchUsersRow
+		if err := rows.Scan(&i.ID, &i.Username, &i.Email); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const setUserRoleByEmail = `-- name: SetUserRoleByEmail :exec
 UPDATE users
 SET role = $2

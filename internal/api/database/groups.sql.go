@@ -74,6 +74,69 @@ func (q *Queries) GetGroupByName(ctx context.Context, name string) (Group, error
 	return i, err
 }
 
+const getRoleInGroup = `-- name: GetRoleInGroup :one
+SELECT role FROM user_groups
+WHERE user_id = $1 AND group_id = $2
+`
+
+type GetRoleInGroupParams struct {
+	UserID  pgtype.UUID `json:"user_id"`
+	GroupID pgtype.UUID `json:"group_id"`
+}
+
+func (q *Queries) GetRoleInGroup(ctx context.Context, arg GetRoleInGroupParams) (GroupRole, error) {
+	row := q.db.QueryRow(ctx, getRoleInGroup, arg.UserID, arg.GroupID)
+	var role GroupRole
+	err := row.Scan(&role)
+	return role, err
+}
+
+const listGroupMembers = `-- name: ListGroupMembers :many
+SELECT u.id, u.username, u.email, u.role, u.blocked, u.created_at, ug.role AS group_role
+FROM users u
+JOIN user_groups ug ON ug.user_id = u.id
+WHERE ug.group_id = $1
+ORDER BY u.username
+`
+
+type ListGroupMembersRow struct {
+	ID        pgtype.UUID        `json:"id"`
+	Username  string             `json:"username"`
+	Email     string             `json:"email"`
+	Role      UserRole           `json:"role"`
+	Blocked   bool               `json:"blocked"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	GroupRole GroupRole          `json:"group_role"`
+}
+
+func (q *Queries) ListGroupMembers(ctx context.Context, groupID pgtype.UUID) ([]ListGroupMembersRow, error) {
+	rows, err := q.db.Query(ctx, listGroupMembers, groupID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListGroupMembersRow
+	for rows.Next() {
+		var i ListGroupMembersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Username,
+			&i.Email,
+			&i.Role,
+			&i.Blocked,
+			&i.CreatedAt,
+			&i.GroupRole,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listGroups = `-- name: ListGroups :many
 SELECT id, name, created_at FROM groups
 ORDER BY created_at DESC
@@ -116,6 +179,46 @@ func (q *Queries) ListGroupsForUser(ctx context.Context, userID pgtype.UUID) ([]
 	for rows.Next() {
 		var i Group
 		if err := rows.Scan(&i.ID, &i.Name, &i.CreatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listGroupsForUserWithRole = `-- name: ListGroupsForUserWithRole :many
+SELECT g.id, g.name, g.created_at, ug.role AS group_role
+FROM groups g
+JOIN user_groups ug ON ug.group_id = g.id
+WHERE ug.user_id = $1
+ORDER BY g.name
+`
+
+type ListGroupsForUserWithRoleRow struct {
+	ID        pgtype.UUID        `json:"id"`
+	Name      string             `json:"name"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	GroupRole GroupRole          `json:"group_role"`
+}
+
+func (q *Queries) ListGroupsForUserWithRole(ctx context.Context, userID pgtype.UUID) ([]ListGroupsForUserWithRoleRow, error) {
+	rows, err := q.db.Query(ctx, listGroupsForUserWithRole, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListGroupsForUserWithRoleRow
+	for rows.Next() {
+		var i ListGroupsForUserWithRoleRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.CreatedAt,
+			&i.GroupRole,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -191,4 +294,23 @@ type SetRoleInGroupParams struct {
 func (q *Queries) SetRoleInGroup(ctx context.Context, arg SetRoleInGroupParams) error {
 	_, err := q.db.Exec(ctx, setRoleInGroup, arg.UserID, arg.GroupID, arg.Role)
 	return err
+}
+
+const updateGroupName = `-- name: UpdateGroupName :one
+UPDATE groups
+SET name = $2
+WHERE id = $1
+RETURNING id, name, created_at
+`
+
+type UpdateGroupNameParams struct {
+	ID   pgtype.UUID `json:"id"`
+	Name string      `json:"name"`
+}
+
+func (q *Queries) UpdateGroupName(ctx context.Context, arg UpdateGroupNameParams) (Group, error) {
+	row := q.db.QueryRow(ctx, updateGroupName, arg.ID, arg.Name)
+	var i Group
+	err := row.Scan(&i.ID, &i.Name, &i.CreatedAt)
+	return i, err
 }
