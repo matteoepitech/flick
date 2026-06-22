@@ -9,17 +9,21 @@ package commands
 
 import (
 	"archive/zip"
+	"bufio"
 	"bytes"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/matteoepitech/flick/internal/api/utils"
@@ -31,6 +35,20 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/tiagomelo/go-clipboard/clipboard"
 )
+
+// uploadItem: a file or folder about to be uploaded.
+type uploadItem struct {
+	name      string
+	isFolder  bool
+	fileCount int
+	size      int64
+}
+
+// quotaResponse: the usage returned by the /quota endpoint.
+type quotaResponse struct {
+	UsedBytes int64 `json:"usedBytes"`
+	LimitMb   int64 `json:"limitMb"`
+}
 
 // doUploadRequest: Do the upload request on the server.
 //
@@ -220,6 +238,111 @@ func randomArchiveName() string {
 	return fmt.Sprintf("%x-%x-%x-%x-%x.zip", b[0:4], b[4:6], b[6:8], b[8:10], b[10:16])
 }
 
+// statUploadItem: Summarize a local path for the pre-upload listing.
+//
+// Params:
+// - path (string): The file or directory passed on the command line.
+//
+// Returns:
+// - result1 (uploadItem): The name, kind and size of the path.
+// - result2 (error): An error if the path cannot be read.
+func statUploadItem(path string) (uploadItem, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return uploadItem{}, err
+	}
+
+	item := uploadItem{name: filepath.Base(path), isFolder: info.IsDir()}
+	if !info.IsDir() {
+		item.size = info.Size()
+		return item, nil
+	}
+
+	err = filepath.WalkDir(path, func(_ string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return nil
+		}
+		if fi, err := d.Info(); err == nil {
+			item.fileCount++
+			item.size += fi.Size()
+		}
+		return nil
+	})
+	return item, err
+}
+
+// printUploadInfo: Show the files and folders about to be uploaded.
+//
+// Params:
+// - args ([]string): The paths passed on the command line.
+func printUploadInfo(args []string) {
+	fmt.Println("\nThis upload contains:")
+	for _, arg := range args {
+		item, err := statUploadItem(arg)
+		if err != nil {
+			continue
+		}
+		if item.isFolder {
+			fmt.Printf("  • "+utils.Blue+"%s/ (%d files, %s)\n"+utils.Reset, item.name, item.fileCount, humanSize(item.size))
+		} else {
+			fmt.Printf("  • "+utils.Dim+"%s (%s)\n"+utils.Reset, item.name, humanSize(item.size))
+		}
+	}
+}
+
+// fetchQuota: Read the current storage usage for the uploader.
+//
+// Params:
+// - userID (string): The uploader id sent through the X-Flick-User-ID header.
+//
+// Returns:
+// - result1 (quotaResponse): The used and limit megabytes.
+// - result2 (error): An error if the server cannot be reached.
+func fetchQuota(userID string) (quotaResponse, error) {
+	var q quotaResponse
+
+	req, err := http.NewRequest("GET", config.Conf.APIBaseURL()+"/quota", nil)
+	if err != nil {
+		return q, err
+	}
+	req.Header.Set("X-Flick-User-ID", userID)
+
+	resp, err := network.SharedClient.Do(req)
+	if err != nil {
+		return q, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return q, fmt.Errorf("quota request failed")
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&q); err != nil {
+		return q, err
+	}
+	return q, nil
+}
+
+// printQuotaBar: Draw a textual bar showing how much of the quota is used.
+//
+// Params:
+// - q (quotaResponse): The used and limit megabytes.
+func printQuotaBar(q quotaResponse) {
+	if q.LimitMb <= 0 {
+		fmt.Printf("Quota: %s used (unlimited)\n", humanSize(q.UsedBytes))
+		return
+	}
+
+	limitBytes := q.LimitMb * 1024 * 1024
+	const width = 20
+	ratio := float64(q.UsedBytes) / float64(limitBytes)
+	if ratio > 1 {
+		ratio = 1
+	}
+	filled := int(ratio * width)
+	bar := strings.Repeat("█", filled) + strings.Repeat("░", width-filled)
+	fmt.Printf("Quota: [%s] %s / %s used (%.0f%%)\n", bar, humanSize(q.UsedBytes), humanSize(limitBytes), ratio*100)
+}
+
 // RunUpload: Run the upload command.
 //
 // Params:
@@ -279,6 +402,21 @@ func RunUpload(cmd *cobra.Command, args []string, exp string, mdc string, encryp
 	creds, err := config.EnsureCredentials()
 	if err != nil {
 		return fmt.Errorf("Failure: Cannot identify on the server: %w", err)
+	}
+
+	printUploadInfo(args)
+	if q, err := fetchQuota(creds.UserID); err == nil {
+		printQuotaBar(q)
+	} else {
+		fmt.Printf(utils.BrightRed + "Quota cannot be fetched" + utils.Reset)
+	}
+
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Printf("%s [y/N]: ", "Upload these files?")
+	line, _ := reader.ReadString('\n')
+	if answer := strings.ToLower(strings.TrimSpace(line)); answer != "y" && answer != "yes" {
+		fmt.Println("Aborted.")
+		return nil
 	}
 
 	archivePath, err := archiveToTemp(args)

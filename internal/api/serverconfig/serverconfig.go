@@ -30,6 +30,9 @@ type Configuration struct {
 	MaxUploadPerHourPerKey  int    `json:"max_upload_per_hour_per_key" validate:"required,ltefield=MaxUploadPerHourPerIP"`
 	MaxUploadPerHourPerIP   int    `json:"max_upload_per_hour_per_ip" validate:"required,gtfield=MaxUploadPerHourPerKey"`
 	MaxUploadPerHour        int    `json:"max_upload_per_hour" validate:"required,gtfield=MaxUploadPerHourPerIP"`
+	AnonymousQuotaMb        int    `json:"anonymous_quota_mb" validate:"gte=0" user:"true"`
+	UserQuotaMb             int    `json:"user_quota_mb"      validate:"gte=0" user:"true"`
+	GroupQuotaMb            int    `json:"group_quota_mb"     validate:"gte=0" user:"true"`
 }
 
 // Server configuration default values
@@ -47,6 +50,9 @@ var Conf Configuration = Configuration{
 	MaxUploadPerHourPerKey:  5,
 	MaxUploadPerHourPerIP:   30,
 	MaxUploadPerHour:        100,
+	AnonymousQuotaMb:        1000,
+	UserQuotaMb:             5000,
+	GroupQuotaMb:            10000,
 }
 
 // Validate for the struct tag.
