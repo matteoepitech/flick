@@ -38,6 +38,18 @@
       "max_file_size_mb": {
         "label": "Taille max d'un fichier (Mo)"
       },
+      "anonymous_quota_mb": {
+        "label": "Quota de stockage anonyme (Mo, 0 = illimité)",
+        "description": "Stockage total qu'un utilisateur anonyme (non connecté) peut conserver sur l'ensemble de ses transferts actifs."
+      },
+      "user_quota_mb": {
+        "label": "Quota de stockage utilisateur (Mo, 0 = illimité)",
+        "description": "Stockage total qu'un utilisateur connecté peut conserver sur l'ensemble de ses transferts personnels actifs."
+      },
+      "group_quota_mb": {
+        "label": "Quota de stockage de groupe (Mo, 0 = illimité)",
+        "description": "Stockage total qu'un groupe peut conserver sur l'ensemble de ses transferts actifs."
+      },
       "default_expiration": {
         "label": "Expiration par défaut (ex. 15m, 24h)",
         "description": "Durée de vie par défaut pour les fichiers partagés. Les utilisateurs peuvent changer leur propre durée par défaut."
@@ -142,7 +154,11 @@
     "dropOrFolder": "ou un",
     "dropBrowseFolder": "dossier",
     "folderMeta": "{count, plural, =1 {# fichier} other {# fichiers}} · {size}",
-    "batchLabel": "{count, plural, =1 {# élément} other {# éléments}}"
+    "batchLabel": "{count, plural, =1 {# élément} other {# éléments}}",
+    "quotaTitle": "Quota de stockage",
+    "quotaUsage": "{used} sur {limit} utilisés",
+    "quotaUnlimited": "{used} utilisés · illimité",
+    "quotaOver": "Cette sélection dépasse votre quota de stockage."
   },
   "SendSuccess": {
     "back": "Nouvel envoi",

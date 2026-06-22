@@ -456,6 +456,35 @@ export async function fetchServerLimits(signal?: AbortSignal): Promise<ServerLim
   return { default: def, max: Math.max(max, def), allowMultiple, maxFileSizeMb }
 }
 
+export interface QuotaUsage {
+  usedBytes: number
+  limitMb: number
+}
+
+// fetchQuota: Read the current storage usage for the visitor, scoped to their
+// uploader id (anonymous or signed-in), exactly like the upload request. The
+// usage is precise in bytes; the limit stays in megabytes, as configured
+// server-side. A limit of 0 means unlimited.
+export async function fetchQuota(signal?: AbortSignal): Promise<QuotaUsage> {
+  const uploaderId = await ensureUploaderId(signal)
+  const url = apiUrl("/quota")
+
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: { "X-Flick-User-ID": uploaderId },
+    signal,
+  })
+  if (!res.ok) {
+    throw new ApiError(res.status, parseErrorMessage(await res.text().catch(() => ""), res.statusText))
+  }
+
+  const data = (await res.json()) as { usedBytes?: number; limitMb?: number }
+  return {
+    usedBytes: typeof data.usedBytes === "number" ? data.usedBytes : 0,
+    limitMb: typeof data.limitMb === "number" ? data.limitMb : 0,
+  }
+}
+
 export interface StatsSnapshot {
   timestamp: string
   activeCodes: number

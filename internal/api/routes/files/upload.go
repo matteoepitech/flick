@@ -21,6 +21,7 @@ import (
 	"github.com/matteoepitech/flick/internal/api/logging"
 	"github.com/matteoepitech/flick/internal/api/metadata"
 	"github.com/matteoepitech/flick/internal/api/path"
+	"github.com/matteoepitech/flick/internal/api/quota"
 	"github.com/matteoepitech/flick/internal/api/routes"
 	"github.com/matteoepitech/flick/internal/api/routes/account"
 	"github.com/matteoepitech/flick/internal/api/serverconfig"
@@ -36,28 +37,29 @@ import (
 //
 // Returns:
 // - result1 (string): The validated uploader UUID.
-// - result2 (bool): True when the uploader is a registered but blocked account.
-// - result3 (error): An error if the header is missing, invalid or unknown.
-func resolveUploaderID(r *http.Request, queries *database.Queries) (string, bool, error) {
+// - result2 (bool): True when the uploader is an anonymous (not logged-in) user.
+// - result3 (bool): True when the uploader is a registered but blocked account.
+// - result4 (error): An error if the header is missing, invalid or unknown.
+func resolveUploaderID(r *http.Request, queries *database.Queries) (string, bool, bool, error) {
 	uploaderID := r.Header.Get("X-Flick-User-ID")
 	if uploaderID == "" {
-		return "", false, fmt.Errorf("missing uploader id")
+		return "", false, false, fmt.Errorf("missing uploader id")
 	}
 
 	var userUUID pgtype.UUID
 	if err := userUUID.Scan(uploaderID); err != nil {
-		return "", false, fmt.Errorf("invalid user id %q: %w", uploaderID, err)
+		return "", false, false, fmt.Errorf("invalid user id %q: %w", uploaderID, err)
 	}
 
 	if _, err := queries.GetAnonymousUserByID(r.Context(), userUUID); err == nil {
-		return uploaderID, false, nil
+		return uploaderID, true, false, nil
 	}
 
 	if user, err := queries.GetUserByID(r.Context(), userUUID); err == nil {
-		return uploaderID, user.Blocked, nil
+		return uploaderID, false, user.Blocked, nil
 	}
 
-	return "", false, fmt.Errorf("unknown user id %q", uploaderID)
+	return "", false, false, fmt.Errorf("unknown user id %q", uploaderID)
 }
 
 // UploadFileHandler: Build the upload file handler. When a `group_id` query
@@ -94,10 +96,18 @@ func UploadFileHandler(queries *database.Queries) http.HandlerFunc {
 		}
 		headers := r.MultipartForm.File["file"]
 
+		var incoming int64
+		for _, header := range headers {
+			incoming += header.Size
+		}
+
 		m := new(metadata.Metadata)
+		m.FileZipSize = incoming
 
 		groupParam := r.URL.Query().Get("group_id")
 		var groupID, folderID, uploaderID pgtype.UUID
+		var quotaUsed int64
+		var quotaLimitMb int
 		isGroup := groupParam != ""
 
 		if isGroup {
@@ -111,6 +121,15 @@ func UploadFileHandler(queries *database.Queries) http.HandlerFunc {
 				return
 			}
 			uploaderID = caller.ID
+
+			used, err := quota.UsedByGroupID(path.GetDataDir(), groupParam)
+			if err != nil {
+				logging.LogInfoError("Cannot read group quota for %q: %v", groupParam, err)
+				routes.WriteError(w, http.StatusInternalServerError, "Cannot save the file")
+				return
+			}
+			quotaUsed = used
+			quotaLimitMb = serverconfig.Conf.GroupQuotaMb
 
 			if folderParam := r.URL.Query().Get("folder_id"); folderParam != "" {
 				if err := folderID.Scan(folderParam); err != nil {
@@ -130,7 +149,7 @@ func UploadFileHandler(queries *database.Queries) http.HandlerFunc {
 				return
 			}
 		} else {
-			rawID, blocked, err := resolveUploaderID(r, queries)
+			rawID, isAnonymous, blocked, err := resolveUploaderID(r, queries)
 			if err != nil {
 				logging.LogInfoError("Cannot identify uploader: %v", err)
 				routes.WriteError(w, http.StatusBadRequest, "Invalid or unknown user")
@@ -140,6 +159,19 @@ func UploadFileHandler(queries *database.Queries) http.HandlerFunc {
 				routes.WriteError(w, http.StatusForbidden, "Account blocked")
 				return
 			}
+
+			used, err := quota.UsedByUploaderID(path.GetDataDir(), rawID)
+			if err != nil {
+				logging.LogInfoError("Cannot read user quota for %q: %v", rawID, err)
+				routes.WriteError(w, http.StatusInternalServerError, "Cannot save the file")
+				return
+			}
+			quotaUsed = used
+			quotaLimitMb = serverconfig.Conf.UserQuotaMb
+			if isAnonymous {
+				quotaLimitMb = serverconfig.Conf.AnonymousQuotaMb
+			}
+
 			if !metadata.SetUploaderID(m, rawID) {
 				routes.WriteError(w, http.StatusBadRequest, "Invalid or unknown user")
 				return
@@ -152,6 +184,12 @@ func UploadFileHandler(queries *database.Queries) http.HandlerFunc {
 				routes.WriteError(w, http.StatusBadRequest, "Invalid password")
 				return
 			}
+		}
+
+		usedMb := (quotaUsed + incoming) / (1024 * 1024)
+		if quotaLimitMb > 0 && usedMb > int64(quotaLimitMb) {
+			routes.WriteError(w, http.StatusRequestEntityTooLarge, "Storage quota exceeded")
+			return
 		}
 
 		// SetExpiration / SetChecksum log the precise reason themselves.

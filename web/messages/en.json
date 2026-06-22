@@ -38,6 +38,18 @@
       "max_file_size_mb": {
         "label": "Max file size (MB)"
       },
+      "anonymous_quota_mb": {
+        "label": "Anonymous storage quota (MB, 0 for unlimited)",
+        "description": "Total storage an anonymous (not logged-in) user may keep across their active transfers."
+      },
+      "user_quota_mb": {
+        "label": "User storage quota (MB, 0 for unlimited)",
+        "description": "Total storage a logged-in user may keep across their active personal transfers."
+      },
+      "group_quota_mb": {
+        "label": "Group storage quota (MB, 0 for unlimited)",
+        "description": "Total storage a group may keep across its active transfers."
+      },
       "default_expiration": {
         "label": "Default expiration (e.g. 15m, 24h)",
         "description": "Default lifetime for shared files. Users can change their own default."
@@ -142,7 +154,11 @@
     "dropOrFolder": "or a whole",
     "dropBrowseFolder": "folder",
     "folderMeta": "{count, plural, =1 {# file} other {# files}} · {size}",
-    "batchLabel": "{count, plural, =1 {# item} other {# items}}"
+    "batchLabel": "{count, plural, =1 {# item} other {# items}}",
+    "quotaTitle": "Storage quota",
+    "quotaUsage": "{used} of {limit} used",
+    "quotaUnlimited": "{used} used · unlimited",
+    "quotaOver": "This selection exceeds your storage quota."
   },
   "SendSuccess": {
     "back": "New transfer",

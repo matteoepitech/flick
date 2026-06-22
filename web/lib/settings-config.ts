@@ -36,6 +36,24 @@ export const settingsSections: SettingSection[] = [
         hasDescription: true,
         notAvailable: true,
       },
+      {
+        key: "anonymous_quota_mb",
+        type: "number",
+        defaultValue: 1000,
+        hasDescription: true,
+      },
+      {
+        key: "user_quota_mb",
+        type: "number",
+        defaultValue: 5000,
+        hasDescription: true,
+      },
+      {
+        key: "group_quota_mb",
+        type: "number",
+        defaultValue: 10000,
+        hasDescription: true,
+      },
     ],
   },
   {

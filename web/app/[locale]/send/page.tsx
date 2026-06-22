@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
-import { ApiError, fetchServerLimits, uploadFile } from "@/lib/api"
+import { ApiError, fetchQuota, fetchServerLimits, uploadFile, type QuotaUsage } from "@/lib/api"
 import {
   fileItem,
   folderItemFromInputFiles,
@@ -42,6 +42,7 @@ export default function SendPage() {
   const [progress, setProgress] = useState<{ name: string; percent: number } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [maxFileSize, setMaxFileSize] = useState<number>(1000 * 1024 * 1024)
+  const [quota, setQuota] = useState<QuotaUsage | null>(null)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -52,6 +53,9 @@ export default function SendPage() {
         setMaxDownloadCount(allowMultiple ? def : 1)
         if (maxFileSizeMb > 0) setMaxFileSize(maxFileSizeMb * 1024 * 1024)
       })
+      .catch(() => {})
+    fetchQuota(controller.signal)
+      .then(setQuota)
       .catch(() => {})
     return () => controller.abort()
   }, [])
@@ -166,9 +170,20 @@ export default function SendPage() {
     { value: "4h", label: t("expiration4h") },
   ]
 
+  // Quota bar: the solid fill is what is already stored, the lighter fill
+  // projects the currently staged selection on top so the user sees whether it
+  // will fit before sending. A limit of 0 means unlimited.
+  const selectedBytes = items.reduce((total, item) => total + item.size, 0)
+  const quotaLimitBytes = quota && quota.limitMb > 0 ? quota.limitMb * 1024 * 1024 : 0
+  const usedPct = quotaLimitBytes > 0 ? Math.min(100, (quota!.usedBytes / quotaLimitBytes) * 100) : 0
+  const projectedPct =
+    quotaLimitBytes > 0 ? Math.min(100, ((quota!.usedBytes + selectedBytes) / quotaLimitBytes) * 100) : 0
+  const overQuota = quotaLimitBytes > 0 && quota!.usedBytes + selectedBytes > quotaLimitBytes
+
   // When password protection is on, an empty password would silently produce a
   // public code, so block submission until one is typed.
-  const canSubmit = items.length > 0 && !submitting && (!passwordEnabled || password.trim().length > 0)
+  const canSubmit =
+    items.length > 0 && !submitting && !overQuota && (!passwordEnabled || password.trim().length > 0)
 
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-col items-center px-6 py-16">
@@ -233,6 +248,35 @@ export default function SendPage() {
             </p>
           </div>
         </div>
+
+        {quota && (
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-semibold text-foreground">{t("quotaTitle")}</span>
+              <span className={cn("tabular-nums text-muted-foreground", overQuota && "text-destructive")}>
+                {quota.limitMb > 0
+                  ? t("quotaUsage", { used: formatBytes(quota.usedBytes), limit: formatBytes(quotaLimitBytes) })
+                  : t("quotaUnlimited", { used: formatBytes(quota.usedBytes) })}
+              </span>
+            </div>
+            {quota.limitMb > 0 && (
+              <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                  className={cn(
+                    "absolute inset-y-0 left-0 rounded-full bg-orange-500/40",
+                    overQuota && "bg-destructive/40"
+                  )}
+                  style={{ width: `${projectedPct}%` }}
+                />
+                <div
+                  className={cn("absolute inset-y-0 left-0 rounded-full bg-orange-500", overQuota && "bg-destructive")}
+                  style={{ width: `${usedPct}%` }}
+                />
+              </div>
+            )}
+            {overQuota && <p className="text-xs text-destructive">{t("quotaOver")}</p>}
+          </div>
+        )}
 
         {items.length > 0 && (
           <Card className="p-2">

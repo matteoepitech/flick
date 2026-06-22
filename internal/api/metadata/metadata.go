@@ -47,6 +47,7 @@ type Metadata struct {
 	PasswordHash         string `json:"password_hash,omitempty"`
 	Message              string `json:"message,omitempty"`
 	GroupID              string `json:"group_id,omitempty"`
+	FileZipSize          int64  `json:"file_zip_size"`
 }
 
 // maxMessageLen for the message of the code.
