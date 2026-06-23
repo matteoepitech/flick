@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
+	codepkg "github.com/matteoepitech/flick/internal/api/code"
 	"github.com/matteoepitech/flick/internal/api/database"
 	"github.com/matteoepitech/flick/internal/api/routes"
 	"github.com/matteoepitech/flick/internal/api/routes/account"
@@ -277,6 +278,15 @@ func DeleteGroupFolderHandler(queries *database.Queries) http.HandlerFunc {
 		if !ok {
 			routes.WriteError(w, http.StatusNotFound, "Folder not found")
 			return
+		}
+
+		// Revoke the stored codes of every transfer in the folder subtree (files
+		// on disk + cache) before the DB rows are cascaded away. Best-effort: a
+		// missing/expired code must not block the deletion.
+		if codes, err := queries.ListGroupUploadCodesInFolderTree(r.Context(), folderID); err == nil {
+			for _, code := range codes {
+				_ = codepkg.DeleteCode(code)
+			}
 		}
 
 		if err := queries.DeleteGroupFolder(r.Context(), folderID); err != nil {

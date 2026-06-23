@@ -43,6 +43,64 @@ func (q *Queries) CreateGroupUpload(ctx context.Context, arg CreateGroupUploadPa
 	return i, err
 }
 
+const deleteGroupUpload = `-- name: DeleteGroupUpload :exec
+DELETE FROM group_uploads
+WHERE id = $1
+`
+
+func (q *Queries) DeleteGroupUpload(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteGroupUpload, id)
+	return err
+}
+
+const getGroupUploadByID = `-- name: GetGroupUploadByID :one
+SELECT id, group_id, folder_id, code, uploader_id, created_at FROM group_uploads
+WHERE id = $1
+`
+
+func (q *Queries) GetGroupUploadByID(ctx context.Context, id pgtype.UUID) (GroupUpload, error) {
+	row := q.db.QueryRow(ctx, getGroupUploadByID, id)
+	var i GroupUpload
+	err := row.Scan(
+		&i.ID,
+		&i.GroupID,
+		&i.FolderID,
+		&i.Code,
+		&i.UploaderID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const listGroupUploadCodesInFolderTree = `-- name: ListGroupUploadCodesInFolderTree :many
+WITH RECURSIVE subtree(id) AS (
+    SELECT gf.id FROM group_folders gf WHERE gf.id = $1
+    UNION ALL
+    SELECT gf.id FROM group_folders gf JOIN subtree s ON gf.parent_id = s.id
+)
+SELECT gu.code FROM group_uploads gu WHERE gu.folder_id IN (SELECT s.id FROM subtree s)
+`
+
+func (q *Queries) ListGroupUploadCodesInFolderTree(ctx context.Context, id pgtype.UUID) ([]string, error) {
+	rows, err := q.db.Query(ctx, listGroupUploadCodesInFolderTree, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var code string
+		if err := rows.Scan(&code); err != nil {
+			return nil, err
+		}
+		items = append(items, code)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listGroupUploadsByFolder = `-- name: ListGroupUploadsByFolder :many
 SELECT gu.id, gu.code, gu.uploader_id, u.username AS uploader_username, gu.created_at
 FROM group_uploads gu

@@ -397,6 +397,8 @@
     "createFolderError": "Could not create the folder. Please retry.",
     "deleteFolder": "Delete folder",
     "deleteFolderError": "Could not delete the folder. Please retry.",
+    "revokeFile": "Revoke file",
+    "revokeFileError": "Could not revoke the file. Please retry.",
     "emptyFolder": "This folder is empty."
   },
   "Blocked": {

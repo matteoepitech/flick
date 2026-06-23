@@ -397,6 +397,8 @@
     "createFolderError": "Impossible de créer le dossier. Veuillez réessayer.",
     "deleteFolder": "Supprimer le dossier",
     "deleteFolderError": "Impossible de supprimer le dossier. Veuillez réessayer.",
+    "revokeFile": "Révoquer le fichier",
+    "revokeFileError": "Impossible de révoquer le fichier. Veuillez réessayer.",
     "emptyFolder": "Ce dossier est vide."
   },
   "Blocked": {

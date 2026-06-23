@@ -12,6 +12,7 @@ import {
   ApiError,
   createGroupFolder,
   deleteGroupFolder,
+  deleteGroupUpload,
   downloadGroupUpload,
   exploreGroup,
   groupUploadInfo,
@@ -179,6 +180,22 @@ export function GroupFiles({ groupId, token, canManage }: GroupFilesProps) {
         reload()
       } catch (err) {
         setActionError(err instanceof ApiError ? err.message : t("deleteFolderError"))
+      } finally {
+        setBusyId(null)
+      }
+    },
+    [token, groupId, reload, t]
+  )
+
+  const handleDeleteUpload = useCallback(
+    async (id: string) => {
+      setBusyId(id)
+      setActionError(null)
+      try {
+        await deleteGroupUpload(token, groupId, id)
+        reload()
+      } catch (err) {
+        setActionError(err instanceof ApiError ? err.message : t("revokeFileError"))
       } finally {
         setBusyId(null)
       }
@@ -417,6 +434,21 @@ export function GroupFiles({ groupId, token, canManage }: GroupFilesProps) {
                 {busyId === upload.id ? <Loader2 className="animate-spin" /> : <Download />}
                 {t("download")}
               </Button>
+              {canManage && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={t("revokeFile")}
+                  disabled={busyId === upload.id}
+                  onClick={() => handleDeleteUpload(upload.id)}
+                >
+                  {busyId === upload.id ? (
+                    <Loader2 className="animate-spin" />
+                  ) : (
+                    <Trash2 className="text-destructive" />
+                  )}
+                </Button>
+              )}
             </li>
           ))}
         </ul>
