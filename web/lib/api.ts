@@ -1149,6 +1149,26 @@ export async function deleteGroupFolder(
   }
 }
 
+// deleteGroupUpload: Revoke a file shared with a group (maintainer/owner only).
+// The stored code (files + cache) is removed server-side too.
+export async function deleteGroupUpload(
+  token: string,
+  groupId: string,
+  uploadId: string,
+  signal?: AbortSignal
+): Promise<void> {
+  const url = apiUrl(`/admin/groups/${groupId}/uploads/${uploadId}`)
+
+  const res = await fetch(url.toString(), {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+    signal,
+  })
+  if (!res.ok) {
+    throw new ApiError(res.status, parseErrorMessage(await res.text().catch(() => ""), res.statusText))
+  }
+}
+
 // groupUploadInfo: List a group transfer's contents through the native info
 // endpoint (membership is enforced via the Bearer token for group-bound codes).
 // Lets the explorer show the real file names instead of the share code.

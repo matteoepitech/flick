@@ -96,6 +96,7 @@ func Run(ctx context.Context) error {
 	mux.HandleFunc("/api/v1/admin/groups/{id}/explore", groups.ExploreGroupHandler(queries))
 	mux.HandleFunc("/api/v1/admin/groups/{id}/folders", groups.CreateGroupFolderHandler(queries))
 	mux.HandleFunc("/api/v1/admin/groups/{id}/folders/{folderId}", groups.DeleteGroupFolderHandler(queries))
+	mux.HandleFunc("/api/v1/admin/groups/{id}/uploads/{uploadId}", groups.DeleteGroupUploadHandler(queries))
 	routes.WriteDefaultConfig()
 
 	server := &http.Server{
