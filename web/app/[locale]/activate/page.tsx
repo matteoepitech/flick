@@ -1,6 +1,7 @@
 "use client"
 
 import { ChevronLeft, CheckCircle2, MonitorSmartphone } from "lucide-react"
+import { useTranslations } from "next-intl"
 import { useSearchParams } from "next/navigation"
 import { Suspense, useEffect, useState, type FormEvent } from "react"
 
@@ -24,6 +25,7 @@ export default function ActivatePage() {
 }
 
 function ActivateForm() {
+  const t = useTranslations("Activate")
   const searchParams = useSearchParams()
 
   const [session, setSession] = useState<AuthSession | null>(null)
@@ -56,7 +58,7 @@ function ActivateForm() {
       setApproved(true)
     } catch (err) {
       console.error(err)
-      setError(err instanceof ApiError && err.message ? err.message : "Could not authorize the device.")
+      setError(err instanceof ApiError && err.message ? err.message : t("error"))
       setSubmitting(false)
     }
   }
@@ -68,13 +70,13 @@ function ActivateForm() {
         className="mb-8 inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
         <ChevronLeft className="size-4" />
-        Back
+        {t("back")}
       </Link>
 
       <div className="w-full text-center">
-        <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Authorize a device</h1>
+        <h1 className="text-3xl font-bold tracking-tight md:text-4xl">{t("title")}</h1>
         <p className="mt-3 text-base text-muted-foreground">
-          Confirm the code shown in your terminal to log the Flick CLI into your account.
+          {t("description")}
         </p>
       </div>
 
@@ -82,41 +84,41 @@ function ActivateForm() {
         {!ready ? null : approved ? (
           <div className="flex flex-col items-center gap-3 text-center">
             <CheckCircle2 className="size-12 text-primary" />
-            <p className="text-lg font-semibold">Device authorized</p>
+            <p className="text-lg font-semibold">{t("approvedTitle")}</p>
             <p className="text-sm text-muted-foreground">
-              You can go back to your terminal, the CLI is now logged in.
+              {t("approvedBody")}
             </p>
           </div>
         ) : !session ? (
           <div className="flex flex-col items-center gap-3 text-center">
-            <p className="text-sm text-muted-foreground">You must be signed in to authorize a device.</p>
+            <p className="text-sm text-muted-foreground">{t("notSignedIn")}</p>
             <Button asChild size="lg" className="h-12 w-full text-base font-semibold">
-              <Link href="/login">Sign in</Link>
+              <Link href="/login">{t("signIn")}</Link>
             </Button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-5 text-left">
             <div className="flex flex-col gap-2">
               <Label htmlFor="user-code" className="text-sm font-semibold text-foreground">
-                Device code
+                {t("codeLabel")}
               </Label>
               <Input
                 id="user-code"
                 value={userCode}
                 onChange={(event) => setUserCode(event.target.value)}
-                placeholder="word-word-000"
+                placeholder={t("codePlaceholder")}
                 autoComplete="off"
                 autoFocus
                 spellCheck={false}
               />
-              <p className="text-xs text-muted-foreground">Signed in as {session.user.email}</p>
+              <p className="text-xs text-muted-foreground">{t("signedInAs", { email: session.user.email })}</p>
             </div>
 
             {error && <p className="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</p>}
 
             <Button type="submit" size="lg" className="h-12 w-full text-base font-semibold" disabled={!canSubmit}>
               <MonitorSmartphone className="size-5" />
-              {submitting ? "Authorizing…" : "Authorize device"}
+              {submitting ? t("submitting") : t("submit")}
             </Button>
           </form>
         )}

@@ -421,5 +421,43 @@
     "title": "Create an account for more",
     "body": "Groups, history, recurring shares and advanced control.",
     "button": "Create a free account"
+  },
+  "Sidebar": {
+    "headerTitle": "Dashboard",
+    "groupAdministration": "Administration",
+    "groupGroup": "Group",
+    "overview": "Overview",
+    "users": "Users",
+    "groups": "Groups",
+    "myGroups": "My groups",
+    "settings": "Settings",
+    "toggleTheme": "Toggle theme"
+  },
+  "Dashboard": {
+    "title": "Overview",
+    "subtitle": "Quick glance at your Flick instance.",
+    "totalUploads": "Total uploads",
+    "totalDownloads": "Total downloads",
+    "activeLinks": "Active links",
+    "storageUsed": "Storage used",
+    "usersCount": "Users",
+    "cardPlaceholder": "Data will be wired to the Go API.",
+    "activeCodes": "Active codes",
+    "activeCodesValue": "Active codes: {count}"
+  },
+  "Activate": {
+    "back": "Back",
+    "title": "Authorize a device",
+    "description": "Confirm the code shown in your terminal to log the Flick CLI into your account.",
+    "approvedTitle": "Device authorized",
+    "approvedBody": "You can go back to your terminal, the CLI is now logged in.",
+    "notSignedIn": "You must be signed in to authorize a device.",
+    "signIn": "Sign in",
+    "codeLabel": "Device code",
+    "codePlaceholder": "word-word-000",
+    "signedInAs": "Signed in as {email}",
+    "submitting": "Authorizing…",
+    "submit": "Authorize device",
+    "error": "Could not authorize the device."
   }
 }

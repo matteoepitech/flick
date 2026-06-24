@@ -1,6 +1,7 @@
 "use client"
 
 import { ArrowUpRight, Boxes, LayoutDashboard, Settings, Users, UsersRound } from "lucide-react"
+import { useTranslations } from "next-intl"
 import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
 
@@ -23,7 +24,7 @@ import { type DashboardSection, visibleSections } from "@/lib/permissions"
 
 type NavItem = {
   href: string
-  label: string
+  labelKey: "overview" | "users" | "groups" | "myGroups" | "settings"
   icon: React.ComponentType<{ className?: string }>
   section: DashboardSection
   separatedAbove?: boolean
@@ -32,14 +33,15 @@ type NavItem = {
 // Every dashboard entry maps to a section so it can be filtered by the user's
 // role. Admins see the administration items; maintainers see only their group.
 const navItems: NavItem[] = [
-  { href: "/dashboard", label: "Overview", icon: LayoutDashboard, section: "overview" },
-  { href: "/dashboard/users", label: "Users", icon: Users, section: "users" },
-  { href: "/dashboard/groups", label: "Groups", icon: Boxes, section: "groups" },
-  { href: "/dashboard/group", label: "My groups", icon: UsersRound, section: "group" },
-  { href: "/dashboard/settings", label: "Settings", icon: Settings, section: "settings", separatedAbove: true },
+  { href: "/dashboard", labelKey: "overview", icon: LayoutDashboard, section: "overview" },
+  { href: "/dashboard/users", labelKey: "users", icon: Users, section: "users" },
+  { href: "/dashboard/groups", labelKey: "groups", icon: Boxes, section: "groups" },
+  { href: "/dashboard/group", labelKey: "myGroups", icon: UsersRound, section: "group" },
+  { href: "/dashboard/settings", labelKey: "settings", icon: Settings, section: "settings", separatedAbove: true },
 ]
 
 export function DashboardSidebar() {
+  const t = useTranslations("Sidebar")
   const pathname = usePathname()
   const [user, setUser] = useState<AuthUser | null>(null)
 
@@ -70,7 +72,7 @@ export function DashboardSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>{user?.role === "admin" ? "Administration" : "Group"}</SidebarGroupLabel>
+          <SidebarGroupLabel>{user?.role === "admin" ? t("groupAdministration") : t("groupGroup")}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="gap-2">
               {items.map((item) => (
@@ -78,10 +80,10 @@ export function DashboardSidebar() {
                   key={item.href}
                   className={item.separatedAbove ? "mt-2 border-t border-sidebar-border pt-2" : ""}
                 >
-                  <SidebarMenuButton asChild isActive={isActive(item.href)} tooltip={item.label}>
+                  <SidebarMenuButton asChild isActive={isActive(item.href)} tooltip={t(item.labelKey)}>
                     <Link href={item.href}>
                       <item.icon className="h-4 w-4" />
-                      <span>{item.label}</span>
+                      <span>{t(item.labelKey)}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

@@ -1,3 +1,5 @@
+import { useTranslations } from "next-intl"
+
 import { DashboardGuard } from "@/components/dashboard-guard"
 import { DashboardSidebar } from "@/components/dashboard-sidebar"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -6,6 +8,7 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/s
 import { TooltipProvider } from "@/components/ui/tooltip"
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const t = useTranslations("Sidebar")
   return (
     <DashboardGuard>
       <TooltipProvider>
@@ -15,7 +18,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <header className="sticky top-0 z-10 flex h-14 items-center gap-2 border-b bg-background px-4">
               <SidebarTrigger />
               <Separator orientation="vertical" className="mr-2 h-4" />
-              <h1 className="text-sm font-medium">Dashboard</h1>
+              <h1 className="text-sm font-medium">{t("headerTitle")}</h1>
               <div className="ml-auto">
                 <ThemeToggle />
               </div>

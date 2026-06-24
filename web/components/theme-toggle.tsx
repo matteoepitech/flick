@@ -3,10 +3,12 @@
 import * as React from "react"
 import { Moon, Sun } from "lucide-react"
 import { useTheme } from "next-themes"
+import { useTranslations } from "next-intl"
 
 import { Button } from "@/components/ui/button"
 
 export function ThemeToggle() {
+  const t = useTranslations("Sidebar")
   const { resolvedTheme, setTheme } = useTheme()
   const [mounted, setMounted] = React.useState(false)
 
@@ -15,7 +17,7 @@ export function ThemeToggle() {
   const isDark = mounted && resolvedTheme === "dark"
 
   return (
-    <Button variant="ghost" size="icon" aria-label="Toggle theme" onClick={() => setTheme(isDark ? "light" : "dark")}>
+    <Button variant="ghost" size="icon" aria-label={t("toggleTheme")} onClick={() => setTheme(isDark ? "light" : "dark")}>
       {isDark ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
     </Button>
   )

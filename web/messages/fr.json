@@ -125,7 +125,7 @@
     "description": "Déposez vos fichiers et configurez les options de partage.",
     "dropTitle": "Glissez vos fichiers ici",
     "dropOr": "ou",
-    "dropBrowse": "parcourez",
+    "dropBrowse": "parcourez des fichiers",
     "dropLimits": "{maxSize} au total max",
     "fileTooLarge": "Le fichier \"{name}\" est trop volumineux (max {size}).",
     "totalTooLarge": "La taille totale est trop volumineuse (max {size}).",
@@ -421,5 +421,43 @@
     "title": "Créez un compte pour plus",
     "body": "Groupes, historique, partages récurrents et contrôle avancé.",
     "button": "Créer un compte gratuit"
+  },
+  "Sidebar": {
+    "headerTitle": "Tableau de bord",
+    "groupAdministration": "Administration",
+    "groupGroup": "Groupe",
+    "overview": "Vue d'ensemble",
+    "users": "Utilisateurs",
+    "groups": "Groupes",
+    "myGroups": "Mes groupes",
+    "settings": "Paramètres",
+    "toggleTheme": "Changer de thème"
+  },
+  "Dashboard": {
+    "title": "Vue d'ensemble",
+    "subtitle": "Aperçu rapide de votre instance Flick.",
+    "totalUploads": "Envois totaux",
+    "totalDownloads": "Téléchargements totaux",
+    "activeLinks": "Liens actifs",
+    "storageUsed": "Stockage utilisé",
+    "usersCount": "Utilisateurs",
+    "cardPlaceholder": "Les données seront connectées à l'API Go.",
+    "activeCodes": "Codes actifs",
+    "activeCodesValue": "Codes actifs : {count}"
+  },
+  "Activate": {
+    "back": "Retour",
+    "title": "Autoriser un appareil",
+    "description": "Confirmez le code affiché dans votre terminal pour connecter le CLI Flick à votre compte.",
+    "approvedTitle": "Appareil autorisé",
+    "approvedBody": "Vous pouvez retourner dans votre terminal, le CLI est maintenant connecté.",
+    "notSignedIn": "Vous devez être connecté pour autoriser un appareil.",
+    "signIn": "Se connecter",
+    "codeLabel": "Code de l'appareil",
+    "codePlaceholder": "mot-mot-000",
+    "signedInAs": "Connecté en tant que {email}",
+    "submitting": "Autorisation…",
+    "submit": "Autoriser l'appareil",
+    "error": "Impossible d'autoriser l'appareil."
   }
 }

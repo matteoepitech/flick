@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslations } from "next-intl"
 import { useEffect, useState } from "react"
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts"
 
@@ -28,14 +29,14 @@ function formatBytes(bytes: number): string {
   return `${value.toFixed(exponent === 0 ? 0 : 1)} ${units[exponent]}`
 }
 
-const chartConfig = {
-  activeCodes: {
-    label: "Active codes",
-    color: "var(--primary)",
-  },
-} satisfies ChartConfig
-
 export default function DashboardPage() {
+  const t = useTranslations("Dashboard")
+  const chartConfig = {
+    activeCodes: {
+      label: t("activeCodes"),
+      color: "var(--primary)",
+    },
+  } satisfies ChartConfig
   const [points, setPoints] = useState<Point[]>([])
   const [latest, setLatest] = useState<StatsSnapshot | null>(null)
 
@@ -72,24 +73,24 @@ export default function DashboardPage() {
   const current = points.at(-1)?.activeCodes ?? 0
 
   const summary = [
-    { label: "Total uploads", value: latest ? String(latest.totalUploads) : null },
-    { label: "Total downloads", value: latest ? String(latest.totalDownloads) : null },
-    { label: "Active links", value: latest ? String(current) : null },
-    { label: "Storage used", value: latest ? formatBytes(latest.storageBytes) : null },
-    { label: "Users", value: latest ? String(latest.userCount) : null },
+    { key: "totalUploads", label: t("totalUploads"), value: latest ? String(latest.totalUploads) : null },
+    { key: "totalDownloads", label: t("totalDownloads"), value: latest ? String(latest.totalDownloads) : null },
+    { key: "activeLinks", label: t("activeLinks"), value: latest ? String(current) : null },
+    { key: "storageUsed", label: t("storageUsed"), value: latest ? formatBytes(latest.storageBytes) : null },
+    { key: "usersCount", label: t("usersCount"), value: latest ? String(latest.userCount) : null },
   ]
 
   return (
     <SectionGuard section="overview">
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight">Overview</h2>
-        <p className="text-muted-foreground">Quick glance at your Flick instance.</p>
+        <h2 className="text-2xl font-semibold tracking-tight">{t("title")}</h2>
+        <p className="text-muted-foreground">{t("subtitle")}</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {summary.map((s) => (
-          <Card key={s.label}>
+          <Card key={s.key}>
             <CardHeader className="pb-2">
               <CardDescription>{s.label}</CardDescription>
               <CardTitle className="text-3xl">
@@ -97,7 +98,7 @@ export default function DashboardPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-xs text-muted-foreground">Data will be wired to the Go API.</p>
+              <p className="text-xs text-muted-foreground">{t("cardPlaceholder")}</p>
             </CardContent>
           </Card>
         ))}
@@ -105,7 +106,7 @@ export default function DashboardPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Active codes: {current}</CardTitle>
+          <CardTitle>{t("activeCodesValue", { count: current })}</CardTitle>
         </CardHeader>
         <CardContent>
           <ChartContainer config={chartConfig} className="h-64 w-full">
