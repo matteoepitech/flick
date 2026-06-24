@@ -25,10 +25,10 @@ export default function Page() {
   ]
 
   return (
-    <main className="relative mx-auto max-w-6xl px-6 py-20">
+    <main className="relative mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-20">
       <MouseMist />
       <section className="flex flex-col items-center text-center">
-        <h1 className="text-5xl tracking-tight md:text-6xl">
+        <h1 className="text-4xl tracking-tight sm:text-5xl md:text-6xl">
           {tHero("titleStart")} <span className="font-bold text-primary">{tHero("titleHighlight")}</span>
         </h1>
         <p className="mt-6 max-w-xl text-lg text-muted-foreground">{tHero("description")}</p>
@@ -69,7 +69,7 @@ export default function Page() {
       <section className="mt-32 mb-10">
         <div className="mx-auto max-w-2xl text-center">
           <p className="text-xs font-semibold tracking-widest text-primary uppercase">{tHow("eyebrow")}</p>
-          <h2 className="mt-3 text-4xl font-bold tracking-tight md:text-5xl">{tHow("title")}</h2>
+          <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">{tHow("title")}</h2>
         </div>
 
         <div className="mt-14 grid grid-cols-1 gap-6 md:grid-cols-3">

@@ -47,7 +47,7 @@ export default function SiteHeader() {
 
   return (
     <header className="border-b">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
         <Link href="/" className="flex items-center gap-2">
           <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
             <ArrowUpRight className="h-5 w-5" />
@@ -55,39 +55,39 @@ export default function SiteHeader() {
           <span className="text-lg font-semibold">flick</span>
         </Link>
 
-        <nav className="flex items-center gap-4">
+        <nav className="flex items-center gap-1 sm:gap-2 md:gap-4">
           {canAccessDashboard(session?.user ?? null) && (
-            <Button asChild variant="ghost">
+            <Button asChild variant="ghost" size="icon" className="sm:w-auto sm:gap-1.5 sm:px-4">
               <Link href="/dashboard">
                 <LayoutDashboard className="h-4 w-4" />
-                {t("dashboard")}
+                <span className="hidden sm:inline">{t("dashboard")}</span>
               </Link>
             </Button>
           )}
-          <Button asChild>
+          <Button asChild size="icon" className="sm:w-auto sm:gap-1.5 sm:px-4">
             <Link href="/send">
               <ArrowUpRight className="h-4 w-4" />
-              {t("send")}
+              <span className="hidden sm:inline">{t("send")}</span>
             </Link>
           </Button>
-          <Button asChild variant="outline">
+          <Button asChild variant="outline" size="icon" className="sm:w-auto sm:gap-1.5 sm:px-4">
             <Link href="/receive">
               <ArrowDownLeft className="h-4 w-4" />
-              {t("receive")}
+              <span className="hidden sm:inline">{t("receive")}</span>
             </Link>
           </Button>
           {session ? (
-            <Button asChild variant="ghost">
+            <Button asChild variant="ghost" size="icon" className="sm:w-auto sm:gap-1.5 sm:px-4">
               <Link href="/profile">
                 <UserRound className="h-4 w-4" />
-                {session.user.username || t("profile")}
+                <span className="hidden max-w-[12ch] truncate sm:inline">{session.user.username || t("profile")}</span>
               </Link>
             </Button>
           ) : (
-            <Button asChild variant="ghost">
+            <Button asChild variant="ghost" size="icon" className="sm:w-auto sm:gap-1.5 sm:px-4">
               <Link href="/login">
                 <LogIn className="h-4 w-4" />
-                {t("login")}
+                <span className="hidden sm:inline">{t("login")}</span>
               </Link>
             </Button>
           )}

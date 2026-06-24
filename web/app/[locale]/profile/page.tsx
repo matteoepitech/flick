@@ -50,7 +50,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-6 py-16">
+    <main className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 sm:py-16">
       <Link
         href="/"
         className="mb-8 inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
@@ -125,14 +125,14 @@ function ProfileCard({
           {rows.map((row) => (
             <div key={row.label} className="flex items-center gap-3 border-t border-border py-3 first:border-t-0">
               <row.icon className="size-4 shrink-0 text-muted-foreground" />
-              <span className="w-32 shrink-0 text-sm text-muted-foreground">{row.label}</span>
+              <span className="w-24 shrink-0 text-sm text-muted-foreground sm:w-32">{row.label}</span>
               <span className="min-w-0 flex-1 truncate text-sm font-medium">{row.value}</span>
             </div>
           ))}
 
           <div className="flex items-center gap-3 border-t border-border py-3">
             <Fingerprint className="size-4 shrink-0 text-muted-foreground" />
-            <span className="w-32 shrink-0 text-sm text-muted-foreground">{t("userId")}</span>
+            <span className="w-24 shrink-0 text-sm text-muted-foreground sm:w-32">{t("userId")}</span>
             <code className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">{user.id}</code>
             <Button
               variant="ghost"

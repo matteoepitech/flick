@@ -37,7 +37,7 @@ export function MouseMist() {
   }, [])
 
   return (
-    <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+    <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 hidden overflow-hidden pointer-fine:block">
       <div
         ref={ref}
         className="absolute top-0 left-0 h-[40rem] w-[40rem] rounded-full bg-primary/40 opacity-70 blur-[120px] will-change-transform dark:bg-primary/25"
