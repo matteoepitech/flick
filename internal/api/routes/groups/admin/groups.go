@@ -11,11 +11,12 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/go-playground/validator/v10"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/Flick-Corp/flick/internal/api/database"
+	"github.com/Flick-Corp/flick/internal/api/logging"
 	"github.com/Flick-Corp/flick/internal/api/routes"
 	"github.com/Flick-Corp/flick/internal/api/routes/account"
+	"github.com/go-playground/validator/v10"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // ListGroupsHandler: Returns every group (admin-only) for the management UI.
@@ -64,7 +65,8 @@ func ListGroupsHandler(queries *database.Queries) http.HandlerFunc {
 // - result1 (http.HandlerFunc): The handler function.
 func CreateGroupHandler(queries *database.Queries) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if _, status, err := account.RequireAdmin(r.Context(), queries, account.TokenFromHeader(r)); err != nil {
+		adminUser, status, err := account.RequireAdmin(r.Context(), queries, account.TokenFromHeader(r))
+		if err != nil {
 			routes.WriteError(w, status, err.Error())
 			return
 		}
@@ -85,9 +87,12 @@ func CreateGroupHandler(queries *database.Queries) http.HandlerFunc {
 
 		group, err := queries.CreateGroup(r.Context(), req.Name)
 		if err != nil {
+			logging.LogInfoError("Cannot create group %q: %v", req.Name, err)
 			routes.WriteError(w, http.StatusInternalServerError, "Cannot create group")
 			return
 		}
+
+		logging.LogInfoSuccess("Admin %q created group %q (%s)", adminUser.Username, group.Name, group.ID.String())
 
 		out := AdminGroupResponse{
 			ID:        group.ID,
@@ -111,7 +116,8 @@ func CreateGroupHandler(queries *database.Queries) http.HandlerFunc {
 // - result1 (http.HandlerFunc): The handler function.
 func DeleteGroupHandler(queries *database.Queries) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if _, status, err := account.RequireAdmin(r.Context(), queries, account.TokenFromHeader(r)); err != nil {
+		adminUser, status, err := account.RequireAdmin(r.Context(), queries, account.TokenFromHeader(r))
+		if err != nil {
 			routes.WriteError(w, status, err.Error())
 			return
 		}
@@ -123,9 +129,12 @@ func DeleteGroupHandler(queries *database.Queries) http.HandlerFunc {
 		}
 
 		if err := queries.DeleteGroup(r.Context(), id); err != nil {
+			logging.LogInfoError("Cannot delete group %q: %v", id.String(), err)
 			routes.WriteError(w, http.StatusInternalServerError, "Cannot delete group")
 			return
 		}
+
+		logging.LogInfoSuccess("Admin %q deleted group %q", adminUser.Username, id.String())
 
 		w.WriteHeader(http.StatusNoContent)
 	}
@@ -141,7 +150,8 @@ func DeleteGroupHandler(queries *database.Queries) http.HandlerFunc {
 // - result1 (http.HandlerFunc): The handler function.
 func UpdateGroupHandler(queries *database.Queries) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if _, status, err := account.RequireAdmin(r.Context(), queries, account.TokenFromHeader(r)); err != nil {
+		adminUser, status, err := account.RequireAdmin(r.Context(), queries, account.TokenFromHeader(r))
+		if err != nil {
 			routes.WriteError(w, status, err.Error())
 			return
 		}
@@ -171,9 +181,12 @@ func UpdateGroupHandler(queries *database.Queries) http.HandlerFunc {
 			Name: req.Name,
 		})
 		if err != nil {
+			logging.LogInfoError("Cannot update group %q: %v", id.String(), err)
 			routes.WriteError(w, http.StatusInternalServerError, "Cannot update group")
 			return
 		}
+
+		logging.LogInfoSuccess("Admin %q renamed group %q to %q", adminUser.Username, group.ID.String(), group.Name)
 
 		out := AdminGroupResponse{
 			ID:        group.ID,

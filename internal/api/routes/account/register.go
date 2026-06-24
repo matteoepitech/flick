@@ -12,11 +12,12 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/Flick-Corp/flick/internal/api/database"
+	"github.com/Flick-Corp/flick/internal/api/logging"
+	"github.com/Flick-Corp/flick/internal/api/routes"
 	"github.com/go-playground/validator/v10"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/Flick-Corp/flick/internal/api/database"
-	"github.com/Flick-Corp/flick/internal/api/routes"
 )
 
 // RegisterRequest structure.
@@ -80,9 +81,12 @@ func RegisterHandler(queries *database.Queries) http.HandlerFunc {
 				}
 				return
 			}
+			logging.LogInfoError("Cannot register user %q: %v", request.Username, err)
 			routes.WriteError(w, http.StatusInternalServerError, "Cannot be registered")
 			return
 		}
+
+		logging.LogInfoSuccess("Registered user %q (%s)", user.Username, user.ID.String())
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)

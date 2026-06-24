@@ -14,13 +14,14 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/Flick-Corp/flick/internal/api/database"
+	"github.com/Flick-Corp/flick/internal/api/logging"
+	"github.com/Flick-Corp/flick/internal/api/routes"
+	"github.com/Flick-Corp/flick/internal/api/routes/account"
 	"github.com/go-playground/validator/v10"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/Flick-Corp/flick/internal/api/database"
-	"github.com/Flick-Corp/flick/internal/api/routes"
-	"github.com/Flick-Corp/flick/internal/api/routes/account"
 )
 
 // UpdateUserRequest: The PATCH payload. Every mutable field is a pointer so a
@@ -161,9 +162,12 @@ func UpdateUserHandler(queries *database.Queries) http.HandlerFunc {
 				}
 				return
 			}
+			logging.LogInfoError("Cannot update user %q: %v", targetID.String(), err)
 			routes.WriteError(w, http.StatusInternalServerError, "Cannot update user")
 			return
 		}
+
+		logging.LogInfoSuccess("Admin %q updated user %q (%s)", adminUser.Username, user.Username, user.ID.String())
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)

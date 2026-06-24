@@ -13,12 +13,13 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/Flick-Corp/flick/internal/api/database"
+	"github.com/Flick-Corp/flick/internal/api/logging"
+	"github.com/Flick-Corp/flick/internal/api/routes"
+	"github.com/Flick-Corp/flick/internal/api/routes/account"
 	"github.com/go-playground/validator/v10"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/Flick-Corp/flick/internal/api/database"
-	"github.com/Flick-Corp/flick/internal/api/routes"
-	"github.com/Flick-Corp/flick/internal/api/routes/account"
 )
 
 // AddGroupMemberHandler: Adds a user to the group identified by the id path
@@ -38,7 +39,8 @@ func AddGroupMemberHandler(queries *database.Queries) http.HandlerFunc {
 		}
 
 		// A global admin or a maintainer/owner of this group may add members.
-		if _, status, err := account.RequireGroupMaintainer(r.Context(), queries, account.TokenFromHeader(r), groupID); err != nil {
+		caller, status, err := account.RequireGroupMaintainer(r.Context(), queries, account.TokenFromHeader(r), groupID)
+		if err != nil {
 			routes.WriteError(w, status, err.Error())
 			return
 		}
@@ -67,9 +69,12 @@ func AddGroupMemberHandler(queries *database.Queries) http.HandlerFunc {
 			UserID:  userID,
 			GroupID: groupID,
 		}); err != nil {
+			logging.LogInfoError("Cannot add user %q to group %q: %v", userID.String(), groupID.String(), err)
 			routes.WriteError(w, http.StatusInternalServerError, "Cannot add user to group")
 			return
 		}
+
+		logging.LogInfoSuccess("%q added user %q to group %q", caller.Username, userID.String(), groupID.String())
 
 		w.WriteHeader(http.StatusNoContent)
 	}
@@ -189,9 +194,12 @@ func RemoveGroupMemberHandler(queries *database.Queries) http.HandlerFunc {
 			UserID:  userID,
 			GroupID: groupID,
 		}); err != nil {
+			logging.LogInfoError("Cannot remove user %q from group %q: %v", userID.String(), groupID.String(), err)
 			routes.WriteError(w, http.StatusInternalServerError, "Cannot remove user from group")
 			return
 		}
+
+		logging.LogInfoSuccess("%q removed user %q from group %q", caller.Username, userID.String(), groupID.String())
 
 		w.WriteHeader(http.StatusNoContent)
 	}
@@ -252,9 +260,12 @@ func SetGroupMemberRoleHandler(queries *database.Queries) http.HandlerFunc {
 			GroupID: groupID,
 			Role:    database.GroupRole(req.Role),
 		}); err != nil {
+			logging.LogInfoError("Cannot set role of user %q in group %q: %v", userID.String(), groupID.String(), err)
 			routes.WriteError(w, http.StatusInternalServerError, "Cannot set member role")
 			return
 		}
+
+		logging.LogInfoSuccess("%q set user %q role to %q in group %q", caller.Username, userID.String(), req.Role, groupID.String())
 
 		w.WriteHeader(http.StatusNoContent)
 	}

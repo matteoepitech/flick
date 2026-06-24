@@ -15,14 +15,15 @@ import (
 	"errors"
 	"net/http"
 
+	codepkg "github.com/Flick-Corp/flick/internal/api/code"
+	"github.com/Flick-Corp/flick/internal/api/database"
+	"github.com/Flick-Corp/flick/internal/api/logging"
+	"github.com/Flick-Corp/flick/internal/api/routes"
+	"github.com/Flick-Corp/flick/internal/api/routes/account"
 	"github.com/go-playground/validator/v10"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
-	codepkg "github.com/Flick-Corp/flick/internal/api/code"
-	"github.com/Flick-Corp/flick/internal/api/database"
-	"github.com/Flick-Corp/flick/internal/api/routes"
-	"github.com/Flick-Corp/flick/internal/api/routes/account"
 )
 
 // FolderResponse: a sub-folder at the explored level.
@@ -181,7 +182,8 @@ func CreateGroupFolderHandler(queries *database.Queries) http.HandlerFunc {
 			return
 		}
 
-		if _, status, err := account.RequireGroupMaintainer(r.Context(), queries, account.TokenFromHeader(r), groupID); err != nil {
+		caller, status, err := account.RequireGroupMaintainer(r.Context(), queries, account.TokenFromHeader(r), groupID)
+		if err != nil {
 			routes.WriteError(w, status, err.Error())
 			return
 		}
@@ -228,9 +230,12 @@ func CreateGroupFolderHandler(queries *database.Queries) http.HandlerFunc {
 				routes.WriteError(w, http.StatusConflict, "A folder with this name already exists")
 				return
 			}
+			logging.LogInfoError("Cannot create folder %q in group %q: %v", req.Name, groupID.String(), err)
 			routes.WriteError(w, http.StatusInternalServerError, "Cannot create folder")
 			return
 		}
+
+		logging.LogInfoSuccess("%q created folder %q (%s) in group %q", caller.Username, folder.Name, folder.ID.String(), groupID.String())
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
@@ -259,7 +264,8 @@ func DeleteGroupFolderHandler(queries *database.Queries) http.HandlerFunc {
 			return
 		}
 
-		if _, status, err := account.RequireGroupMaintainer(r.Context(), queries, account.TokenFromHeader(r), groupID); err != nil {
+		caller, status, err := account.RequireGroupMaintainer(r.Context(), queries, account.TokenFromHeader(r), groupID)
+		if err != nil {
 			routes.WriteError(w, status, err.Error())
 			return
 		}
@@ -290,9 +296,12 @@ func DeleteGroupFolderHandler(queries *database.Queries) http.HandlerFunc {
 		}
 
 		if err := queries.DeleteGroupFolder(r.Context(), folderID); err != nil {
+			logging.LogInfoError("Cannot delete folder %q in group %q: %v", folderID.String(), groupID.String(), err)
 			routes.WriteError(w, http.StatusInternalServerError, "Cannot delete folder")
 			return
 		}
+
+		logging.LogInfoSuccess("%q deleted folder %q in group %q", caller.Username, folderID.String(), groupID.String())
 
 		w.WriteHeader(http.StatusNoContent)
 	}

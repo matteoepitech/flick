@@ -86,9 +86,11 @@ func SendServerConfig() http.HandlerFunc {
 			serverconfig.Conf = newConf
 			data, _ := json.MarshalIndent(serverconfig.Conf, "", "  ")
 			if err := os.WriteFile(filepath.Join(dir, "server-config.json"), data, 0644); err != nil {
+				logging.LogInfoError("Cannot save server configuration: %v", err)
 				WriteError(w, http.StatusInternalServerError, "Failed to save config")
 				return
 			}
+			logging.LogInfoSuccess("Server configuration updated")
 			fmt.Fprint(w, "OK")
 			return
 		}
