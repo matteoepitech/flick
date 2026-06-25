@@ -69,6 +69,7 @@ type exploreModel struct {
 	roots     []*exploreNode
 	rows      []exploreRow
 	cursor    int
+	currentID string // folder whose contents receive create/upload actions
 
 	// folder creation prompt (tree mode)
 	creating  bool
