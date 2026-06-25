@@ -1,7 +1,14 @@
 import JSZip from "jszip"
+import * as tus from "tus-js-client"
 import { hashBlob, equal } from "@/lib/checksum"
 
 const API_PREFIX = "/api/v1"
+
+// Size of each chunk streamed to the server during a tus upload. A fixed chunk
+// size keeps the browser from holding the whole archive in a single request and
+// lets an interrupted upload resume; it matches the CLI's 16 MiB so both senders
+// behave identically.
+const TUS_CHUNK_SIZE = 16 * 1024 * 1024 // 16 MiB
 
 // In the browser the API lives on the same origin: Caddy routes /api/v1/* to
 // the Go API. Server-side (SSR) we talk to the API directly on the Docker
@@ -156,16 +163,6 @@ export interface Upload {
 // randomArchiveName: the name under which the whole upload is stored and later
 // handed back on download. A random uuid keeps unrelated uploads from colliding
 // on disk and is exactly what the receiver saves (e.g. "<uuid>.zip").
-// encodeMessageHeader: Base64-encode the UTF-8 bytes of a personal message so it
-// can travel in the X-Flick-Message header, which only accepts ASCII. The Go
-// server decodes it back before storing it in the code's metadata.
-function encodeMessageHeader(message: string): string {
-  const bytes = new TextEncoder().encode(message)
-  let binary = ""
-  for (const byte of bytes) binary += String.fromCharCode(byte)
-  return btoa(binary)
-}
-
 function randomArchiveName(): string {
   const id =
     typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
@@ -225,6 +222,68 @@ async function buildUploadArchive(items: Upload[]): Promise<{ archive: Blob; che
   return { archive, checksum }
 }
 
+// resolveShareCode: Fetch the share code the server assigned to a finished tus
+// upload. The tus protocol's final response carries no body, so the code is
+// pulled in a short follow-up request keyed by the upload id (the last path
+// segment of the upload URL). The headers carry the same identity (uploader id
+// or Bearer token) that authorized the upload.
+async function resolveShareCode(
+  uploadUrl: string,
+  headers: Record<string, string>,
+  signal?: AbortSignal
+): Promise<string> {
+  const id = uploadUrl.replace(/\/+$/, "").split("/").pop() ?? ""
+  const url = apiUrl("/upload/tus-result")
+  url.searchParams.set("id", id)
+
+  const res = await fetch(url.toString(), { method: "GET", headers, signal })
+  if (!res.ok) {
+    throw new ApiError(res.status, parseErrorMessage(await res.text().catch(() => ""), res.statusText))
+  }
+  return (await res.text()).trim()
+}
+
+// uploadArchiveViaTus: Stream one archive to the server with the tus resumable
+// protocol, chunked so the browser never holds the whole upload in a single
+// request. Every per-upload setting travels as tus metadata (the server reads it
+// back when finalizing); identity travels in `headers`. Resolves with the bare
+// share code. Shared by the public upload and group uploads.
+function uploadArchiveViaTus(
+  archive: Blob,
+  filename: string,
+  metadata: Record<string, string>,
+  headers: Record<string, string>,
+  onProgress?: (progress: UploadProgress) => void,
+  signal?: AbortSignal
+): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    const upload = new tus.Upload(archive, {
+      endpoint: apiUrl("/upload/tus/").toString(),
+      chunkSize: TUS_CHUNK_SIZE,
+      retryDelays: [0, 1000, 3000, 5000],
+      removeFingerprintOnSuccess: true,
+      // tus-js-client base64-encodes metadata values (UTF-8 safe), so any text
+      // (e.g. a unicode message) travels intact without manual encoding.
+      metadata: { filename, ...metadata },
+      headers,
+      onProgress: (bytesSent, bytesTotal) => {
+        if (onProgress) onProgress({ loaded: bytesSent, total: bytesTotal })
+      },
+      onError: (err) => reject(err instanceof Error ? err : new ApiError(0, String(err))),
+      onSuccess: () => {
+        resolveShareCode(upload.url ?? "", headers, signal).then(resolve).catch(reject)
+      },
+    })
+
+    signal?.addEventListener("abort", () => {
+      void upload.abort()
+      reject(new DOMException("Aborted", "AbortError"))
+    })
+
+    upload.start()
+  })
+}
+
 export async function uploadFile(
   items: Upload[],
   expiration: string,
@@ -234,48 +293,30 @@ export async function uploadFile(
   password?: string,
   message?: string
 ): Promise<string> {
-  const url = apiUrl("/upload")
-  url.searchParams.set("expiration", expiration)
-  url.searchParams.set("maxDownloadCount", String(maxDownloadCount))
-
   // The server requires a known uploader (X-Flick-User-ID), exactly like the CLI.
   const uploaderId = await ensureUploaderId(signal)
 
   const { archive, checksum: archiveChecksum } = await buildUploadArchive(items)
 
-  const form = new FormData()
-  form.append("file", archive, randomArchiveName())
+  const metadata: Record<string, string> = {
+    checksum: archiveChecksum,
+    encrypted: "false",
+    expiration,
+    maxDownloadCount: String(maxDownloadCount),
+  }
+  // An empty password leaves the code public; the server treats it as unset.
+  if (password) metadata.password = password
+  // Optional personal note surfaced to the downloader on the receive page.
+  if (message) metadata.message = message
 
-  return new Promise<string>((resolve, reject) => {
-    const xhr = new XMLHttpRequest()
-    xhr.open("POST", url.toString())
-    xhr.setRequestHeader("X-Flick-User-ID", uploaderId)
-    xhr.setRequestHeader("X-Flick-Checksum", archiveChecksum)
-    // An empty password leaves the code public; the server treats it as unset.
-    if (password) xhr.setRequestHeader("X-Flick-Password", password)
-    // Optional personal note surfaced to the downloader on the receive page.
-    // Base64 of the UTF-8 bytes keeps the header ASCII-safe for any text.
-    if (message) xhr.setRequestHeader("X-Flick-Message", encodeMessageHeader(message))
-
-    xhr.upload.addEventListener("progress", (event) => {
-      if (event.lengthComputable && onProgress) {
-        onProgress({ loaded: event.loaded, total: event.total })
-      }
-    })
-
-    xhr.addEventListener("load", () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        resolve(xhr.responseText.trim())
-      } else {
-        reject(new ApiError(xhr.status, parseErrorMessage(xhr.responseText, xhr.statusText)))
-      }
-    })
-    xhr.addEventListener("error", () => reject(new ApiError(0, "Network error")))
-    xhr.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")))
-
-    signal?.addEventListener("abort", () => xhr.abort())
-    xhr.send(form)
-  })
+  return uploadArchiveViaTus(
+    archive,
+    randomArchiveName(),
+    metadata,
+    { "X-Flick-User-ID": uploaderId },
+    onProgress,
+    signal
+  )
 }
 
 // DownloadedArchive: one stored item pulled back from the server (the combined
@@ -1211,41 +1252,24 @@ export async function uploadToGroup(
   onProgress?: (progress: UploadProgress) => void,
   signal?: AbortSignal
 ): Promise<void> {
-  const url = apiUrl("/upload")
-  url.searchParams.set("group_id", groupId)
-  url.searchParams.set("expiration", expiration)
-  if (folderId) url.searchParams.set("folder_id", folderId)
-
   const { archive, checksum } = await buildUploadArchive(items)
 
-  const form = new FormData()
-  form.append("file", archive, randomArchiveName())
+  const metadata: Record<string, string> = {
+    checksum,
+    encrypted: "false",
+    expiration,
+    groupId,
+  }
+  if (folderId) metadata.folderId = folderId
 
-  return new Promise<void>((resolve, reject) => {
-    const xhr = new XMLHttpRequest()
-    xhr.open("POST", url.toString())
-    xhr.setRequestHeader("Authorization", `Bearer ${token}`)
-    xhr.setRequestHeader("X-Flick-Checksum", checksum)
-
-    xhr.upload.addEventListener("progress", (event) => {
-      if (event.lengthComputable && onProgress) {
-        onProgress({ loaded: event.loaded, total: event.total })
-      }
-    })
-
-    xhr.addEventListener("load", () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        resolve()
-      } else {
-        reject(new ApiError(xhr.status, parseErrorMessage(xhr.responseText, xhr.statusText)))
-      }
-    })
-    xhr.addEventListener("error", () => reject(new ApiError(0, "Network error")))
-    xhr.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")))
-
-    signal?.addEventListener("abort", () => xhr.abort())
-    xhr.send(form)
-  })
+  await uploadArchiveViaTus(
+    archive,
+    randomArchiveName(),
+    metadata,
+    { Authorization: `Bearer ${token}` },
+    onProgress,
+    signal
+  )
 }
 
 // downloadGroupUpload: Fetch a group transfer's archive(s) through the native

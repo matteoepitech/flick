@@ -9,16 +9,14 @@ package commands
 
 import (
 	"bufio"
-	"bytes"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/fs"
-	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -30,10 +28,17 @@ import (
 	archiveutil "github.com/Flick-Corp/flick/internal/utils/archive"
 	"github.com/Flick-Corp/flick/internal/utils/checksum"
 	"github.com/Flick-Corp/flick/internal/utils/encryption"
+	tus "github.com/eventials/go-tus"
 	"github.com/schollz/progressbar/v3"
 	"github.com/spf13/cobra"
 	"github.com/tiagomelo/go-clipboard/clipboard"
 )
+
+// tusChunkSize is the size of each PATCH chunk streamed to the server. Keeping
+// it fixed bounds the client's memory use (go-tus buffers one chunk at a time)
+// no matter how large the archive is, and matches the web client's chunk size
+// so both senders behave identically.
+const tusChunkSize int64 = 16 * 1024 * 1024 // 16 MiB
 
 // uploadItem: a file or folder about to be uploaded.
 type uploadItem struct {
@@ -49,32 +54,18 @@ type quotaResponse struct {
 	LimitMb   int64 `json:"limitMb"`
 }
 
-// doUploadRequest: Do the upload request on the server.
+// printShareCode: Show the final share code to the user and copy it to the
+// clipboard, appending the encryption key fragment when the upload is encrypted.
 //
 // Params:
-// - req (*http.Request): The request HTTP.
+// - code (string): The bare share code returned by the server.
 // - exp (string): The expiration of this upload, shown next to the code.
 // - keyFragment (string): The base64url encryption key to append to the code.
 //
 // Returns:
-// - result1 (error): An error occured.
-func doUploadRequest(req *http.Request, exp string, keyFragment string) error {
-	resp, err := network.SharedClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("Failure: Cannot access the server: %w", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("Failure: Invalid response from the server")
-	}
-
-	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		return fmt.Errorf("Failure: %s", serverErrorMessage(body, resp.Status))
-	}
-
-	shareCode := string(body)
+// - result1 (error): An error if the clipboard cannot be written.
+func printShareCode(code string, exp string, keyFragment string) error {
+	shareCode := code
 	if keyFragment != "" {
 		shareCode += "#" + keyFragment
 	}
@@ -84,11 +75,125 @@ func doUploadRequest(req *http.Request, exp string, keyFragment string) error {
 	}
 
 	c := clipboard.New(clipboard.ClipboardOptions{Primary: true})
-	if err := c.CopyText(shareCode); err != nil {
-		return err
+	return c.CopyText(shareCode)
+}
+
+// uploadViaTus: Stream the archive to the server with the tus resumable upload
+// protocol. The file is sent in fixed-size chunks so the client's memory use
+// stays bounded regardless of the archive size, and a dropped connection can be
+// resumed instead of restarting from zero. All the per-upload settings travel as
+// tus metadata (the server reads them back when finalizing the transfer); the
+// uploader identity travels as the usual X-Flick-User-ID header.
+//
+// Params:
+// - archive (*os.File): The (possibly encrypted) archive to upload, positioned anywhere.
+// - size (int64): The exact byte size of the archive.
+// - userID (string): The uploader id sent through the X-Flick-User-ID header.
+// - archiveChecksum (string): The BLAKE3 hex digest of the archive bytes.
+// - encrypted (bool): Whether the archive is end-to-end encrypted.
+// - password (string): An optional download password, or empty for none.
+// - message (string): An optional personal note, or empty for none.
+// - expiration (string): The resolved expiration duration (e.g. "24h").
+// - maxDownloadCount (string): The resolved maximum download count.
+//
+// Returns:
+// - result1 (string): The bare share code assigned by the server.
+// - result2 (error): An error if the upload or code lookup failed.
+func uploadViaTus(archive *os.File, size int64, userID string, archiveChecksum string,
+	encrypted bool, password string, message string, expiration string, maxDownloadCount string) (string, error) {
+
+	metadata := tus.Metadata{
+		"filename":         archiveutil.RandomName(),
+		"checksum":         archiveChecksum,
+		"encrypted":        strconv.FormatBool(encrypted),
+		"expiration":       expiration,
+		"maxDownloadCount": maxDownloadCount,
+	}
+	if password != "" {
+		metadata["password"] = password
+	}
+	if message != "" {
+		metadata["message"] = message
 	}
 
-	return nil
+	header := http.Header{}
+	header.Set("X-Flick-User-ID", userID)
+
+	client, err := tus.NewClient(config.Conf.APIBaseURL()+"/upload/tus/", &tus.Config{
+		ChunkSize:  tusChunkSize,
+		HttpClient: network.SharedClient,
+		Header:     header,
+	})
+	if err != nil {
+		return "", fmt.Errorf("Failure: Cannot create the upload client: %w", err)
+	}
+
+	upload := tus.NewUpload(archive, size, metadata, "")
+	uploader, err := client.CreateUpload(upload)
+	if err != nil {
+		return "", fmt.Errorf("Failure: Cannot start the upload: %w", err)
+	}
+
+	bar := progressbar.DefaultBytes(size, "Uploading")
+	progress := make(chan tus.Upload)
+	uploader.NotifyUploadProgress(progress)
+	go func() {
+		for u := range progress {
+			_ = bar.Set64(u.Offset())
+		}
+	}()
+
+	if err := uploader.Upload(); err != nil {
+		return "", fmt.Errorf("Failure: The upload failed: %w", err)
+	}
+	_ = bar.Set64(size)
+	_ = bar.Finish()
+
+	return fetchUploadCode(uploader.Url(), userID)
+}
+
+// fetchUploadCode: Resolve the share code the server assigned to a finished tus
+// upload. The tus protocol's final response carries no body, so the code is
+// fetched in a short follow-up request keyed by the upload id (the last segment
+// of the upload URL). The server has already finalized the transfer by the time
+// the upload completes, so this always succeeds immediately.
+//
+// Params:
+// - uploadURL (string): The tus upload URL returned by the server on creation.
+// - userID (string): The uploader id sent through the X-Flick-User-ID header.
+//
+// Returns:
+// - result1 (string): The bare share code.
+// - result2 (error): An error if the server cannot be reached or refuses.
+func fetchUploadCode(uploadURL string, userID string) (string, error) {
+	parsed, err := url.Parse(uploadURL)
+	if err != nil {
+		return "", fmt.Errorf("Failure: Invalid upload URL from the server: %w", err)
+	}
+
+	query := url.Values{}
+	query.Set("id", path.Base(parsed.Path))
+	req, err := http.NewRequest("GET", config.Conf.APIBaseURL()+"/upload/tus-result?"+query.Encode(), nil)
+	if err != nil {
+		return "", fmt.Errorf("Failure: Cannot create the request for the server.")
+	}
+	req.Header.Set("X-Flick-User-ID", userID)
+
+	resp, err := network.SharedClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("Failure: Cannot access the server: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("Failure: Invalid response from the server")
+	}
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return "", fmt.Errorf("Failure: %s", serverErrorMessage(body, resp.Status))
+	}
+
+	return strings.TrimSpace(string(body)), nil
 }
 
 // encryptToTemp: Encrypt the archive at srcPath into a new temporary file under
@@ -354,49 +459,13 @@ func RunUpload(cmd *cobra.Command, args []string, exp string, mdc string, encryp
 	}
 	fmt.Printf("Uploading %s... (%d bytes archived)\n", label, archiveStat.Size())
 
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-	part, err := writer.CreateFormFile("file", archiveutil.RandomName())
+	shareCode, err := uploadViaTus(archive, archiveStat.Size(), creds.UserID, archiveChecksum,
+		keyFragment != "", password, message, expValue, mdcValue)
 	if err != nil {
-		return fmt.Errorf("Failure: Cannot create the form file: %w", err)
+		return err
 	}
 
-	if _, err := io.Copy(part, archive); err != nil {
-		return fmt.Errorf("Failure: Cannot copy the archive.")
-	}
-	if err := writer.Close(); err != nil {
-		return fmt.Errorf("Failure: Cannot finalize the upload body: %w", err)
-	}
-
-	bar := progressbar.DefaultBytes(int64(body.Len()), "Uploading")
-	progressBody := io.TeeReader(body, bar)
-
-	params := url.Values{}
-	params.Set("expiration", expValue)
-	params.Set("maxDownloadCount", mdcValue)
-
-	reqURL := fmt.Sprintf("%s/upload?%s", config.Conf.APIBaseURL(), params.Encode())
-
-	req, err := http.NewRequest("POST", reqURL, progressBody)
-	if err != nil {
-		return fmt.Errorf("Failure: Cannot create the request for the server.")
-	}
-
-	req.Header.Set("Content-Type", writer.FormDataContentType())
-	req.Header.Set("X-Flick-User-ID", creds.UserID)
-	req.Header.Set("X-Flick-Checksum", archiveChecksum)
-	if keyFragment != "" {
-		req.Header.Set("X-Flick-Encrypted", "true")
-	}
-	if password != "" {
-		req.Header.Set("X-Flick-Password", password)
-	}
-	if message != "" {
-		req.Header.Set("X-Flick-Message", base64.StdEncoding.EncodeToString([]byte(message)))
-	}
-	req.ContentLength = int64(body.Len())
-
-	if err := doUploadRequest(req, exp, keyFragment); err != nil {
+	if err := printShareCode(shareCode, exp, keyFragment); err != nil {
 		return err
 	}
 	if password != "" {
