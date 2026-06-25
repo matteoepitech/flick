@@ -17,7 +17,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/Flick-Corp/flick/internal/cli/config"
@@ -309,38 +308,17 @@ func uploadToGroupFolder(token, groupID, folderID string, srcs []string) error {
 	return nil
 }
 
-// uniqueFileName: Return a file name that does not collide with an existing one
-// in the current directory, suffixing " (n)" before the extension if needed.
-//
-// Params:
-// - name (string): The desired file name.
-//
-// Returns:
-// - result1 (string): A free file name.
-func uniqueFileName(name string) string {
-	if _, err := os.Stat(name); os.IsNotExist(err) {
-		return name
-	}
-	ext := filepath.Ext(name)
-	base := strings.TrimSuffix(name, ext)
-	for n := 2; ; n++ {
-		candidate := fmt.Sprintf("%s (%d)%s", base, n, ext)
-		if _, err := os.Stat(candidate); os.IsNotExist(err) {
-			return candidate
-		}
-	}
-}
-
 // downloadGroupFile: Download a group transfer by code through the native
-// /download endpoint (Bearer) and save each archive part into the current
-// directory. Silent so it can run under the TUI.
+// /download endpoint (Bearer) and extract each archive part into the current
+// directory, exactly like the standalone download command. Silent so it can run
+// under the TUI.
 //
 // Params:
 // - token (string): The session token.
 // - code (string): The transfer's share code.
 //
 // Returns:
-// - result1 (string): The saved file name on success.
+// - result1 (string): The extracted top-level name(s) on success.
 // - result2 (error): An error if the download failed.
 func downloadGroupFile(token, code string) (string, error) {
 	req, err := http.NewRequest(http.MethodGet, config.Conf.APIBaseURL()+"/download?code="+code, nil)
@@ -364,7 +342,7 @@ func downloadGroupFile(token, code string) (string, error) {
 	}
 	reader := multipart.NewReader(resp.Body, params["boundary"])
 
-	saved := ""
+	names := make([]string, 0)
 	for {
 		part, err := reader.NextPart()
 		if err == io.EOF {
@@ -373,25 +351,47 @@ func downloadGroupFile(token, code string) (string, error) {
 		if err != nil {
 			return "", err
 		}
+		if part.FormName() != "file" {
+			part.Close()
+			continue
+		}
 
-		name := filepath.Base(part.FileName())
-		if name == "" || name == "." {
-			name = code + ".zip"
-		}
-		name = uniqueFileName(name)
-		out, err := os.Create(name)
-		if err != nil {
-			part.Close()
-			return "", err
-		}
-		if _, err := io.Copy(out, part); err != nil {
-			out.Close()
-			part.Close()
-			return "", err
-		}
-		out.Close()
+		extracted, err := extractPart(part)
 		part.Close()
-		saved = name
+		if err != nil {
+			return "", err
+		}
+		names = append(names, extracted...)
 	}
-	return saved, nil
+
+	if len(names) == 0 {
+		return code, nil
+	}
+	return strings.Join(names, ", "), nil
+}
+
+// extractPart: Buffer one archive part to a temp file and extract it into the
+// current directory, returning its top-level entry names. Group transfers are
+// never encrypted, so no decryption step is needed here.
+//
+// Params:
+// - part (io.Reader): The multipart file stream carrying the zip archive.
+//
+// Returns:
+// - result1 ([]string): The unique top-level names extracted.
+// - result2 (error): An error if the part could not be buffered or extracted.
+func extractPart(part io.Reader) ([]string, error) {
+	tmp, err := os.CreateTemp("", "flick-download-*.zip")
+	if err != nil {
+		return nil, fmt.Errorf("cannot create temp archive: %w", err)
+	}
+	defer os.Remove(tmp.Name())
+
+	if _, err := io.Copy(tmp, part); err != nil {
+		tmp.Close()
+		return nil, fmt.Errorf("cannot download the archive: %w", err)
+	}
+	tmp.Close()
+
+	return archiveutil.Extract(tmp.Name(), ".")
 }
