@@ -285,7 +285,14 @@
     "passwordHint": "Only filled in if you want to set a new password.",
     "save": "Save",
     "cancel": "Cancel",
-    "editError": "Could not save changes. Please retry."
+    "editError": "Could not save changes. Please retry.",
+    "createAction": "Add user",
+    "createTitle": "Add user",
+    "createSubtitle": "Create a new account manually. The user can sign in with these credentials.",
+    "createPasswordPlaceholder": "Set a password",
+    "create": "Create",
+    "createValidation": "Username, email and password are all required.",
+    "createError": "Could not create the user. Please retry."
   },
   "Groups": {
     "title": "Groups",

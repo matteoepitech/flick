@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { useLocale, useTranslations } from "next-intl"
 
+import { CreateUserSheet } from "@/components/create-user-sheet"
 import { EditUserSheet } from "@/components/edit-user-sheet"
 import { ErrorState } from "@/components/error-state"
 import { Badge } from "@/components/ui/badge"
@@ -116,6 +117,12 @@ export function UsersManager() {
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-end">
+        <CreateUserSheet
+          onCreated={(created) => setUsers((prev) => [created, ...prev])}
+        />
+      </div>
+
       {actionError && <p className="text-sm text-destructive">{actionError}</p>}
 
       <div className="rounded-md border">

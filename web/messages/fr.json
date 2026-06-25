@@ -285,7 +285,14 @@
     "passwordHint": "À remplir uniquement pour définir un nouveau mot de passe.",
     "save": "Enregistrer",
     "cancel": "Annuler",
-    "editError": "Impossible d'enregistrer les modifications. Veuillez réessayer."
+    "editError": "Impossible d'enregistrer les modifications. Veuillez réessayer.",
+    "createAction": "Ajouter un utilisateur",
+    "createTitle": "Ajouter un utilisateur",
+    "createSubtitle": "Créez un compte manuellement. L'utilisateur pourra se connecter avec ces identifiants.",
+    "createPasswordPlaceholder": "Définir un mot de passe",
+    "create": "Créer",
+    "createValidation": "Le nom d'utilisateur, l'email et le mot de passe sont obligatoires.",
+    "createError": "Impossible de créer l'utilisateur. Veuillez réessayer."
   },
   "Groups": {
     "title": "Groupes",
