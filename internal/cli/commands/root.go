@@ -57,7 +57,13 @@ func runCLI(cmd *cobra.Command, args []string) error {
 	}
 
 	exp, _ := cmd.Flags().GetString("exp")
+	if !cmd.Flags().Changed("exp") {
+		exp = ""
+	}
 	mdc, _ := cmd.Flags().GetString("mdc")
+	if !cmd.Flags().Changed("mdc") {
+		mdc = ""
+	}
 	encrypt, _ := cmd.Flags().GetBool("encrypt")
 	password, _ := cmd.Flags().GetString("password")
 	message, _ := cmd.Flags().GetString("message")
