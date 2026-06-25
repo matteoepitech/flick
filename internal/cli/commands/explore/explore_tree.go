@@ -92,17 +92,19 @@ func (m *exploreModel) rebuild() {
 	}
 }
 
-// targetFolder: The group folder an action applies to: the folder under the
-// cursor when it is a folder, otherwise the folder containing the cursor row.
+// targetFolder: The group folder an action applies to. It uses the folder level
+// that contains the highlighted row, except when the highlighted row is the
+// currently opened folder itself (notably an empty folder).
 //
 // Returns:
 // - result1 (string): The target folder id, or "" for the group root.
 func (m exploreModel) targetFolder() string {
 	if len(m.rows) == 0 {
-		return ""
+		return m.currentID
 	}
+
 	row := m.rows[m.cursor]
-	if row.node.isFolder {
+	if row.node.isFolder && row.node.id == m.currentID {
 		return row.node.id
 	}
 	return row.parentID

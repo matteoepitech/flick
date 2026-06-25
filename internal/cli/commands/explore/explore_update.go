@@ -44,6 +44,7 @@ func (m exploreModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case folderMsg:
 		children := childrenFrom(msg.folders, msg.files)
 		m.status = ""
+		m.currentID = msg.folderID
 		if msg.folderID == "" {
 			m.roots = children
 			if m.mode != modeTree {
@@ -217,6 +218,7 @@ func (m exploreModel) handleTree(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.roots = nil
 		m.rows = nil
 		m.cursor = 0
+		m.currentID = ""
 		m.status = ""
 	case "up", "k":
 		if m.cursor > 0 {
