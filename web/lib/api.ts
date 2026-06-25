@@ -233,7 +233,7 @@ async function resolveShareCode(
   signal?: AbortSignal
 ): Promise<string> {
   const id = uploadUrl.replace(/\/+$/, "").split("/").pop() ?? ""
-  const url = apiUrl("/upload/tus-result")
+  const url = apiUrl("/upload-result")
   url.searchParams.set("id", id)
 
   const res = await fetch(url.toString(), { method: "GET", headers, signal })
@@ -258,7 +258,7 @@ function uploadArchiveViaTus(
 ): Promise<string> {
   return new Promise<string>((resolve, reject) => {
     const upload = new tus.Upload(archive, {
-      endpoint: apiUrl("/upload/tus/").toString(),
+      endpoint: apiUrl("/upload/").toString(),
       chunkSize: TUS_CHUNK_SIZE,
       retryDelays: [0, 1000, 3000, 5000],
       removeFingerprintOnSuccess: true,

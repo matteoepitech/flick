@@ -13,7 +13,9 @@ require (
 	github.com/schollz/progressbar/v3 v3.19.0
 	github.com/spf13/cobra v1.10.2
 	github.com/tiagomelo/go-clipboard v0.1.2
+	github.com/tus/tusd/v2 v2.10.0
 	golang.org/x/crypto v0.51.0
+	golang.org/x/exp v0.0.0-20250106191152-7588d65b2ba8
 	golang.org/x/term v0.43.0
 	lukechampine.com/blake3 v1.4.1
 )

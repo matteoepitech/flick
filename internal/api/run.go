@@ -24,6 +24,7 @@ import (
 	"github.com/Flick-Corp/flick/internal/api/routes/account"
 	"github.com/Flick-Corp/flick/internal/api/routes/account/oauth"
 	"github.com/Flick-Corp/flick/internal/api/routes/files"
+	"github.com/Flick-Corp/flick/internal/api/routes/files/tus"
 	"github.com/Flick-Corp/flick/internal/api/routes/groups"
 	groupsadmin "github.com/Flick-Corp/flick/internal/api/routes/groups/admin"
 	"github.com/Flick-Corp/flick/internal/api/routes/users"
@@ -71,8 +72,14 @@ func Run(ctx context.Context) error {
 	}
 	defer pool.Close()
 
+	tusHandler, err := tus.NewHandler(queries)
+	if err != nil {
+		return err
+	}
+
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/v1/upload", files.UploadFileHandler(queries))
+	mux.Handle(tus.BasePath, http.StripPrefix(tus.BasePath, tusHandler))
+	mux.HandleFunc("/api/v1/upload-result", tus.ResultHandler())
 	mux.HandleFunc("/api/v1/identify", identification.IdentifyHandler(queries))
 	mux.HandleFunc("/api/v1/download", files.DownloadFileHandler(queries))
 	mux.HandleFunc("/api/v1/download/info", files.DownloadInfoHandler(queries))
@@ -108,6 +115,9 @@ func Run(ctx context.Context) error {
 	if err := code.InitCodeCache(); err != nil {
 		logging.LogInfoError("Cannot load code cache from disk: %v", err)
 	}
+
+	// Sweep abandoned tus uploads in the background.
+	tus.StartCleanupRoutine(ctx)
 
 	logging.LogInfoSuccess("FLICK server listening on %s", addr)
 

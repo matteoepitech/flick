@@ -119,7 +119,7 @@ func uploadViaTus(archive *os.File, size int64, userID string, archiveChecksum s
 	header := http.Header{}
 	header.Set("X-Flick-User-ID", userID)
 
-	client, err := tus.NewClient(config.Conf.APIBaseURL()+"/upload/tus/", &tus.Config{
+	client, err := tus.NewClient(config.Conf.APIBaseURL()+"/upload/", &tus.Config{
 		ChunkSize:  tusChunkSize,
 		HttpClient: network.SharedClient,
 		Header:     header,
@@ -173,7 +173,7 @@ func fetchUploadCode(uploadURL string, userID string) (string, error) {
 
 	query := url.Values{}
 	query.Set("id", path.Base(parsed.Path))
-	req, err := http.NewRequest("GET", config.Conf.APIBaseURL()+"/upload/tus-result?"+query.Encode(), nil)
+	req, err := http.NewRequest("GET", config.Conf.APIBaseURL()+"/upload-result?"+query.Encode(), nil)
 	if err != nil {
 		return "", fmt.Errorf("Failure: Cannot create the request for the server.")
 	}
