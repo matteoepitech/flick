@@ -15,7 +15,6 @@ import (
 	"mime"
 	"mime/multipart"
 	"net/http"
-	"net/url"
 	"os"
 	"strings"
 
@@ -23,6 +22,8 @@ import (
 	"github.com/Flick-Corp/flick/internal/cli/network"
 	archiveutil "github.com/Flick-Corp/flick/internal/utils/archive"
 	"github.com/Flick-Corp/flick/internal/utils/checksum"
+	tusutil "github.com/Flick-Corp/flick/internal/utils/tus"
+	tus "github.com/eventials/go-tus"
 )
 
 // exploreGroup: a group the user belongs to, as shown on the groups screen.
@@ -238,10 +239,10 @@ func deleteGroupFolder(token, groupID, folderID string) error {
 	return nil
 }
 
-// uploadToGroupFolder: Archive the local sources and upload them into a group
-// folder through the native /upload endpoint (Bearer + group_id/folder_id). An
-// empty folderID uploads at the group root. Silent (no progress bar) so it can
-// run under the TUI.
+// uploadToGroupFolder: Archive the local sources and stream them into a group
+// folder with the tus resumable protocol (Bearer auth, group_id/folder_id passed
+// as upload metadata). An empty folderID uploads at the group root. Silent (no
+// progress bar) so it can run under the TUI.
 //
 // Params:
 // - token (string): The session token.
@@ -269,41 +270,41 @@ func uploadToGroupFolder(token, groupID, folderID string, srcs []string) error {
 	}
 	defer archive.Close()
 
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-	part, err := writer.CreateFormFile("file", archiveutil.RandomName())
+	stat, err := archive.Stat()
 	if err != nil {
 		return err
 	}
-	if _, err := io.Copy(part, archive); err != nil {
-		return err
-	}
-	if err := writer.Close(); err != nil {
-		return err
-	}
 
-	params := url.Values{}
-	params.Set("group_id", groupID)
-	params.Set("expiration", config.Conf.DefExpTime)
+	metadata := tus.Metadata{
+		"filename":   archiveutil.RandomName(),
+		"checksum":   sum,
+		"encrypted":  "false",
+		"expiration": config.Conf.DefExpTime,
+		"groupId":    groupID,
+	}
 	if folderID != "" {
-		params.Set("folder_id", folderID)
+		metadata["folderId"] = folderID
 	}
 
-	req, err := http.NewRequest(http.MethodPost, config.Conf.APIBaseURL()+"/upload?"+params.Encode(), body)
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Content-Type", writer.FormDataContentType())
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("X-Flick-Checksum", sum)
+	header := http.Header{}
+	header.Set("Authorization", "Bearer "+token)
 
-	resp, err := network.SharedClient.Do(req)
+	client, err := tus.NewClient(config.Conf.APIBaseURL()+"/upload/", &tus.Config{
+		ChunkSize:  tusutil.ChunkSize,
+		HttpClient: network.SharedClient,
+		Header:     header,
+	})
 	if err != nil {
-		return fmt.Errorf("failed to reach the server: %w", err)
+		return fmt.Errorf("cannot create the upload client: %w", err)
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("server returned %s", resp.Status)
+
+	upload := tus.NewUpload(archive, stat.Size(), metadata, "")
+	uploader, err := client.CreateUpload(upload)
+	if err != nil {
+		return fmt.Errorf("cannot start the upload: %w", err)
+	}
+	if err := uploader.Upload(); err != nil {
+		return fmt.Errorf("the upload failed: %w", err)
 	}
 	return nil
 }

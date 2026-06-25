@@ -28,17 +28,12 @@ import (
 	archiveutil "github.com/Flick-Corp/flick/internal/utils/archive"
 	"github.com/Flick-Corp/flick/internal/utils/checksum"
 	"github.com/Flick-Corp/flick/internal/utils/encryption"
+	tusutil "github.com/Flick-Corp/flick/internal/utils/tus"
 	tus "github.com/eventials/go-tus"
 	"github.com/schollz/progressbar/v3"
 	"github.com/spf13/cobra"
 	"github.com/tiagomelo/go-clipboard/clipboard"
 )
-
-// tusChunkSize is the size of each PATCH chunk streamed to the server. Keeping
-// it fixed bounds the client's memory use (go-tus buffers one chunk at a time)
-// no matter how large the archive is, and matches the web client's chunk size
-// so both senders behave identically.
-const tusChunkSize int64 = 16 * 1024 * 1024 // 16 MiB
 
 // uploadItem: a file or folder about to be uploaded.
 type uploadItem struct {
@@ -120,7 +115,7 @@ func uploadViaTus(archive *os.File, size int64, userID string, archiveChecksum s
 	header.Set("X-Flick-User-ID", userID)
 
 	client, err := tus.NewClient(config.Conf.APIBaseURL()+"/upload/", &tus.Config{
-		ChunkSize:  tusChunkSize,
+		ChunkSize:  tusutil.ChunkSize,
 		HttpClient: network.SharedClient,
 		Header:     header,
 	})
