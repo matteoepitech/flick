@@ -61,6 +61,7 @@ func needChanges() bool {
 func RunConfigure(cmd *cobra.Command, args []string) error {
 	var serverURL string
 	var DefExpTime string
+	var DefDownloadCount int32
 
 	fmt.Printf("Change the default Flick server? [y/N]: ")
 	if needChanges() {
@@ -69,11 +70,20 @@ func RunConfigure(cmd *cobra.Command, args []string) error {
 		config.Conf.ServerURL = config.NormalizeServerURL(serverURL) // TODO: verify input
 	}
 
-	fmt.Printf("Change the default expiration time? [y/n]: ")
+	fmt.Printf("Change the default expiration time? [y/N]: ")
 	if needChanges() {
 		fmt.Printf("Enter the default expiration time: ")
 		fmt.Scan(&DefExpTime)
 		config.Conf.DefExpTime = DefExpTime // TODO: verify input
+	}
+
+	fmt.Printf("Change the default download count? [y/N]: ")
+	if needChanges() {
+		fmt.Printf("Enter the default download count: ")
+		fmt.Scan(&DefDownloadCount)
+		if DefDownloadCount > 0 {
+			config.Conf.DefDownloadCount = DefDownloadCount
+		}
 	}
 
 	if err := config.Conf.SaveConfigurationFile(); err != nil {

@@ -465,7 +465,7 @@ func RunUpload(cmd *cobra.Command, args []string, exp string, mdc string, encryp
 		return err
 	}
 
-	if err := printShareCode(shareCode, exp, keyFragment); err != nil {
+	if err := printShareCode(shareCode, expValue, keyFragment); err != nil {
 		return err
 	}
 	if password != "" {
