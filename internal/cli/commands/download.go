@@ -8,7 +8,6 @@
 package commands
 
 import (
-	"archive/zip"
 	"bufio"
 	"bytes"
 	"encoding/json"
@@ -18,13 +17,13 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/Flick-Corp/flick/internal/api/utils"
 	"github.com/Flick-Corp/flick/internal/cli/config"
 	"github.com/Flick-Corp/flick/internal/cli/network"
+	archiveutil "github.com/Flick-Corp/flick/internal/utils/archive"
 	"github.com/Flick-Corp/flick/internal/utils/checksum"
 	"github.com/Flick-Corp/flick/internal/utils/encryption"
 	"github.com/schollz/progressbar/v3"
@@ -157,7 +156,8 @@ func downloadArchive(part io.Reader, bar *progressbar.ProgressBar, expectedCheck
 		zipPath = decPath
 	}
 
-	return extractZip(zipPath, ".")
+	_, err = archiveutil.Extract(zipPath, ".")
+	return err
 }
 
 // decryptToTemp: Decrypt the archive at srcPath into a new temporary file under
@@ -192,75 +192,6 @@ func decryptToTemp(srcPath string, key encryption.Key) (string, error) {
 		return "", fmt.Errorf("Failure: Cannot finalize the decrypted archive: %w", err)
 	}
 	return tmp.Name(), nil
-}
-
-// extractZip: Extract a zip archive into dest.
-//
-// Params:
-// - zipPath (string): The path to the zip file on disk.
-// - dest (string): The destination directory.
-//
-// Returns:
-// - result1 (error): An error if occured.
-func extractZip(zipPath string, dest string) error {
-	absDest, err := filepath.Abs(dest)
-	if err != nil {
-		return err
-	}
-
-	r, err := zip.OpenReader(zipPath)
-	if err != nil {
-		return fmt.Errorf("Failure: Cannot open the archive: %w", err)
-	}
-	defer r.Close()
-
-	for _, f := range r.File {
-		target := filepath.Join(absDest, f.Name)
-
-		if target != absDest && !strings.HasPrefix(target, absDest+string(os.PathSeparator)) {
-			return fmt.Errorf("Failure: unsafe path in archive: %q", f.Name)
-		}
-
-		if f.FileInfo().IsDir() {
-			if err := os.MkdirAll(target, 0755); err != nil {
-				return err
-			}
-			continue
-		}
-
-		if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
-			return err
-		}
-		if err := writeZipEntry(f, target); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// writeZipEntry: Copy a single zip entry to target on disk.
-//
-// Params:
-// - f (*zip.File): The zip entry to extract.
-// - target (string): The destination path on disk.
-//
-// Returns:
-// - result1 (error): An error if occured.
-func writeZipEntry(f *zip.File, target string) error {
-	src, err := f.Open()
-	if err != nil {
-		return err
-	}
-	defer src.Close()
-
-	out, err := os.Create(target)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	_, err = io.Copy(out, src)
-	return err
 }
 
 // humanSize: Format a byte count into a short human-readable string.
