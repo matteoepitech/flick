@@ -2,13 +2,14 @@
 
 # ⚡ Flick
 
-**Share files in a flick.**
+<b>Share files in a flick.</b>
 
 Upload a file, get a simple code like `ocean-tiger-42`, share it. That's it.
 
-<!-- Add a screenshot or banner here once available:
-<img src="docs/assets/banner.png" width="100%" alt="Flick in action">
--->
+<img src="docs/assets/banner.png" width="100%" alt="Flick">
+
+<br>
+<br>
 
 <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/Flick-Corp/flick?label=Star%20Repo&style=social">
 
@@ -17,37 +18,17 @@ Upload a file, get a simple code like `ocean-tiger-42`, share it. That's it.
 <img src="https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL">
 <img src="https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white" alt="Docker">
 
-<br>
-
-<picture>
-    <source srcset="https://fonts.gstatic.com/s/e/notoemoji/latest/26a1/512.webp" type="image/webp">
-    <img src="https://fonts.gstatic.com/s/e/notoemoji/latest/26a1/512.gif" alt="⚡" width="32" height="32">
-</picture>
-<picture>
-    <source srcset="https://fonts.gstatic.com/s/e/notoemoji/latest/1f680/512.webp" type="image/webp">
-    <img src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f680/512.gif" alt="🚀" width="32" height="32">
-</picture>
-<picture>
-    <source srcset="https://fonts.gstatic.com/s/e/notoemoji/latest/1f389/512.webp" type="image/webp">
-    <img src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f389/512.gif" alt="🎉" width="32" height="32">
-</picture>
-
 </div>
 
-<div align="center">
-
 <br>
-
-<a href="https://flick.d3l.tech"><kbd> &nbsp;🌍 Live Server&nbsp; </kbd></a>&nbsp;
-<a href="#quick-start"><kbd> &nbsp;🎉 Quick Start&nbsp; </kbd></a>&nbsp;
-<a href="#the-cli"><kbd> &nbsp;💻 The CLI&nbsp; </kbd></a>&nbsp;
-<a href="#configuration"><kbd> &nbsp;⚙️ Configuration&nbsp; </kbd></a>
-
-</div>
 
 ## What is Flick?
 
-**Flick** is a sleek and lightweight **self-hosted file sharing tool** built with **Go** and **Next.js**. It's not here to replace WeTransfer or Dropbox but rather to offer a simple, modern, and hassle-free way to share files from your own server with minimal effort.
+**Flick** is a sleek and lightweight **file sharing tool** built with **Go** and **Next.js**. It's not here to replace WeTransfer or Dropbox but rather to offer a simple, modern, and hassle-free way to share files.
+
+Use it right away on **[flick.d3l.tech](https://flick.d3l.tech)**. Our hosted server is free for anyone, no account or setup needed.
+
+Or **self-host** it for your organization: private groups, team management, and full control over your data and infrastructure.
 
 You send a file and Flick gives you a short code that is easy to remember or say out loud. The other person enters the code, from the website or the terminal, and gets the file. Files clean themselves up: they expire after a while or after a few downloads.
 
@@ -71,8 +52,9 @@ Downloading 100% |████████████████████�
 
 ✅ &nbsp;No accounts, no long links: just a short code, easy to say over the phone<br>
 ✅ &nbsp;Self-destructing files: expire by time, by download count, or both<br>
-✅ &nbsp;Your server, your rules: max file size, duration, rate limits, all configurable<br>
-✅ &nbsp;Open-source and self-hosted: your files never leave your server
+✅ &nbsp;Use it instantly on our free hosted server at [flick.d3l.tech](https://flick.d3l.tech)<br>
+✅ &nbsp;Self-host for your org: private groups, your own rules, your infrastructure<br>
+✅ &nbsp;Open-source: your files never leave your server
 
 ### What's in a Name?
 
@@ -113,11 +95,6 @@ Open `http://localhost`. 🎉
 >
 > No certificate to generate or manage: Caddy takes care of it.
 
-| Service    | URL                     |
-| ---------- | ----------------------- |
-| 🌐 Web app | http://localhost        |
-| ⚙️ API     | http://localhost/api/v1 |
-
 To stop Flick, run `make down`. Your data is kept safe.
 
 ### Development mode
@@ -140,7 +117,13 @@ echo "deb [signed-by=/usr/share/keyrings/flick.gpg] https://apt.d3l.tech/apt sta
 sudo apt update && sudo apt install flick
 ```
 
-On other platforms (macOS, Windows, other Linux), grab the `flick` binary from
+On macOS, install via Homebrew:
+
+```bash
+brew install Flick-Corp/flick/flick
+```
+
+On other platforms (Windows, other Linux), grab the `flick` binary from
 [apt.d3l.tech/releases](https://apt.d3l.tech/releases/) - the CLI keeps itself up to date afterwards.
 
 ```bash
@@ -187,18 +170,13 @@ Flick combines effortless sharing with full control over your server.
 - Rate limiting per user, per IP, and global hourly caps
 - PostgreSQL persistence with automatic database migrations
 
-## Configuration
+## Self-Hosting
 
-The server creates a default configuration on first start. The main knobs:
+Flick is built for easy self-hosting. Docker Compose gets you up in minutes with a database, API, web app, and a Caddy reverse proxy that handles automatic HTTPS.
 
-| Setting                  | Default | What it does                    |
-| ------------------------ | ------- | ------------------------------- |
-| `max_file_size_mb`       | `1000`  | Biggest file allowed            |
-| `default_expiration`     | `15m`   | How long files live by default  |
-| `max_expiration`         | `4h`    | Longest a file can live         |
-| `default_download_count` | `1`     | Downloads allowed by default    |
-| `max_download_count`     | `5`     | Most downloads allowed per file |
-| `activate_rate_limit`    | `true`  | Protect your server from abuse  |
+Perfect for organizations that want private groups, custom limits, and full data sovereignty.
+
+See the [Quick Start](#quick-start) section above to get started.
 
 ## Technologies Used
 
