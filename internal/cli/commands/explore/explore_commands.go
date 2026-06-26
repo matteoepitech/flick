@@ -120,3 +120,22 @@ func rmdirCmd(token, groupID, folderID, parentID string) tea.Cmd {
 		return actionMsg{note: "Folder deleted", reload: true, reloadFolder: parentID}
 	}
 }
+
+// rmUploadCmd: Build the command that revokes a group file transfer.
+//
+// Params:
+// - token (string): The session token.
+// - groupID (string): The target group.
+// - uploadID (string): The upload to revoke.
+// - parentID (string): The upload's parent folder, reloaded afterwards.
+//
+// Returns:
+// - result1 (tea.Cmd): A command emitting actionMsg or exploreErrMsg.
+func rmUploadCmd(token, groupID, uploadID, parentID string) tea.Cmd {
+	return func() tea.Msg {
+		if err := deleteGroupUpload(token, groupID, uploadID); err != nil {
+			return exploreErrMsg{err}
+		}
+		return actionMsg{note: "File deleted", reload: true, reloadFolder: parentID}
+	}
+}

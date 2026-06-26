@@ -147,6 +147,10 @@ func ExploreGroupHandler(queries *database.Queries) http.HandlerFunc {
 			out.Folders = append(out.Folders, FolderResponse{ID: folder.ID, Name: folder.Name})
 		}
 		for _, upload := range uploads {
+			if !codepkg.IsCodeAlreadyExistInList(upload.Code) {
+				_ = queries.DeleteGroupUpload(r.Context(), upload.ID)
+				continue
+			}
 			out.Uploads = append(out.Uploads, UploadResponse{
 				ID:        upload.ID,
 				Code:      upload.Code,

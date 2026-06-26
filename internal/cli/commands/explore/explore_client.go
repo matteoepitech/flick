@@ -42,6 +42,7 @@ type exploreFolder struct {
 // exploreFile: a transfer at the explored level, with its real (resolved) name.
 // The code stays internal: it is only used to download through the native route.
 type exploreFile struct {
+	id   string
 	name string
 	code string
 }
@@ -134,6 +135,7 @@ func fetchExplore(token, groupID, folderID string) ([]exploreFolder, []exploreFi
 	var res struct {
 		Folders []exploreFolder `json:"folders"`
 		Uploads []struct {
+			ID   string `json:"id"`
 			Code string `json:"code"`
 		} `json:"uploads"`
 	}
@@ -143,7 +145,7 @@ func fetchExplore(token, groupID, folderID string) ([]exploreFolder, []exploreFi
 
 	files := make([]exploreFile, 0, len(res.Uploads))
 	for _, upload := range res.Uploads {
-		files = append(files, exploreFile{name: resolveUploadName(token, upload.Code), code: upload.Code})
+		files = append(files, exploreFile{id: upload.ID, name: resolveUploadName(token, upload.Code), code: upload.Code})
 	}
 	return res.Folders, files, nil
 }
@@ -223,6 +225,33 @@ func createGroupFolder(token, groupID, parentID, name string) error {
 // - result1 (error): An error if the call failed.
 func deleteGroupFolder(token, groupID, folderID string) error {
 	req, err := http.NewRequest(http.MethodDelete, config.Conf.APIBaseURL()+"/admin/groups/"+groupID+"/folders/"+folderID, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	resp, err := network.SharedClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to reach the server: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNoContent {
+		return fmt.Errorf("server returned %s", resp.Status)
+	}
+	return nil
+}
+
+// deleteGroupUpload: Revoke a file transfer from the group (maintainer/owner).
+//
+// Params:
+// - token (string): The session token.
+// - groupID (string): The target group.
+// - uploadID (string): The group upload row to delete.
+//
+// Returns:
+// - result1 (error): An error if the call failed.
+func deleteGroupUpload(token, groupID, uploadID string) error {
+	req, err := http.NewRequest(http.MethodDelete, config.Conf.APIBaseURL()+"/admin/groups/"+groupID+"/uploads/"+uploadID, nil)
 	if err != nil {
 		return err
 	}

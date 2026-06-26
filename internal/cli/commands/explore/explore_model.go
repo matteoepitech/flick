@@ -34,6 +34,7 @@ type exploreNode struct {
 	id       string
 	name     string
 	isFolder bool
+	uploadID string
 	code     string
 	loaded   bool
 	expanded bool

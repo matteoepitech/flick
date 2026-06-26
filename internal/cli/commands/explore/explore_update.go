@@ -293,7 +293,7 @@ func (m exploreModel) handleTree(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.nameInput = ""
 	case "x":
 		if !m.canManage() {
-			m.status = exploreErrStyle.Render("Only a maintainer/owner can delete folders")
+			m.status = exploreErrStyle.Render("Only a maintainer/owner can delete")
 			return m, nil
 		}
 		if len(m.rows) == 0 {
@@ -303,6 +303,10 @@ func (m exploreModel) handleTree(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if row.node.isFolder {
 			m.status = "Deleting..."
 			return m, rmdirCmd(m.token, m.groupID, row.node.id, row.parentID)
+		}
+		if row.node.uploadID != "" {
+			m.status = "Deleting..."
+			return m, rmUploadCmd(m.token, m.groupID, row.node.uploadID, row.parentID)
 		}
 	}
 	return m, nil
