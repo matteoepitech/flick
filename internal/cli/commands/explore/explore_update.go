@@ -201,6 +201,20 @@ func (m exploreModel) downloadNode() (tea.Model, tea.Cmd) {
 	return m, downloadCmd(m.token, node.code)
 }
 
+// returnToGroups: Leave the current group tree and show the group selection.
+//
+// Returns:
+// - result1 (exploreModel): The updated model.
+func (m exploreModel) returnToGroups() exploreModel {
+	m.mode = modeGroups
+	m.roots = nil
+	m.rows = nil
+	m.cursor = 0
+	m.currentID = ""
+	m.status = ""
+	return m
+}
+
 // handleTree: Handle a key press on the folder tree screen.
 //
 // Params:
@@ -214,12 +228,7 @@ func (m exploreModel) handleTree(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "q", "ctrl+c":
 		return m, tea.Quit
 	case "esc":
-		m.mode = modeGroups
-		m.roots = nil
-		m.rows = nil
-		m.cursor = 0
-		m.currentID = ""
-		m.status = ""
+		return m.returnToGroups(), nil
 	case "up", "k":
 		if m.cursor > 0 {
 			m.cursor--
@@ -239,6 +248,9 @@ func (m exploreModel) handleTree(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "d":
 		return m.downloadNode()
 	case "left", "h":
+		if m.currentID == "" {
+			return m.returnToGroups(), nil
+		}
 		if len(m.rows) == 0 {
 			return m, nil
 		}
