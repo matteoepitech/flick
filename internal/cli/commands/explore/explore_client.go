@@ -145,7 +145,11 @@ func fetchExplore(token, groupID, folderID string) ([]exploreFolder, []exploreFi
 
 	files := make([]exploreFile, 0, len(res.Uploads))
 	for _, upload := range res.Uploads {
-		files = append(files, exploreFile{id: upload.ID, name: resolveUploadName(token, upload.Code), code: upload.Code})
+		files = append(files, exploreFile{
+			id:   upload.ID,
+			name: resolveUploadName(token, upload.Code),
+			code: upload.Code,
+		})
 	}
 	return res.Folders, files, nil
 }
@@ -241,7 +245,7 @@ func deleteGroupFolder(token, groupID, folderID string) error {
 	return nil
 }
 
-// deleteGroupUpload: Revoke a file transfer from the group (maintainer/owner).
+// deleteGroupUpload: Revoke a file shared with a group (maintainer/owner).
 //
 // Params:
 // - token (string): The session token.
