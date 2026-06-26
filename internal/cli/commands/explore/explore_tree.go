@@ -29,7 +29,7 @@ func childrenFrom(folders []exploreFolder, files []exploreFile) []*exploreNode {
 		out = append(out, &exploreNode{id: f.ID, name: f.Name, isFolder: true})
 	}
 	for _, f := range files {
-		out = append(out, &exploreNode{id: f.id, name: f.name, uploadID: f.id, code: f.code})
+		out = append(out, &exploreNode{name: f.name, code: f.code, uploadID: f.id})
 	}
 	return out
 }

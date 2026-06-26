@@ -304,10 +304,8 @@ func (m exploreModel) handleTree(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.status = "Deleting..."
 			return m, rmdirCmd(m.token, m.groupID, row.node.id, row.parentID)
 		}
-		if row.node.uploadID != "" {
-			m.status = "Deleting..."
-			return m, rmUploadCmd(m.token, m.groupID, row.node.uploadID, row.parentID)
-		}
+		m.status = "Deleting..."
+		return m, rmfileCmd(m.token, m.groupID, row.node.uploadID, row.parentID)
 	}
 	return m, nil
 }
