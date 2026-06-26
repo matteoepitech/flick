@@ -95,7 +95,8 @@ func printShareCode(code string, exp string, keyFragment string) error {
 // - result1 (string): The bare share code assigned by the server.
 // - result2 (error): An error if the upload or code lookup failed.
 func uploadViaTus(archive *os.File, size int64, userID string, archiveChecksum string,
-	encrypted bool, password string, message string, expiration string, maxDownloadCount string) (string, error) {
+	encrypted bool, password string, message string, expiration string, maxDownloadCount string,
+	bar *progressbar.ProgressBar, barOffset int64) (string, error) {
 
 	metadata := tus.Metadata{
 		"filename":         archiveutil.RandomName(),
@@ -129,19 +130,21 @@ func uploadViaTus(archive *os.File, size int64, userID string, archiveChecksum s
 		return "", fmt.Errorf("Failure: Cannot start the upload: %w", err)
 	}
 
-	bar := progressbar.DefaultBytes(size, "Uploading")
+	if bar == nil {
+		bar = progressbar.DefaultBytes(size, "Uploading")
+	}
 	progress := make(chan tus.Upload)
 	uploader.NotifyUploadProgress(progress)
 	go func() {
 		for u := range progress {
-			_ = bar.Set64(u.Offset())
+			_ = bar.Set64(barOffset + u.Offset())
 		}
 	}()
 
 	if err := uploader.Upload(); err != nil {
 		return "", fmt.Errorf("Failure: The upload failed: %w", err)
 	}
-	_ = bar.Set64(size)
+	_ = bar.Set64(barOffset + size)
 	_ = bar.Finish()
 
 	return fetchUploadCode(uploader.Url(), userID)
@@ -413,9 +416,22 @@ func RunUpload(cmd *cobra.Command, args []string, exp string, mdc string, encryp
 		return nil
 	}
 
-	archivePath, err := archiveutil.ToTemp(args)
-	if err != nil {
-		return err
+	var archivePath string
+	var bar *progressbar.ProgressBar
+	zipTotal, _ := archiveutil.TotalSize(args)
+	if zipTotal > 0 {
+		bar = progressbar.DefaultBytes(zipTotal, "Zipping...")
+		archivePath, err = archiveutil.ToTemp(args, func(written, _ int64) {
+			_ = bar.Set64(written)
+		})
+		if err != nil {
+			return err
+		}
+	} else {
+		archivePath, err = archiveutil.ToTemp(args, nil)
+		if err != nil {
+			return err
+		}
 	}
 	defer os.Remove(archivePath)
 
@@ -455,14 +471,14 @@ func RunUpload(cmd *cobra.Command, args []string, exp string, mdc string, encryp
 		return fmt.Errorf("Failure: The upload is too large. The server only accepts up to %d MB.", serverLimits.MaxFileSizeMb)
 	}
 
-	label := filepath.Base(args[0])
-	if len(args) > 1 {
-		label = fmt.Sprintf("%d items", len(args))
+	if bar != nil {
+		bar.Reset()
+		bar.ChangeMax64(archiveStat.Size())
+		bar.Describe("Uploading...")
 	}
-	fmt.Printf("Uploading %s... (%d bytes archived)\n", label, archiveStat.Size())
 
 	shareCode, err := uploadViaTus(archive, archiveStat.Size(), creds.UserID, archiveChecksum,
-		keyFragment != "", password, message, expValue, mdcValue)
+		keyFragment != "", password, message, expValue, mdcValue, bar, 0)
 	if err != nil {
 		return err
 	}

@@ -149,6 +149,7 @@
     "submit": "Générer le code",
     "submitting": "Envoi en cours…",
     "uploadProgress": "{name} · {percent}%",
+    "zipping": "Compression...",
     "uploadError": "Échec de l'envoi. Réessayez.",
     "comingSoon": "Non disponible",
     "dropOrFolder": "ou un",

@@ -92,6 +92,7 @@ function parseErrorMessage(body: string, fallback: string): string {
 export interface UploadProgress {
   loaded: number
   total: number
+  phase?: "zipping" | "uploading"
 }
 
 // Anonymous uploader id, the web counterpart of the CLI's credentials file: it
@@ -253,10 +254,27 @@ async function opfsRoot(): Promise<FileSystemDirectoryHandle | null> {
 // it back up chunk by chunk. Entries are stored uncompressed (client-zip does no
 // deflate); for a transfer tool that trades a little bandwidth for bounded memory
 // and is moot for already-compressed media. Shared by public and group uploads.
-async function buildUploadArchive(items: Upload[]): Promise<PreparedArchive> {
+async function buildUploadArchive(items: Upload[], onProgress?: (loaded: number) => void): Promise<PreparedArchive> {
   const entries = archiveEntries(items)
+  const total = items.reduce((sum, i) => sum + i.entries.reduce((s, e) => s + e.file.size, 0), 0)
+
   // A fresh stream per attempt: a ReadableStream can only be consumed once.
-  const zipStream = (): ReadableStream<Uint8Array> => makeZip(entries)
+  const zipStream = (): ReadableStream<Uint8Array> => {
+    if (!onProgress) return makeZip(entries)
+
+    let written = 0
+    return makeZip(
+      entries.map(entry => ({
+        name: entry.name,
+        input: chunkedStream(entry.input, 65536, n => {
+          written += n
+          onProgress(written)
+        }),
+        lastModified: entry.lastModified,
+        size: entry.input.size,
+      }))
+    )
+  }
 
   const root = await opfsRoot()
   if (root) {
@@ -302,6 +320,25 @@ async function buildUploadArchive(items: Upload[]): Promise<PreparedArchive> {
   const archive = await new Response(zipStream()).blob()
   const checksum = await hashBlob(archive)
   return { archive, checksum, cleanup: noopCleanup }
+}
+
+function chunkedStream(blob: Blob, chunkSize: number, onChunk: (bytesRead: number) => void): ReadableStream<Uint8Array> {
+  let pos = 0
+  return new ReadableStream({
+    async pull(controller) {
+      if (pos >= blob.size) {
+        controller.close()
+        return
+      }
+      const end = Math.min(pos + chunkSize, blob.size)
+      const slice = blob.slice(pos, end)
+      const buf = await slice.arrayBuffer()
+      controller.enqueue(new Uint8Array(buf))
+      const bytesRead = end - pos
+      pos = end
+      onChunk(bytesRead)
+    },
+  })
 }
 
 // resolveShareCode: Fetch the share code the server assigned to a finished tus
@@ -378,7 +415,10 @@ export async function uploadFile(
   // The server requires a known uploader (X-Flick-User-ID), exactly like the CLI.
   const uploaderId = await ensureUploaderId(signal)
 
-  const { archive, checksum: archiveChecksum, cleanup } = await buildUploadArchive(items)
+  const zipTotal = items.reduce((sum, i) => sum + i.entries.reduce((s, e) => s + e.file.size, 0), 0)
+  const { archive, checksum: archiveChecksum, cleanup } = await buildUploadArchive(items, onProgress ? (loaded) => {
+    onProgress({ loaded, total: zipTotal, phase: "zipping" })
+  } : undefined)
   try {
     const metadata: Record<string, string> = {
       checksum: archiveChecksum,
@@ -396,7 +436,7 @@ export async function uploadFile(
       randomArchiveName(),
       metadata,
       { "X-Flick-User-ID": uploaderId },
-      onProgress,
+      onProgress ? (p) => onProgress({ ...p, phase: "uploading" }) : undefined,
       signal
     )
   } finally {
@@ -1352,7 +1392,10 @@ export async function uploadToGroup(
   onProgress?: (progress: UploadProgress) => void,
   signal?: AbortSignal
 ): Promise<void> {
-  const { archive, checksum, cleanup } = await buildUploadArchive(items)
+  const zipTotal = items.reduce((sum, i) => sum + i.entries.reduce((s, e) => s + e.file.size, 0), 0)
+  const { archive, checksum, cleanup } = await buildUploadArchive(items, onProgress ? (loaded) => {
+    onProgress({ loaded, total: zipTotal, phase: "zipping" })
+  } : undefined)
   try {
     const metadata: Record<string, string> = {
       checksum,
@@ -1367,7 +1410,7 @@ export async function uploadToGroup(
       randomArchiveName(),
       metadata,
       { Authorization: `Bearer ${token}` },
-      onProgress,
+      onProgress ? (p) => onProgress({ ...p, phase: "uploading" }) : undefined,
       signal
     )
   } finally {

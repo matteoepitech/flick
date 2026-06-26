@@ -149,6 +149,7 @@
     "submit": "Generate code",
     "submitting": "Uploading…",
     "uploadProgress": "{name} · {percent}%",
+    "zipping": "Zipping...",
     "uploadError": "Upload failed. Please retry.",
     "comingSoon": "Not available",
     "dropOrFolder": "or a whole",

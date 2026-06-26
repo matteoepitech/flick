@@ -286,7 +286,7 @@ func deleteGroupUpload(token, groupID, uploadID string) error {
 // Returns:
 // - result1 (error): An error if the upload failed.
 func uploadToGroupFolder(token, groupID, folderID string, srcs []string) error {
-	archivePath, err := archiveutil.ToTemp(srcs)
+	archivePath, err := archiveutil.ToTemp(srcs, nil)
 	if err != nil {
 		return err
 	}

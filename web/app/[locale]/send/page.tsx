@@ -38,7 +38,13 @@ export default function SendPage() {
   const [password, setPassword] = useState("")
   const [message, setMessage] = useState("")
   const [submitting, setSubmitting] = useState(false)
-  const [progress, setProgress] = useState<{ name: string; percent: number } | null>(null)
+  const [progress, setProgress] = useState<{
+    name: string
+    percent: number
+    phase: "zipping" | "uploading"
+    speed?: string
+    eta?: string
+  } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [maxFileSize, setMaxFileSize] = useState<number>(1000 * 1024 * 1024)
   const [maxExpiration, setMaxExpiration] = useState<string>("4h")
@@ -144,8 +150,51 @@ export default function SendPage() {
         uploads,
         expiration,
         maxDownloadCount,
-        ({ loaded, total }) => {
-          setProgress({ name: label, percent: Math.round((loaded / total) * 100) })
+        (uploadProgress) => {
+          if (uploadProgress.phase === "zipping") {
+            setProgress({
+              name: t("zipping"),
+              percent: Math.round((uploadProgress.loaded / uploadProgress.total) * 100),
+              phase: "zipping",
+            })
+          } else {
+            const now = Date.now()
+            const deltaTime = now - speedRef.current.lastTime
+            const deltaBytes = uploadProgress.loaded - speedRef.current.lastLoaded
+            if (deltaTime > 200 && deltaBytes > 0) {
+              const instantSpeed = (deltaBytes / deltaTime) * 1000
+              speedRef.current.smoothed = speedRef.current.smoothed
+                ? speedRef.current.smoothed * 0.7 + instantSpeed * 0.3
+                : instantSpeed
+              speedRef.current.lastTime = now
+              speedRef.current.lastLoaded = uploadProgress.loaded
+            }
+            if (!speedRef.current.lastTime) {
+              speedRef.current.lastTime = now
+              speedRef.current.lastLoaded = uploadProgress.loaded
+            }
+
+            const pct = Math.round((uploadProgress.loaded / uploadProgress.total) * 100)
+            const remaining = uploadProgress.total - uploadProgress.loaded
+            const eta =
+              remaining > 0 && speedRef.current.smoothed > 0
+                ? Math.ceil(remaining / speedRef.current.smoothed)
+                : undefined
+
+            let speedStr: string | undefined
+            let etaStr: string | undefined
+            if (speedRef.current.smoothed > 0) {
+              speedStr =
+                speedRef.current.smoothed >= 1_048_576
+                  ? `${(speedRef.current.smoothed / 1_048_576).toFixed(1)} MB/s`
+                  : `${(speedRef.current.smoothed / 1_024).toFixed(1)} KB/s`
+            }
+            if (eta !== undefined) {
+              etaStr = eta < 60 ? `${eta}s` : `${Math.floor(eta / 60)}m ${eta % 60}s`
+            }
+
+            setProgress({ name: label, percent: pct, phase: "uploading", speed: speedStr, eta: etaStr })
+          }
         },
         undefined,
         passwordEnabled ? password : undefined,
@@ -173,6 +222,8 @@ export default function SendPage() {
   const projectedPct =
     quotaLimitBytes > 0 ? Math.min(100, ((quota!.usedBytes + selectedBytes) / quotaLimitBytes) * 100) : 0
   const overQuota = quotaLimitBytes > 0 && quota!.usedBytes + selectedBytes > quotaLimitBytes
+
+  const speedRef = useRef({ lastTime: 0, lastLoaded: 0, smoothed: 0 })
 
   const overMaxExpiration = expiration.length > 0 && parseDurationMinutes(expiration) > parseDurationMinutes(maxExpiration)
 
@@ -387,6 +438,12 @@ export default function SendPage() {
               <span className="truncate">{progress.name}</span>
               <span className="tabular-nums">{progress.percent}%</span>
             </div>
+            {progress.phase === "uploading" && (progress.speed || progress.eta) && (
+              <div className="flex justify-between text-xs text-muted-foreground tabular-nums">
+                {progress.speed && <span>{progress.speed}</span>}
+                {progress.eta && <span>ETA {progress.eta}</span>}
+              </div>
+            )}
             <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
               <div
                 className="h-full rounded-full bg-orange-500 transition-all duration-150"
