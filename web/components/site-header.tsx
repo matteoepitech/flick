@@ -2,6 +2,7 @@
 
 import { ArrowDownLeft, ArrowUpRight, LayoutDashboard, LogIn, UserRound } from "lucide-react"
 import { useTranslations } from "next-intl"
+import Image from "next/image"
 import { useEffect, useState } from "react"
 
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -48,11 +49,9 @@ export default function SiteHeader() {
   return (
     <header className="border-b">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-        <Link href="/" className="flex items-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <ArrowUpRight className="h-5 w-5" />
-          </span>
-          <span className="text-lg font-semibold">flick</span>
+        <Link href="/" className="flex items-center gap-0">
+          <Image src="/assets/flick_logo.png" alt="Flick" width={32} height={32} />
+          <span className="translate-y-2 text-lg font-semibold">lick</span>
         </Link>
 
         <nav className="flex items-center gap-1 sm:gap-2 md:gap-4">

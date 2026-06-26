@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { Geist_Mono, Inter } from "next/font/google"
 import { hasLocale, NextIntlClientProvider } from "next-intl"
@@ -16,6 +17,14 @@ const fontMono = Geist_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
 })
+
+export const metadata: Metadata = {
+  icons: {
+    icon: "/assets/flick_logo.png",
+    shortcut: "/favicon.ico",
+    apple: "/assets/flick_logo.png",
+  },
+}
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }))
