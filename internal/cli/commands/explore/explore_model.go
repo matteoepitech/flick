@@ -19,13 +19,13 @@ const (
 
 // Styles.
 var (
-	exploreTitleStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("63"))
+	exploreTitleStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("13"))
 	exploreCrumbStyle = lipgloss.NewStyle().Faint(true)
 	exploreTreeStyle  = lipgloss.NewStyle().Faint(true)
-	exploreFolderClr  = lipgloss.Color("39")  // blue for folders
-	exploreSelectClr  = lipgloss.Color("208") // orange for selected items
+	exploreFolderClr  = lipgloss.Color("14") // bright cyan for folders
+	exploreSelectClr  = lipgloss.Color("11") // bright yellow for selected items
 	exploreHelpStyle  = lipgloss.NewStyle().Faint(true)
-	exploreErrStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("196"))
+	exploreErrStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))
 )
 
 // exploreNode: a node in the lazily-loaded tree. Folders carry children once
