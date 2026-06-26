@@ -2,6 +2,7 @@
 
 import { ArrowUpRight, Boxes, LayoutDashboard, Settings, Users, UsersRound } from "lucide-react"
 import { useTranslations } from "next-intl"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
 
@@ -63,11 +64,9 @@ export function DashboardSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        <Link href="/" className="flex items-center gap-2 px-2 py-1">
-          <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <ArrowUpRight className="h-5 w-5" />
-          </span>
-          <span className="text-lg font-semibold group-data-[collapsible=icon]:hidden">flick</span>
+        <Link href="/" className="flex items-center gap-0 px-2 py-1">
+          <Image src="/assets/flick_logo.png" alt="Flick" width={32} height={32} />
+          <span className="translate-y-2 text-lg font-semibold group-data-[collapsible=icon]:hidden">lick</span>
         </Link>
       </SidebarHeader>
       <SidebarContent>
