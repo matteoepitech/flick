@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a Security Vulnerability
+    url: https://github.com/Flick-Corp/flick/blob/main/SECURITY.md
+    about: Please do not open a public issue. Follow our security policy to report vulnerabilities privately.
+  - name: Questions & Discussions
+    url: https://github.com/Flick-Corp/flick/discussions
+    about: Ask questions and discuss ideas with the community.
