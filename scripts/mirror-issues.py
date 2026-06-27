@@ -119,9 +119,7 @@ def build_body(issue):
     return (
         f"{description}\n\n"
         "---\n"
-        f"*Mirrored from GitLab issue [#{iid}]({issue['web_url']}) "
-        f"(opened by {author}). Managed automatically — edits here are "
-        "overwritten on the next sync.*\n"
+        f"*Mirrored from GitLab issue (opened by {author}).*\n"
         f"<!-- {MARKER.format(iid)} -->\n"
     )
 
