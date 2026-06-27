@@ -135,7 +135,7 @@ release-server-job:
     - docker push "$REGISTRY_IMAGE/flick-api:latest"
     - docker push "$REGISTRY_IMAGE/flick-web:latest"
 
-# Mirror Job
+# Mirror Job (code: main branch -> GitHub)
 mirror-job:
   stage: mirror
   needs: [build-job]
@@ -145,3 +145,48 @@ mirror-job:
     - git remote remove github 2>/dev/null || true
     - git remote add github https://oauth2:${MIRROR_TOKEN}@${MIRROR_URL}
     - git push github HEAD:refs/heads/main --force
+
+# Mirror Issues Job
+mirror-issues-job:
+  stage: mirror
+  needs: []
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"'
+      allow_failure: true
+  script:
+    - |
+      docker run --rm -v "$PWD:/work" -w /work \
+        -e GITLAB_URL="$CI_SERVER_URL" \
+        -e GITLAB_PROJECT_ID="$CI_PROJECT_ID" \
+        -e GITLAB_TOKEN="$GITLAB_API_TOKEN" \
+        -e MIRROR_URL="$MIRROR_URL" \
+        -e GITHUB_TOKEN="$MIRROR_TOKEN" \
+        -e MIRROR_ISSUE_LABEL="$MIRROR_ISSUE_LABEL" \
+        python:3-slim python scripts/mirror-issues.py
+
+# Mirror Release Job
+mirror-release-job:
+  stage: release-cli
+  needs: [build-job]
+  rules:
+    - if: "$CI_COMMIT_TAG =~ /^v/"
+  script:
+    - git fetch origin main
+    - git merge-base --is-ancestor $CI_COMMIT_SHA origin/main || { echo "Tag is not on main, aborting..."; exit 1; }
+    - git fetch origin "+refs/tags/*:refs/tags/*" 2>/dev/null || true
+    - git remote remove github 2>/dev/null || true
+    - git remote add github https://oauth2:${MIRROR_TOKEN}@${MIRROR_URL}
+    - git push github "refs/tags/${CI_COMMIT_TAG}" --force
+    - PREV_TAG=$(git describe --tags --abbrev=0 "${CI_COMMIT_TAG}^" 2>/dev/null || echo "")
+    - if [ -n "$PREV_TAG" ]; then RANGE="${PREV_TAG}..${CI_COMMIT_TAG}"; else RANGE="$CI_COMMIT_TAG"; fi
+    - export RELEASE_NOTES_FALLBACK="$(git log --no-merges --pretty=format:'- %s (%h)' $RANGE)"
+    - |
+      docker run --rm -v "$PWD:/work" -w /work \
+        -e VERSION="$CI_COMMIT_TAG" \
+        -e GITLAB_URL="$CI_SERVER_URL" \
+        -e GITLAB_PROJECT_ID="$CI_PROJECT_ID" \
+        -e GITLAB_TOKEN="$GITLAB_API_TOKEN" \
+        -e MIRROR_URL="$MIRROR_URL" \
+        -e GITHUB_TOKEN="$MIRROR_TOKEN" \
+        -e RELEASE_NOTES_FALLBACK="$RELEASE_NOTES_FALLBACK" \
+        python:3-slim python scripts/mirror-release.py
