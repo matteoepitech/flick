@@ -67,8 +67,6 @@ export default function SendPage() {
     return () => controller.abort()
   }, [])
 
-  // webkitdirectory / directory are non-standard attributes React won't type, so
-  // set them imperatively to let the second input pick a whole folder.
   useEffect(() => {
     const input = folderInputRef.current
     if (input) {
@@ -78,10 +76,6 @@ export default function SendPage() {
   }, [])
 
   function addItems(incoming: UploadItem[]) {
-    // No cap on the number of files: everything is zipped into a single archive,
-    // so what bounds the browser's memory is the total byte size, not the count.
-    // We guard the cumulative size against the server's max upload size, which is
-    // exactly what that one archive must fit under anyway.
     let running = items.reduce((total, item) => total + item.size, 0)
     let rejected = false
     const valid: UploadItem[] = []
@@ -97,7 +91,7 @@ export default function SendPage() {
     }
 
     if (valid.length > 0 && !rejected) {
-      setError(null) // clear possible previous error if we successfully add items without new errors
+      setError(null)
     }
 
     if (valid.length > 0) {
@@ -123,7 +117,6 @@ export default function SendPage() {
 
     const list = event.dataTransfer.items
     if (list && list.length > 0 && typeof list[0].webkitGetAsEntry === "function") {
-      // Entry API lets us walk dropped folders; fall back to flat files below.
       addItems(await itemsFromDataTransfer(list))
     } else if (event.dataTransfer.files.length > 0) {
       addItems(Array.from(event.dataTransfer.files).map(fileItem))
@@ -141,8 +134,6 @@ export default function SendPage() {
     setError(null)
 
     try {
-      // Every staged item is packed into one combined archive under a single
-      // code; folders keep their structure, loose files sit at the archive root.
       const uploads = items.map((item) => ({ name: item.name, isFolder: item.isFolder, entries: item.entries }))
       const label = items.length === 1 ? items[0].name : t("batchLabel", { count: items.length })
 
@@ -213,9 +204,6 @@ export default function SendPage() {
     }
   }
 
-  // Quota bar: the solid fill is what is already stored, the lighter fill
-  // projects the currently staged selection on top so the user sees whether it
-  // will fit before sending. A limit of 0 means unlimited.
   const selectedBytes = items.reduce((total, item) => total + item.size, 0)
   const quotaLimitBytes = quota && quota.limitMb > 0 ? quota.limitMb * 1024 * 1024 : 0
   const usedPct = quotaLimitBytes > 0 ? Math.min(100, (quota!.usedBytes / quotaLimitBytes) * 100) : 0
@@ -225,12 +213,15 @@ export default function SendPage() {
 
   const speedRef = useRef({ lastTime: 0, lastLoaded: 0, smoothed: 0 })
 
-  const overMaxExpiration = expiration.length > 0 && parseDurationMinutes(expiration) > parseDurationMinutes(maxExpiration)
+  const overMaxExpiration =
+    expiration.length > 0 && parseDurationMinutes(expiration) > parseDurationMinutes(maxExpiration)
 
-  // When password protection is on, an empty password would silently produce a
-  // public code, so block submission until one is typed.
   const canSubmit =
-    items.length > 0 && !submitting && !overQuota && !overMaxExpiration && (!passwordEnabled || password.trim().length > 0)
+    items.length > 0 &&
+    !submitting &&
+    !overQuota &&
+    !overMaxExpiration &&
+    (!passwordEnabled || password.trim().length > 0)
 
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-col items-center px-6 py-16">
@@ -243,7 +234,7 @@ export default function SendPage() {
       </Link>
 
       <div className="w-full text-center">
-        <h1 className="text-3xl font-bold tracking-tight md:text-4xl">{t("title")}</h1>
+        <h1 className="font-heading text-3xl font-bold tracking-tight md:text-4xl">{t("title")}</h1>
         <p className="mt-3 text-base text-muted-foreground">{t("description")}</p>
       </div>
 
@@ -300,7 +291,7 @@ export default function SendPage() {
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between text-sm">
               <span className="font-semibold text-foreground">{t("quotaTitle")}</span>
-              <span className={cn("tabular-nums text-muted-foreground", overQuota && "text-destructive")}>
+              <span className={cn("text-muted-foreground tabular-nums", overQuota && "text-destructive")}>
                 {quota.limitMb > 0
                   ? t("quotaUsage", { used: formatBytes(quota.usedBytes), limit: formatBytes(quotaLimitBytes) })
                   : t("quotaUnlimited", { used: formatBytes(quota.usedBytes) })}
@@ -310,13 +301,13 @@ export default function SendPage() {
               <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
                 <div
                   className={cn(
-                    "absolute inset-y-0 left-0 rounded-full bg-orange-500/40",
+                    "absolute inset-y-0 left-0 rounded-full bg-primary/40",
                     overQuota && "bg-destructive/40"
                   )}
                   style={{ width: `${projectedPct}%` }}
                 />
                 <div
-                  className={cn("absolute inset-y-0 left-0 rounded-full bg-orange-500", overQuota && "bg-destructive")}
+                  className={cn("absolute inset-y-0 left-0 rounded-full bg-primary", overQuota && "bg-destructive")}
                   style={{ width: `${usedPct}%` }}
                 />
               </div>
@@ -446,7 +437,7 @@ export default function SendPage() {
             )}
             <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
               <div
-                className="h-full rounded-full bg-orange-500 transition-all duration-150"
+                className="h-full rounded-full bg-primary transition-all duration-150"
                 style={{ width: `${progress.percent}%` }}
               />
             </div>

@@ -16,14 +16,14 @@ type ErrorStateProps = {
 export function ErrorState({ title, description, details, retryLabel, onRetry }: ErrorStateProps) {
   return (
     <div className="w-full">
-      <Card className="border-destructive/40">
+      <Card className="ring-destructive/30">
         <CardHeader>
           <div className="flex items-start gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-destructive/10 text-destructive">
-              <AlertTriangle className="h-5 w-5" />
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-destructive/10 text-destructive">
+              <AlertTriangle className="size-5" />
             </span>
             <div className="space-y-1">
-              <CardTitle>{title}</CardTitle>
+              <CardTitle className="font-heading font-bold">{title}</CardTitle>
               <CardDescription>{description}</CardDescription>
             </div>
           </div>
@@ -31,14 +31,14 @@ export function ErrorState({ title, description, details, retryLabel, onRetry }:
         {(details || onRetry) && (
           <CardContent className="space-y-4">
             {details && (
-              <pre className="overflow-auto rounded-md border bg-muted p-3 text-xs whitespace-pre-wrap break-words">
+              <pre className="overflow-auto rounded-lg border border-border bg-muted p-3 font-mono text-xs break-words whitespace-pre-wrap">
                 {details}
               </pre>
             )}
             {onRetry && retryLabel && (
               <div className="flex justify-end">
                 <Button variant="outline" onClick={onRetry}>
-                  <RefreshCw className="h-4 w-4" />
+                  <RefreshCw className="size-4" />
                   {retryLabel}
                 </Button>
               </div>

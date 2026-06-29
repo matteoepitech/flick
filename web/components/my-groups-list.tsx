@@ -44,7 +44,7 @@ export function MyGroupsList() {
   }
 
   return (
-    <div className="rounded-md border">
+    <div className="overflow-hidden rounded-xl border border-border bg-card">
       <Table>
         <TableHeader>
           <TableRow>
@@ -64,11 +64,11 @@ export function MyGroupsList() {
               >
                 <TableCell className="font-medium">{group.name}</TableCell>
                 <TableCell>
-                  <Badge className={cn("w-32 justify-center", GROUP_ROLE_BADGE[group.role])}>
+                  <Badge className={cn("w-32 justify-center rounded-full", GROUP_ROLE_BADGE[group.role])}>
                     {t(`role_${group.role}`)}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-right text-sm text-muted-foreground">
+                <TableCell className="text-right text-sm font-medium text-primary">
                   {manageable ? t("manage") : t("open")}
                 </TableCell>
               </TableRow>

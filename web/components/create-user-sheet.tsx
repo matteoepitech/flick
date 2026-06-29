@@ -23,25 +23,24 @@ interface CreateUserSheetProps {
   onCreated: (user: AdminUser) => void
 }
 
-// CreateUserSheet lets an admin create an account by hand. It reuses the public
-// /register endpoint, which only persists the user and never issues a session
-// token, so creating a user here does not touch the admin's own session.
 export function CreateUserSheet({ onCreated }: CreateUserSheetProps) {
   const t = useTranslations("Users")
+
+  const tRegister = useTranslations("Register")
   const [open, setOpen] = useState(false)
   const [username, setUsername] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Reset the form each time the sheet opens, so a cancelled creation never
-  // leaks into the next one.
   function handleOpenChange(next: boolean) {
     if (next) {
       setUsername("")
       setEmail("")
       setPassword("")
+      setConfirmPassword("")
       setError(null)
     }
     setOpen(next)
@@ -54,6 +53,11 @@ export function CreateUserSheet({ onCreated }: CreateUserSheetProps) {
     const mail = email.trim()
     if (!name || !mail || !password) {
       setError(t("createValidation"))
+      return
+    }
+
+    if (password !== confirmPassword) {
+      setError(tRegister("passwordMismatch"))
       return
     }
 
@@ -87,7 +91,7 @@ export function CreateUserSheet({ onCreated }: CreateUserSheetProps) {
       </SheetTrigger>
       <SheetContent>
         <SheetHeader>
-          <SheetTitle>{t("createTitle")}</SheetTitle>
+          <SheetTitle className="font-heading text-xl font-bold">{t("createTitle")}</SheetTitle>
           <SheetDescription>{t("createSubtitle")}</SheetDescription>
         </SheetHeader>
 
@@ -121,6 +125,18 @@ export function CreateUserSheet({ onCreated }: CreateUserSheetProps) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder={t("createPasswordPlaceholder")}
+              autoComplete="new-password"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="create-confirm-password">{tRegister("confirmPassword")}</Label>
+            <Input
+              id="create-confirm-password"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder={tRegister("confirmPasswordPlaceholder")}
               autoComplete="new-password"
             />
           </div>

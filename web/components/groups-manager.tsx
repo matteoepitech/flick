@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { useLocale, useTranslations } from "next-intl"
+import { Users } from "lucide-react"
 
 import { CreateGroupSheet } from "@/components/create-group-sheet"
 import { DeleteGroupSheet } from "@/components/delete-group-sheet"
@@ -11,6 +12,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useRouter } from "@/i18n/navigation"
 import { ApiError, listGroups, type AdminGroup, type AuthSession } from "@/lib/api"
 import { loadSession } from "@/lib/auth"
+import { cn } from "@/lib/utils"
+
+const HEAD_CLASS = "font-heading font-semibold text-[10.5px] tracking-[0.1em] uppercase text-muted-foreground"
 
 export function GroupsManager() {
   const t = useTranslations("Groups")
@@ -89,13 +93,13 @@ export function GroupsManager() {
         <CreateGroupSheet token={session.token} onCreated={onCreated} />
       </div>
 
-      <div className="rounded-md border">
+      <div className="overflow-hidden rounded-xl border border-border bg-card">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>{t("colName")}</TableHead>
-              <TableHead>{t("colCreated")}</TableHead>
-              <TableHead className="text-right">{t("colActions")}</TableHead>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className={HEAD_CLASS}>{t("colName")}</TableHead>
+              <TableHead className={HEAD_CLASS}>{t("colCreated")}</TableHead>
+              <TableHead className={cn(HEAD_CLASS, "text-right")}>{t("colActions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -109,11 +113,18 @@ export function GroupsManager() {
               groups.map((group) => (
                 <TableRow
                   key={group.id}
-                  className="cursor-pointer"
+                  className="cursor-pointer border-border hover:bg-muted/60"
                   onClick={() => router.push(`/dashboard/groups/${group.id}`)}
                 >
-                  <TableCell className="font-medium">{group.name}</TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell>
+                    <span className="inline-flex items-center gap-2.5">
+                      <span className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <Users className="size-4" />
+                      </span>
+                      <span className="font-heading font-semibold">{group.name}</span>
+                    </span>
+                  </TableCell>
+                  <TableCell className="font-mono text-xs text-muted-foreground">
                     {group.createdAt ? new Date(group.createdAt).toLocaleDateString(locale) : "—"}
                   </TableCell>
                   <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>

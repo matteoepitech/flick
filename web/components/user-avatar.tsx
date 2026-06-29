@@ -1,7 +1,5 @@
 import { cn } from "@/lib/utils"
 
-// A deterministic palette so a given username always gets the same colour. The
-// data model has no profile picture, so we render initials on a coloured disc.
 const AVATAR_COLORS = [
   "bg-red-500",
   "bg-orange-500",
@@ -37,7 +35,7 @@ export function UserAvatar({ name, className }: UserAvatarProps) {
   return (
     <span
       className={cn(
-        "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-medium text-white",
+        "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-mono text-xs font-semibold text-white",
         colorFor(name),
         className
       )}

@@ -31,8 +31,6 @@ export function CreateGroupSheet({ token, onCreated }: CreateGroupSheetProps) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Reset the form each time the sheet opens so a cancelled creation never
-  // leaks into the next one.
   function handleOpenChange(next: boolean) {
     if (next) {
       setName("")
@@ -73,7 +71,7 @@ export function CreateGroupSheet({ token, onCreated }: CreateGroupSheetProps) {
       </SheetTrigger>
       <SheetContent>
         <SheetHeader>
-          <SheetTitle>{t("createTitle")}</SheetTitle>
+          <SheetTitle className="font-heading text-xl font-bold">{t("createTitle")}</SheetTitle>
           <SheetDescription>{t("createSubtitle")}</SheetDescription>
         </SheetHeader>
 

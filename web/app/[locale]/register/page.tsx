@@ -30,9 +30,7 @@ export default function RegisterPage() {
     const controller = new AbortController()
     fetchStats(controller.signal)
       .then((stats) => setIsFirstAccount(stats.userCount === 0))
-      .catch(() => {
-        // Ignore: the banner is informational, registration still works.
-      })
+      .catch(() => {})
     return () => controller.abort()
   }, [])
 
@@ -80,12 +78,12 @@ export default function RegisterPage() {
       </Link>
 
       <div className="w-full text-center">
-        <h1 className="text-3xl font-bold tracking-tight md:text-4xl">{t("title")}</h1>
+        <h1 className="font-heading text-3xl font-bold tracking-tight md:text-4xl">{t("title")}</h1>
         <p className="mt-3 text-base text-muted-foreground">{t("description")}</p>
       </div>
 
       {isFirstAccount && (
-        <div className="mt-8 flex w-full items-start gap-3 rounded-lg border border-primary/30 bg-primary/10 px-4 py-3 text-left text-sm text-foreground">
+        <div className="mt-8 flex w-full items-start gap-3 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-left text-sm text-foreground">
           <ShieldCheck className="mt-0.5 size-5 shrink-0 text-primary" />
           <span>{t("firstAdminNotice")}</span>
         </div>
@@ -162,7 +160,11 @@ export default function RegisterPage() {
             />
           </div>
 
-          {error && <p className="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</p>}
+          {error && (
+            <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              {error}
+            </p>
+          )}
 
           <Button type="submit" size="lg" className="h-12 w-full text-base font-semibold" disabled={!canSubmit}>
             <UserRoundPlus className="size-5" />

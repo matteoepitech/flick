@@ -1,11 +1,12 @@
 "use client"
 
-import { ArrowUpRight, Boxes, LayoutDashboard, Settings, Users, UsersRound } from "lucide-react"
+import { Boxes, LayoutDashboard, Settings, Users, UsersRound } from "lucide-react"
 import { useTranslations } from "next-intl"
-import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
 
+import { BrandLogo } from "@/components/brand-logo"
+import { UserAvatar } from "@/components/user-avatar"
 import { Link } from "@/i18n/navigation"
 import {
   Sidebar,
@@ -31,14 +32,25 @@ type NavItem = {
   separatedAbove?: boolean
 }
 
-// Every dashboard entry maps to a section so it can be filtered by the user's
-// role. Admins see the administration items; maintainers see only their group.
-const navItems: NavItem[] = [
-  { href: "/dashboard", labelKey: "overview", icon: LayoutDashboard, section: "overview" },
-  { href: "/dashboard/users", labelKey: "users", icon: Users, section: "users" },
-  { href: "/dashboard/groups", labelKey: "groups", icon: Boxes, section: "groups" },
-  { href: "/dashboard/group", labelKey: "myGroups", icon: UsersRound, section: "group" },
-  { href: "/dashboard/settings", labelKey: "settings", icon: Settings, section: "settings", separatedAbove: true },
+type NavGroup = {
+  labelKey: "groupAdministration" | "workspace"
+  items: NavItem[]
+}
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    labelKey: "workspace",
+    items: [{ href: "/dashboard/group", labelKey: "myGroups", icon: UsersRound, section: "group" }],
+  },
+  {
+    labelKey: "groupAdministration",
+    items: [
+      { href: "/dashboard", labelKey: "overview", icon: LayoutDashboard, section: "overview" },
+      { href: "/dashboard/users", labelKey: "users", icon: Users, section: "users" },
+      { href: "/dashboard/groups", labelKey: "groups", icon: Boxes, section: "groups" },
+      { href: "/dashboard/settings", labelKey: "settings", icon: Settings, section: "settings", separatedAbove: true },
+    ],
+  },
 ]
 
 export function DashboardSidebar() {
@@ -51,47 +63,64 @@ export function DashboardSidebar() {
   }, [])
 
   const allowed = visibleSections(user)
-  const items = navItems.filter((item) => allowed.includes(item.section))
 
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === "/dashboard" || /\/[^/]+\/dashboard$/.test(pathname)
-    // Match the section page itself or any of its sub-routes (e.g. a group
-    // detail page), while keeping "/dashboard/group" distinct from
-    // "/dashboard/groups" thanks to the trailing slash.
+
     return pathname.endsWith(href) || pathname.includes(href + "/")
   }
 
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        <Link href="/" className="flex items-center gap-0 px-2 py-1">
-          <Image src="/assets/flick_logo.png" alt="Flick" width={32} height={32} />
-          <span className="translate-y-2 text-lg font-semibold group-data-[collapsible=icon]:hidden">lick</span>
+        <Link href="/" className="flex items-center px-1.5 py-1" aria-label="Flick">
+          <BrandLogo className="group-data-[collapsible=icon]:[&>span:last-child]:hidden" />
         </Link>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>{user?.role === "admin" ? t("groupAdministration") : t("groupGroup")}</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu className="gap-2">
-              {items.map((item) => (
-                <SidebarMenuItem
-                  key={item.href}
-                  className={item.separatedAbove ? "mt-2 border-t border-sidebar-border pt-2" : ""}
-                >
-                  <SidebarMenuButton asChild isActive={isActive(item.href)} tooltip={t(item.labelKey)}>
-                    <Link href={item.href}>
-                      <item.icon className="h-4 w-4" />
-                      <span>{t(item.labelKey)}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {NAV_GROUPS.map((group) => {
+          const groupItems = group.items.filter((item) => allowed.includes(item.section))
+          if (groupItems.length === 0) return null
+          return (
+            <SidebarGroup key={group.labelKey}>
+              <SidebarGroupLabel>{t(group.labelKey)}</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu className="gap-2">
+                  {groupItems.map((item) => (
+                    <SidebarMenuItem
+                      key={item.href}
+                      className={item.separatedAbove ? "mt-2 border-t border-sidebar-border pt-2" : ""}
+                    >
+                      <SidebarMenuButton asChild isActive={isActive(item.href)} tooltip={t(item.labelKey)}>
+                        <Link href={item.href}>
+                          <item.icon className="h-4 w-4" />
+                          <span>{t(item.labelKey)}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )
+        })}
       </SidebarContent>
-      <SidebarFooter></SidebarFooter>
+      <SidebarFooter>
+        {user && (
+          <Link
+            href="/profile"
+            className="flex items-center gap-2.5 rounded-lg p-1.5 transition-colors group-data-[collapsible=icon]:justify-center hover:bg-sidebar-accent"
+          >
+            <UserAvatar name={user.username || "?"} className="size-8" />
+            <div className="min-w-0 group-data-[collapsible=icon]:hidden">
+              <div className="truncate text-sm font-semibold">{user.username}</div>
+              <div className="text-xs text-muted-foreground capitalize">
+                {user.role === "admin" ? t("groupAdministration") : t("groupGroup")}
+              </div>
+            </div>
+          </Link>
+        )}
+      </SidebarFooter>
     </Sidebar>
   )
 }

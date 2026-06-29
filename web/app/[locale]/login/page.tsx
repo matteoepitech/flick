@@ -35,18 +35,16 @@ export default function LoginPage() {
     try {
       const session = await loginUser(email.trim(), password)
       saveSession(session)
-      // A blocked account still logs in (so it keeps a session for the profile
-      // page) but is sent straight to the blocked page.
+
       if (session.user.blocked) {
         router.replace("/blocked")
         return
       }
-      // Admins and maintainers land in the dashboard; everyone else goes home.
+
       router.push(canAccessDashboard(session.user) ? landingPath(session.user) : "/")
     } catch (err) {
       console.error(err)
-      // A blocked account is rejected at login: send them to the blocked page
-      // rather than showing a raw credentials error.
+
       if (isAccountBlocked(err)) {
         router.replace("/blocked")
         return
@@ -67,7 +65,7 @@ export default function LoginPage() {
       </Link>
 
       <div className="w-full text-center">
-        <h1 className="text-3xl font-bold tracking-tight md:text-4xl">{t("title")}</h1>
+        <h1 className="font-heading text-3xl font-bold tracking-tight md:text-4xl">{t("title")}</h1>
         <p className="mt-3 text-base text-muted-foreground">{t("description")}</p>
       </div>
 
@@ -114,7 +112,11 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {error && <p className="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</p>}
+          {error && (
+            <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              {error}
+            </p>
+          )}
 
           <Button type="submit" size="lg" className="h-12 w-full text-base font-semibold" disabled={!canSubmit}>
             <LogIn className="size-5" />

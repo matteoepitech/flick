@@ -33,16 +33,11 @@ type State =
 export default function ReceiveCodePage({ params }: { params: Promise<{ code: string }> }) {
   const t = useTranslations("ReceiveCode")
   const { code: rawCode } = use(params)
-  // A pasted code may carry a "#key" suffix for encrypted uploads. The key is
-  // useless in the browser (it cannot decrypt), so drop it: we look up and
-  // display only the bare code, and never send the key anywhere.
+
   const code = decodeURIComponent(rawCode).split("#")[0]
 
   const [state, setState] = useState<State>({ status: "loading" })
 
-  // Listing the files does NOT consume the single-use download, so it's safe to
-  // fetch on load (and to abort on unmount / re-run under StrictMode). The actual
-  // consuming transfer only happens later, when the user clicks "download".
   useEffect(() => {
     const controller = new AbortController()
     setState({ status: "loading" })
@@ -73,8 +68,9 @@ export default function ReceiveCodePage({ params }: { params: Promise<{ code: st
       </Link>
 
       <div className="w-full text-center">
-        <h1 className="text-3xl font-bold tracking-tight md:text-4xl">{t("title")}</h1>
-        <p className="mt-3 font-mono text-sm text-muted-foreground">{t("subtitle", { code })}</p>
+        <p className="font-heading text-xs font-semibold tracking-[0.12em] text-primary uppercase">{t("eyebrow")}</p>
+        <h1 className="mt-4 font-heading text-3xl font-bold tracking-tight md:text-4xl">{t("title")}</h1>
+        <p className="mt-3 font-mono text-sm text-primary">{t("subtitle", { code })}</p>
       </div>
 
       <div className="mt-10 w-full">
@@ -86,11 +82,15 @@ export default function ReceiveCodePage({ params }: { params: Promise<{ code: st
         )}
 
         {state.status === "not_found" && (
-          <p className="rounded-lg bg-destructive/10 px-4 py-3 text-center text-sm text-destructive">{t("notFound")}</p>
+          <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-center text-sm text-destructive">
+            {t("notFound")}
+          </p>
         )}
 
         {state.status === "error" && (
-          <p className="rounded-lg bg-destructive/10 px-4 py-3 text-center text-sm text-destructive">{t("error")}</p>
+          <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-center text-sm text-destructive">
+            {t("error")}
+          </p>
         )}
 
         {state.status === "ready" && <ReadyView info={state.info} code={code} />}
@@ -106,10 +106,6 @@ function ReadyView({ info, code }: { info: DownloadInfo; code: string }) {
   const [wrongPassword, setWrongPassword] = useState(false)
   const items = info.items
 
-  // ONE click = ONE GET = ONE consumed download. The server returns a multipart
-  // body; each part is the stored <uuid>.zip, which we save as-is. The password
-  // (when the code is protected) gates the request; a wrong one is rejected with
-  // 401 before the single-use download is consumed.
   async function downloadAll() {
     if (busy) return
     if (info.passwordProtected && password.trim().length === 0) return
@@ -138,7 +134,7 @@ function ReadyView({ info, code }: { info: DownloadInfo; code: string }) {
     <form onSubmit={handleDownload} className="flex flex-col gap-4">
       {info.message && (
         <Card className="flex flex-col gap-2 p-4">
-          <div className="flex items-center gap-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+          <div className="flex items-center gap-2 font-heading text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">
             <MessageSquareText className="size-4" />
             {t("message")}
           </div>
@@ -150,7 +146,7 @@ function ReadyView({ info, code }: { info: DownloadInfo; code: string }) {
         <ul className="flex flex-col">
           {items.map((item) => (
             <li key={item.name} className="flex items-center gap-3 rounded-lg px-3 py-2.5">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                 {info.encrypted ? (
                   <Lock className="h-4 w-4" />
                 ) : info.passwordProtected ? (
@@ -165,7 +161,7 @@ function ReadyView({ info, code }: { info: DownloadInfo; code: string }) {
                 <p className="truncate text-sm font-medium">
                   {info.encrypted ? t("encrypted") : info.passwordProtected ? t("passwordProtected") : item.name}
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="font-mono text-xs text-muted-foreground">
                   {item.isFolder
                     ? `${t("folderFiles", { count: item.fileCount })} · ${formatBytes(item.size)}`
                     : formatBytes(item.size)}
@@ -177,7 +173,7 @@ function ReadyView({ info, code }: { info: DownloadInfo; code: string }) {
       </Card>
 
       {info.encrypted ? (
-        <p className="flex items-start gap-2 rounded-lg bg-muted px-4 py-3 text-sm text-muted-foreground">
+        <p className="flex items-start gap-2 rounded-xl border border-border bg-muted px-4 py-3 text-sm text-muted-foreground">
           <Lock className="mt-0.5 size-4 shrink-0" />
           {t("encryptedHint")}
         </p>

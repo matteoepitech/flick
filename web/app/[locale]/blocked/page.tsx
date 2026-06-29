@@ -22,10 +22,10 @@ export default function BlockedPage() {
       <Card className="w-full border-destructive/40">
         <CardHeader>
           <div className="flex flex-col items-center gap-3 text-center">
-            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 text-destructive">
-              <Ban className="h-6 w-6" />
+            <span className="flex size-12 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+              <Ban className="size-6" />
             </span>
-            <CardTitle>{t("title")}</CardTitle>
+            <CardTitle className="font-heading text-xl font-bold">{t("title")}</CardTitle>
             <CardDescription>{t("description")}</CardDescription>
           </div>
         </CardHeader>

@@ -23,10 +23,7 @@ export function ExpirationPicker({ value, onChange, maxExpiration }: ExpirationP
 
   const maxMinutes = useMemo(() => (maxExpiration ? parseDurationMinutes(maxExpiration) : Infinity), [maxExpiration])
 
-  const availablePresets = useMemo(
-    () => PRESETS.filter((p) => parseDurationMinutes(p) <= maxMinutes),
-    [maxMinutes]
-  )
+  const availablePresets = useMemo(() => PRESETS.filter((p) => parseDurationMinutes(p) <= maxMinutes), [maxMinutes])
 
   const overMax = Boolean(value && maxExpiration && parseDurationMinutes(value) > maxMinutes)
 
@@ -51,7 +48,11 @@ export function ExpirationPicker({ value, onChange, maxExpiration }: ExpirationP
   }
 
   function handleCustomKeyDown(event: KeyboardEvent<HTMLInputElement>, val: string) {
-    if (event.key === "Enter" && DURATION_PATTERN.test(val) && !(maxExpiration && parseDurationMinutes(val) > maxMinutes)) {
+    if (
+      event.key === "Enter" &&
+      DURATION_PATTERN.test(val) &&
+      !(maxExpiration && parseDurationMinutes(val) > maxMinutes)
+    ) {
       onChange(val)
     }
   }
@@ -67,10 +68,10 @@ export function ExpirationPicker({ value, onChange, maxExpiration }: ExpirationP
               type="button"
               onClick={() => handlePreset(preset)}
               className={cn(
-                "rounded-lg border px-3.5 py-1.5 text-sm font-medium transition-colors",
+                "rounded-full border px-3.5 py-1.5 font-mono text-sm font-medium transition-colors",
                 active
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-border bg-background text-foreground hover:bg-muted"
+                  ? "border-primary bg-primary/8 text-primary"
+                  : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
             >
               {preset}
@@ -81,10 +82,10 @@ export function ExpirationPicker({ value, onChange, maxExpiration }: ExpirationP
           type="button"
           onClick={handleCustomToggle}
           className={cn(
-            "rounded-lg border px-3.5 py-1.5 text-sm font-medium transition-colors",
+            "rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors",
             custom
-              ? "border-primary bg-primary/10 text-primary"
-              : "border-border bg-background text-foreground hover:bg-muted"
+              ? "border-primary bg-primary/8 text-primary"
+              : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
           )}
         >
           {t("expirationCustom")}
@@ -100,7 +101,7 @@ export function ExpirationPicker({ value, onChange, maxExpiration }: ExpirationP
             onKeyDown={(e) => handleCustomKeyDown(e, value)}
             placeholder={t("expirationCustomPlaceholder")}
             className={cn(
-              "h-9 w-full rounded-lg border bg-background px-3 text-sm outline-none transition-colors placeholder:text-muted-foreground",
+              "h-9 w-full rounded-lg border bg-background px-3 text-sm transition-colors outline-none placeholder:text-muted-foreground",
               value && !DURATION_PATTERN.test(value)
                 ? "border-destructive/50 focus:border-destructive"
                 : "border-border focus:border-primary"

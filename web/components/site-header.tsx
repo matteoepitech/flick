@@ -1,11 +1,12 @@
 "use client"
 
-import { ArrowDownLeft, ArrowUpRight, LayoutDashboard, LogIn, UserRound } from "lucide-react"
+import { ArrowDownLeft, ArrowUpRight, LayoutDashboard, LogIn } from "lucide-react"
 import { useTranslations } from "next-intl"
-import Image from "next/image"
 import { useEffect, useState } from "react"
 
+import { BrandLogo } from "@/components/brand-logo"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { UserAvatar } from "@/components/user-avatar"
 import { Button } from "@/components/ui/button"
 import { type AuthSession } from "@/lib/api"
 import { loadSession, verifySession } from "@/lib/auth"
@@ -19,9 +20,6 @@ export default function SiteHeader() {
 
   const [session, setSession] = useState<AuthSession | null>(null)
 
-  // Re-read the session on every navigation so the header reflects login/logout
-  // without a full page reload, drop it if the server no longer knows the
-  // account (e.g. a deleted user), and send blocked users to the blocked page.
   useEffect(() => {
     const stored = loadSession()
     setSession(stored)
@@ -32,8 +30,6 @@ export default function SiteHeader() {
       if (status === "invalid") {
         setSession(null)
       } else if (status === "blocked") {
-        // A blocked user keeps read-only access to their own profile (and the
-        // blocked page); everywhere else sends them back to the blocked page.
         const allowed = pathname.startsWith("/blocked") || pathname.startsWith("/profile")
         if (!allowed) router.replace("/blocked")
       }
@@ -47,46 +43,54 @@ export default function SiteHeader() {
   }
 
   return (
-    <header className="border-b">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-        <Link href="/" className="flex items-center gap-0">
-          <Image src="/assets/flick_logo.png" alt="Flick" width={32} height={32} />
-          <span className="translate-y-2 text-lg font-semibold">lick</span>
+    <header className="sticky top-0 z-50 border-b bg-background/70 backdrop-blur-xl before:pointer-events-none before:absolute before:inset-x-0 before:bottom-full before:h-[100vh] before:bg-background before:content-['']">
+      <div className="mx-auto flex h-[66px] max-w-6xl items-center justify-between gap-4 px-4 sm:px-7">
+        <Link href="/" aria-label="Flick">
+          <BrandLogo />
         </Link>
 
-        <nav className="flex items-center gap-1 sm:gap-2 md:gap-4">
+        <nav className="flex items-center gap-1.5 sm:gap-2">
           {canAccessDashboard(session?.user ?? null) && (
-            <Button asChild variant="ghost" size="icon" className="sm:w-auto sm:gap-1.5 sm:px-4">
-              <Link href="/dashboard">
-                <LayoutDashboard className="h-4 w-4" />
-                <span className="hidden sm:inline">{t("dashboard")}</span>
+            <>
+              <Link
+                href="/dashboard"
+                className="mr-1 hidden text-[14.5px] text-muted-foreground transition-colors hover:text-foreground md:inline"
+              >
+                {t("dashboard")}
               </Link>
-            </Button>
+              <Button asChild variant="ghost" size="icon" className="md:hidden">
+                <Link href="/dashboard" aria-label={t("dashboard")}>
+                  <LayoutDashboard className="size-4" />
+                </Link>
+              </Button>
+            </>
           )}
-          <Button asChild size="icon" className="sm:w-auto sm:gap-1.5 sm:px-4">
-            <Link href="/send">
-              <ArrowUpRight className="h-4 w-4" />
-              <span className="hidden sm:inline">{t("send")}</span>
-            </Link>
-          </Button>
-          <Button asChild variant="outline" size="icon" className="sm:w-auto sm:gap-1.5 sm:px-4">
+
+          <Button asChild variant="outline" className="rounded-full px-3 sm:px-4">
             <Link href="/receive">
-              <ArrowDownLeft className="h-4 w-4" />
+              <ArrowDownLeft className="size-4" />
               <span className="hidden sm:inline">{t("receive")}</span>
             </Link>
           </Button>
+          <Button asChild className="rounded-full px-3 sm:px-4">
+            <Link href="/send">
+              <ArrowUpRight className="size-4" />
+              <span className="hidden sm:inline">{t("send")}</span>
+            </Link>
+          </Button>
+
           {session ? (
-            <Button asChild variant="ghost" size="icon" className="sm:w-auto sm:gap-1.5 sm:px-4">
-              <Link href="/profile">
-                <UserRound className="h-4 w-4" />
-                <span className="hidden max-w-[12ch] truncate sm:inline">{session.user.username || t("profile")}</span>
-              </Link>
-            </Button>
+            <Link
+              href="/profile"
+              aria-label={session.user.username || t("profile")}
+              className="ml-1 rounded-full ring-1 ring-border transition-all hover:ring-ring/50"
+            >
+              <UserAvatar name={session.user.username || "?"} className="size-[34px]" />
+            </Link>
           ) : (
-            <Button asChild variant="ghost" size="icon" className="sm:w-auto sm:gap-1.5 sm:px-4">
-              <Link href="/login">
-                <LogIn className="h-4 w-4" />
-                <span className="hidden sm:inline">{t("login")}</span>
+            <Button asChild variant="ghost" size="icon" className="ml-1">
+              <Link href="/login" aria-label={t("login")}>
+                <LogIn className="size-4" />
               </Link>
             </Button>
           )}

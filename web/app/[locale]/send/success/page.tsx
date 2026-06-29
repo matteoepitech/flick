@@ -41,26 +41,29 @@ function SendSuccessContent() {
       </Link>
 
       <div className="w-full text-center">
-        <h1 className="text-3xl font-bold tracking-tight md:text-4xl">{t("title")}</h1>
+        <p className="font-heading text-xs font-semibold tracking-[0.12em] text-primary uppercase">{t("eyebrow")}</p>
+        <h1 className="mt-4 font-heading text-3xl font-bold tracking-tight md:text-4xl">{t("title")}</h1>
         <p className="mt-3 text-base text-muted-foreground">{t("description")}</p>
       </div>
 
       <div className="mt-10 flex w-full flex-col gap-4">
         {codes.length === 0 && (
-          <p className="rounded-lg bg-muted px-4 py-3 text-center text-sm text-muted-foreground">{t("noCode")}</p>
+          <p className="rounded-xl border border-border bg-muted px-4 py-3 text-center text-sm text-muted-foreground">
+            {t("noCode")}
+          </p>
         )}
 
         {codes.map((code) => {
           const isCopied = copied === code
           return (
             <Card key={code} className="gap-4 p-6">
-              <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">{t("codeLabel")}</p>
-              <p className="rounded-lg border border-dashed border-primary/30 bg-primary/5 px-5 py-4 text-center font-mono text-2xl font-bold tracking-[0.15em] break-all text-primary">
+              <p className="font-heading text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">
+                {t("codeLabel")}
+              </p>
+              <p className="rounded-xl border border-dashed border-primary/30 bg-primary/5 px-5 py-5 text-center font-mono text-3xl font-bold tracking-[0.15em] break-all text-primary">
                 {code}
               </p>
-              {exp && (
-                <p className="text-center text-sm text-muted-foreground">{t("expiresIn", { exp })}</p>
-              )}
+              {exp && <p className="text-center font-mono text-sm text-muted-foreground">{t("expiresIn", { exp })}</p>}
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Button
                   type="button"

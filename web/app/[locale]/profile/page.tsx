@@ -4,6 +4,7 @@ import { AtSign, Calendar, Check, ChevronLeft, Copy, Fingerprint, LogOut, UserRo
 import { useLocale, useTranslations } from "next-intl"
 import { useEffect, useState } from "react"
 
+import { UserAvatar } from "@/components/user-avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { type AuthSession } from "@/lib/api"
@@ -25,7 +26,6 @@ export default function ProfilePage() {
     setReady(true)
     if (!stored) return
 
-    // Drop a ghost session whose account no longer exists on the server.
     const controller = new AbortController()
     verifySession(stored, controller.signal).then((valid) => {
       if (!valid) setSession(null)
@@ -44,9 +44,7 @@ export default function ProfilePage() {
       await navigator.clipboard.writeText(id)
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
-    } catch {
-      // Clipboard unavailable, ignore silently.
-    }
+    } catch {}
   }
 
   return (
@@ -60,8 +58,7 @@ export default function ProfilePage() {
       </Link>
 
       <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
-        <p className="mt-2 text-muted-foreground">{t("subtitle")}</p>
+        <h1 className="font-heading text-3xl font-bold tracking-tight">{t("title")}</h1>
       </div>
 
       {!ready ? null : !session ? (
@@ -97,7 +94,6 @@ function ProfileCard({
   const t = useTranslations("Profile")
   const { user } = session
 
-  const initials = (user.username || user.email || "?").slice(0, 2).toUpperCase()
   const memberSince = user.createdAt
     ? new Date(user.createdAt).toLocaleDateString(locale, { year: "numeric", month: "long", day: "numeric" })
     : t("unknown")
@@ -112,12 +108,13 @@ function ProfileCard({
     <div className="space-y-6">
       <Card>
         <CardHeader className="flex flex-row items-center gap-4">
-          <span className="flex size-16 shrink-0 items-center justify-center rounded-full bg-primary text-xl font-semibold text-primary-foreground">
-            {initials}
-          </span>
+          <UserAvatar name={user.username || user.email || "?"} className="size-16 text-lg" />
           <div className="min-w-0">
-            <CardTitle className="truncate text-xl">{user.username || t("unknown")}</CardTitle>
+            <CardTitle className="truncate font-heading text-xl font-bold">{user.username || t("unknown")}</CardTitle>
             <p className="truncate text-sm text-muted-foreground">{user.email}</p>
+            <span className="mt-2 inline-flex rounded-full bg-primary/12 px-2.5 py-0.5 font-heading text-[11px] font-semibold tracking-[0.1em] text-primary uppercase">
+              {user.role}
+            </span>
           </div>
         </CardHeader>
 
