@@ -11,13 +11,13 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/Flick-Corp/flick/internal/api/database"
 	"github.com/Flick-Corp/flick/internal/api/path"
 	"github.com/Flick-Corp/flick/internal/api/quota"
 	"github.com/Flick-Corp/flick/internal/api/routes"
 	"github.com/Flick-Corp/flick/internal/api/routes/account"
 	"github.com/Flick-Corp/flick/internal/api/serverconfig"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // QuotaHandler: Build the quota usage handler. With a `group_id` query parameter
@@ -41,17 +41,17 @@ func QuotaHandler(queries *database.Queries) http.HandlerFunc {
 		var usedBytes int64
 		var limitMb int
 
-		if groupParam := r.URL.Query().Get("group_id"); groupParam != "" {
-			var groupID pgtype.UUID
-			if err := groupID.Scan(groupParam); err != nil {
+		if groupID := r.URL.Query().Get("group_id"); groupID != "" {
+			var groupPgID pgtype.UUID
+			if err := groupPgID.Scan(groupID); err != nil {
 				routes.WriteError(w, http.StatusBadRequest, "Invalid group id")
 				return
 			}
-			if _, status, err := account.RequireGroupMaintainer(r.Context(), queries, account.TokenFromHeader(r), groupID); err != nil {
+			if _, status, err := account.RequireGroupMaintainer(r.Context(), queries, account.TokenFromHeader(r), groupPgID); err != nil {
 				routes.WriteError(w, status, err.Error())
 				return
 			}
-			u, err := quota.UsedByGroupID(path.GetDataDir(), groupParam)
+			u, err := quota.CalculateQuotaByGroupID(groupID)
 			if err != nil {
 				routes.WriteError(w, http.StatusInternalServerError, "Cannot read quota")
 				return
@@ -64,7 +64,7 @@ func QuotaHandler(queries *database.Queries) http.HandlerFunc {
 				routes.WriteError(w, http.StatusBadRequest, "Invalid or unknown user")
 				return
 			}
-			u, err := quota.UsedByUploaderID(path.GetDataDir(), rawID)
+			u, err := quota.CalculateQuotaByUploaderID(rawID)
 			if err != nil {
 				routes.WriteError(w, http.StatusInternalServerError, "Cannot read quota")
 				return

@@ -16,7 +16,6 @@ import (
 	"github.com/tus/tusd/v2/pkg/filestore"
 	tusd "github.com/tus/tusd/v2/pkg/handler"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/Flick-Corp/flick/internal/api/database"
 	"github.com/Flick-Corp/flick/internal/api/logging"
 	"github.com/Flick-Corp/flick/internal/api/path"
@@ -26,6 +25,7 @@ import (
 	"github.com/Flick-Corp/flick/internal/api/routes/files"
 	"github.com/Flick-Corp/flick/internal/api/serverconfig"
 	"github.com/Flick-Corp/flick/internal/utils/checksum"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // preUploadCreate: tus hook invoked before a new upload is created. It validates
@@ -111,7 +111,7 @@ func authorizeUpload(hook tusd.HookEvent, queries *database.Queries) (uploadInpu
 			}
 		}
 
-		used, err := quota.UsedByGroupID(path.GetDataDir(), in.GroupID)
+		used, err := quota.CalculateQuotaByGroupID(in.GroupID)
 		if err != nil {
 			return in, tusd.NewError("ERR_FLICK_QUOTA", "Cannot read group quota", http.StatusInternalServerError)
 		}
@@ -130,7 +130,7 @@ func authorizeUpload(hook tusd.HookEvent, queries *database.Queries) (uploadInpu
 		}
 		in.ResolvedUploader = rawID
 
-		used, err := quota.UsedByUploaderID(path.GetDataDir(), rawID)
+		used, err := quota.CalculateQuotaByUploaderID(rawID)
 		if err != nil {
 			return in, tusd.NewError("ERR_FLICK_QUOTA", "Cannot read user quota", http.StatusInternalServerError)
 		}

@@ -11,36 +11,35 @@ import (
 	"os"
 
 	"github.com/Flick-Corp/flick/internal/api/metadata"
+	"github.com/Flick-Corp/flick/internal/api/path"
 )
 
-// UsedByGroupID: Walk the data directory and sum the stored size of every active
+// CalculateQuotaByGroupID: Walk the data directory and sum the stored size of every active
 // transfer bound to the given group. Reading the on-disk metadata keeps the
 // total correct as expired transfers disappear.
 //
 // Params:
-// - dataDir (string): The data directory holding the code folders.
 // - groupID (string): The group UUID owning the transfers.
 //
 // Returns:
 // - result1 (int64): The total bytes used by the group.
 // - result2 (error): An error if the data directory cannot be read.
-func UsedByGroupID(dataDir string, groupID string) (int64, error) {
-	return walkSum(dataDir, "", groupID)
+func CalculateQuotaByGroupID(groupID string) (int64, error) {
+	return walkSum(path.GetDataDir(), "", groupID)
 }
 
-// UsedByUploaderID: Walk the data directory and sum the stored size of an
+// CalculateQuotaByUploaderID: Walk the data directory and sum the stored size of an
 // uploader's active personal transfers. Group transfers count against their
 // group, not the uploader, so they are excluded here.
 //
 // Params:
-// - dataDir (string): The data directory holding the code folders.
 // - uploaderID (string): The uploader UUID owning the transfers.
 //
 // Returns:
 // - result1 (int64): The total bytes used by the uploader.
 // - result2 (error): An error if the data directory cannot be read.
-func UsedByUploaderID(dataDir string, uploaderID string) (int64, error) {
-	return walkSum(dataDir, uploaderID, "")
+func CalculateQuotaByUploaderID(uploaderID string) (int64, error) {
+	return walkSum(path.GetDataDir(), uploaderID, "")
 }
 
 // walkSum: Sum the stored size of transfers owned by either an uploader or a
