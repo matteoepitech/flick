@@ -5,9 +5,8 @@ import { useLocale, useTranslations } from "next-intl"
 import { Check, Loader2, Pencil, Search, X } from "lucide-react"
 
 import { ErrorState } from "@/components/error-state"
+import { RoleSelect } from "@/components/role-select"
 import { UserAvatar } from "@/components/user-avatar"
-import { Badge } from "@/components/ui/badge"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
@@ -29,6 +28,8 @@ import {
 import { loadSession } from "@/lib/auth"
 import { GROUP_ROLES, GROUP_ROLE_BADGE, GROUP_ROLE_DOT } from "@/lib/group-roles"
 import { cn } from "@/lib/utils"
+
+const HEAD_CLASS = "font-heading font-semibold text-[10.5px] tracking-[0.1em] uppercase text-muted-foreground"
 
 export function GroupMembersManager({ groupId }: { groupId: string }) {
   const t = useTranslations("Groups")
@@ -83,8 +84,6 @@ export function GroupMembersManager({ groupId }: { groupId: string }) {
 
   const retry = useCallback(() => setReloadKey((k) => k + 1), [])
 
-  // Search results: users not already members, matching the query. Capped so the
-  // dropdown never grows unbounded.
   const results = useMemo(() => {
     const memberIds = new Set(members.map((m) => m.id))
     const q = query.trim().toLowerCase()
@@ -207,10 +206,13 @@ export function GroupMembersManager({ groupId }: { groupId: string }) {
   return (
     <div className="space-y-6">
       <div>
+        <p className="mb-2 font-heading text-[11px] font-semibold tracking-[0.14em] text-primary uppercase">
+          {t("membersTitle")}
+        </p>
         {editingName ? (
           <div className="flex items-center gap-2">
             <Input
-              className="h-9 max-w-sm text-lg font-semibold"
+              className="h-9 max-w-sm font-heading text-lg font-semibold"
               value={nameInput}
               disabled={savingName}
               autoFocus
@@ -241,13 +243,12 @@ export function GroupMembersManager({ groupId }: { groupId: string }) {
           </div>
         ) : (
           <div className="flex items-center gap-2">
-            <h2 className="text-2xl font-semibold tracking-tight">{groupName ?? t("membersTitle")}</h2>
+            <h2 className="font-heading text-3xl font-bold tracking-tight">{groupName ?? t("membersTitle")}</h2>
             <Button size="icon" variant="ghost" onClick={startRename} aria-label={t("renameAction")}>
               <Pencil />
             </Button>
           </div>
         )}
-        <p className="text-muted-foreground">{t("membersSubtitle")}</p>
       </div>
 
       <div className="space-y-1">
@@ -293,15 +294,15 @@ export function GroupMembersManager({ groupId }: { groupId: string }) {
 
       {actionError && <p className="text-sm text-destructive">{actionError}</p>}
 
-      <div className="rounded-md border">
+      <div className="overflow-hidden rounded-xl border border-border bg-card">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>{t("colUser")}</TableHead>
-              <TableHead>{t("colEmail")}</TableHead>
-              <TableHead>{t("colGroupRole")}</TableHead>
-              <TableHead>{t("colCreated")}</TableHead>
-              <TableHead className="text-right">{t("colActions")}</TableHead>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className={HEAD_CLASS}>{t("colUser")}</TableHead>
+              <TableHead className={HEAD_CLASS}>{t("colEmail")}</TableHead>
+              <TableHead className={HEAD_CLASS}>{t("colGroupRole")}</TableHead>
+              <TableHead className={HEAD_CLASS}>{t("colCreated")}</TableHead>
+              <TableHead className={cn(HEAD_CLASS, "text-right")}>{t("colActions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -315,43 +316,46 @@ export function GroupMembersManager({ groupId }: { groupId: string }) {
               members.map((member) => {
                 const busy = pending.has(member.id)
                 return (
-                  <TableRow key={member.id}>
+                  <TableRow key={member.id} className="border-border hover:bg-muted/60">
                     <TableCell className="font-medium">
-                      <span className="inline-flex items-center gap-2">
+                      <span className="inline-flex items-center gap-2.5">
                         <UserAvatar name={member.username} className="h-7 w-7" />
                         {member.username}
-                        {member.role === "admin" && <Badge variant="outline">{t("roleAdmin")}</Badge>}
+                        {member.role === "admin" && (
+                          <span className="rounded-full bg-primary/12 px-2 py-0.5 font-heading text-[10px] font-semibold tracking-wide text-primary uppercase">
+                            {t("roleAdmin")}
+                          </span>
+                        )}
                       </span>
                     </TableCell>
                     <TableCell className="text-muted-foreground">{member.email}</TableCell>
                     <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild disabled={busy}>
-                          <button type="button" className="disabled:opacity-50" aria-label={t("colGroupRole")}>
-                            <Badge
-                              className={cn("w-32 cursor-pointer justify-center", GROUP_ROLE_BADGE[member.groupRole])}
-                            >
-                              {busy && <Loader2 className="h-3 w-3 animate-spin" />}
-                              {t(`groupRole_${member.groupRole}`)}
-                            </Badge>
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start">
-                          {GROUP_ROLES.map((role) => (
-                            <DropdownMenuItem key={role} onClick={() => handleRole(member, role)}>
-                              <span className={cn("mr-2 h-2 w-2 rounded-full", GROUP_ROLE_DOT[role])} />
-                              {t(`groupRole_${role}`)}
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <RoleSelect
+                        value={member.groupRole}
+                        options={GROUP_ROLES.map((role) => ({
+                          value: role,
+                          label: t(`groupRole_${role}`),
+                          badgeClass: GROUP_ROLE_BADGE[role],
+                          dotClass: GROUP_ROLE_DOT[role],
+                        }))}
+                        onSelect={(role) => handleRole(member, role)}
+                        busy={busy}
+                        ariaLabel={t("colGroupRole")}
+                      />
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="font-mono text-xs text-muted-foreground">
                       {member.createdAt ? new Date(member.createdAt).toLocaleDateString(locale) : "—"}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" disabled={busy} onClick={() => handleRemove(member)}>
-                        {t("removeAction")}
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="text-muted-foreground hover:text-destructive"
+                        disabled={busy}
+                        onClick={() => handleRemove(member)}
+                        aria-label={t("removeAction")}
+                      >
+                        {busy ? <Loader2 className="animate-spin" /> : <X />}
                       </Button>
                     </TableCell>
                   </TableRow>

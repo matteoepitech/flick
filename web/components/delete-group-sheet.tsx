@@ -57,7 +57,7 @@ export function DeleteGroupSheet({ group, token, onDeleted }: DeleteGroupSheetPr
       </SheetTrigger>
       <SheetContent>
         <SheetHeader>
-          <SheetTitle>{t("deleteTitle")}</SheetTitle>
+          <SheetTitle className="font-heading text-xl font-bold">{t("deleteTitle")}</SheetTitle>
           <SheetDescription>{t("deleteSubtitle", { name: group.name })}</SheetDescription>
         </SheetHeader>
 

@@ -103,24 +103,35 @@
   },
   "Hero": {
     "badge": "Frictionless file transfer",
+    "tag": "No account · Open source",
     "titleStart": "Share with a",
     "titleHighlight": "code.",
     "description": "Flick generates a short code your contact enters to download. No account required.",
+    "copy": "Copy",
+    "copied": "Copied",
     "ctaSend": "Send a file",
     "ctaReceive": "Receive with a code"
   },
   "Features": {
+    "instantTag": "Instant",
     "instantTitle": "Instant upload",
     "instantBody": "Drop your files and get a code in seconds.",
+    "receiveTag": "Simple",
     "receiveTitle": "Simple reception",
     "receiveBody": "Enter the code shared by your contact to download.",
+    "expirationTag": "Ephemeral",
     "expirationTitle": "Controlled expiry",
     "expirationBody": "Set a lifetime: 1h, 24h, 7 days or custom.",
+    "protectionTag": "Secure",
     "protectionTitle": "Optional protection",
     "protectionBody": "Add a password to secure access to your files."
   },
+  "Footer": {
+    "rights": "Open source · Self-host · © 2026"
+  },
   "Send": {
     "back": "Back",
+    "eyebrow": "Send",
     "title": "Send files",
     "description": "Drop your files and configure sharing options.",
     "dropTitle": "Drop your files here",
@@ -163,6 +174,7 @@
   },
   "SendSuccess": {
     "back": "New transfer",
+    "eyebrow": "Sent",
     "title": "Your code is ready",
     "description": "Share this code (or the link) with your recipient.",
     "codeLabel": "Share code",
@@ -174,6 +186,7 @@
   },
   "Receive": {
     "back": "Back",
+    "eyebrow": "Receive",
     "title": "Receive a file",
     "description": "Enter the code shared by the sender.",
     "placeholder": "Ex: hello-world-123",
@@ -182,6 +195,7 @@
   },
   "ReceiveCode": {
     "back": "Change code",
+    "eyebrow": "Download",
     "title": "File(s) available",
     "subtitle": "Code {code}",
     "download": "Download",
@@ -347,7 +361,8 @@
     "roleAdmin": "Admin"
   },
   "MyGroups": {
-    "title": "My groups",
+    "eyebrow": "Workspace",
+    "title": "Workspace",
     "subtitle": "The groups you belong to, and your role in each.",
     "emptyTitle": "No groups",
     "emptyDescription": "You don't belong to any group yet.",
@@ -415,7 +430,7 @@
     "eyebrow": "How it works",
     "title": "Three steps, zero friction.",
     "step1Title": "Drop",
-    "step1Body": "Drag your files into Flick. We handle the encrypted upload.",
+    "step1Body": "Drag your files into Flick.",
     "step2Title": "Share the code",
     "step2Body": "A short code is generated. Copy it, say it, send it in a message.",
     "step3Title": "Download",
@@ -430,10 +445,11 @@
     "headerTitle": "Dashboard",
     "groupAdministration": "Administration",
     "groupGroup": "Group",
+    "workspace": "Workspace",
     "overview": "Overview",
     "users": "Users",
     "groups": "Groups",
-    "myGroups": "My groups",
+    "myGroups": "Workspace",
     "settings": "Settings",
     "toggleTheme": "Toggle theme"
   },
@@ -445,7 +461,6 @@
     "activeLinks": "Active links",
     "storageUsed": "Storage used",
     "usersCount": "Users",
-    "cardPlaceholder": "Data will be wired to the Go API.",
     "activeCodes": "Active codes",
     "activeCodesValue": "Active codes: {count}"
   },

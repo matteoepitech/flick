@@ -95,11 +95,7 @@ export function SettingsForm() {
   }
 
   if (loadError) {
-    const details = [
-      `GET ${loadError.url}`,
-      loadError.status ? `HTTP ${loadError.status}` : null,
-      loadError.message,
-    ]
+    const details = [`GET ${loadError.url}`, loadError.status ? `HTTP ${loadError.status}` : null, loadError.message]
       .filter(Boolean)
       .join("\n")
 
@@ -127,9 +123,7 @@ export function SettingsForm() {
       <div className="flex items-center justify-end gap-3">
         {saveError && <span className="text-sm text-destructive">{saveError}</span>}
         {!saveError && savedAt && (
-          <span className="text-sm text-muted-foreground">
-            {t("savedAt", { time: savedAt })}
-          </span>
+          <span className="text-sm text-muted-foreground">{t("savedAt", { time: savedAt })}</span>
         )}
         <Button type="submit" disabled={saving}>
           {saving ? t("saving") : t("save")}
@@ -153,18 +147,14 @@ function SectionCard({
     <Card>
       <CardHeader>
         <CardTitle>{t(`sections.${section.id}.title`)}</CardTitle>
-        {section.hasDescription && (
-          <CardDescription>{t(`sections.${section.id}.description`)}</CardDescription>
-        )}
+        {section.hasDescription && <CardDescription>{t(`sections.${section.id}.description`)}</CardDescription>}
       </CardHeader>
-      <CardContent className="space-y-5">
+      <CardContent className="divide-y divide-border py-0">
         {section.fields.map((field) => {
           if (field.dependsOn && values[field.dependsOn.key] !== field.dependsOn.equals) {
             return null
           }
-          return (
-            <FieldRow key={field.key} field={field} value={values[field.key]} onUpdate={onUpdate} />
-          )
+          return <FieldRow key={field.key} field={field} value={values[field.key]} onUpdate={onUpdate} />
         })}
       </CardContent>
     </Card>
@@ -184,23 +174,27 @@ function FieldRow({
   const label = t(`fields.${field.key}.label`)
   const description = field.hasDescription ? t(`fields.${field.key}.description`) : null
   const disabled = Boolean(field.notAvailable)
-  const wrapperClass = disabled ? "opacity-50 pointer-events-none select-none" : ""
+  const wrapperClass = disabled ? "pointer-events-none opacity-50 select-none" : ""
   const unavailableBadge = disabled ? (
-    <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+    <span className="ml-2 rounded-full bg-muted px-2 py-0.5 font-heading text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
       {t("notAvailable")}
     </span>
   ) : null
 
+  const labelBlock = (
+    <div className="space-y-1 sm:flex-1">
+      <Label htmlFor={field.key} className="font-medium">
+        {label}
+        {unavailableBadge}
+      </Label>
+      {description && <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>}
+    </div>
+  )
+
   if (field.type === "switch") {
     return (
-      <div className={`flex items-center justify-between gap-4 ${wrapperClass}`}>
-        <div className="space-y-0.5">
-          <Label htmlFor={field.key}>
-            {label}
-            {unavailableBadge}
-          </Label>
-          {description && <p className="text-sm text-muted-foreground">{description}</p>}
-        </div>
+      <div className={`flex items-center justify-between gap-4 py-5 first:pt-5 last:pb-5 ${wrapperClass}`}>
+        {labelBlock}
         <Switch
           id={field.key}
           checked={Boolean(value)}
@@ -212,49 +206,45 @@ function FieldRow({
   }
 
   return (
-    <div className={`space-y-2 ${wrapperClass}`}>
-      <Label htmlFor={field.key}>
-        {label}
-        {unavailableBadge}
-      </Label>
-      {description && <p className="text-sm text-muted-foreground">{description}</p>}
-      {field.type === "textarea" ? (
-        <Textarea
-          id={field.key}
-          value={String(value ?? "")}
-          placeholder={field.placeholder}
-          disabled={disabled}
-          onChange={(e) => onUpdate(field.key, e.target.value)}
-        />
-      ) : field.type === "select" ? (
-        <select
-          id={field.key}
-          value={String(value ?? "")}
-          disabled={disabled}
-          onChange={(e) => onUpdate(field.key, e.target.value)}
-          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {field.options?.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-      ) : (
-        <Input
-          id={field.key}
-          type={field.type === "number" ? "number" : "text"}
-          value={String(value ?? "")}
-          placeholder={field.placeholder}
-          disabled={disabled}
-          onChange={(e) =>
-            onUpdate(
-              field.key,
-              field.type === "number" ? Number(e.target.value) : e.target.value,
-            )
-          }
-        />
-      )}
+    <div
+      className={`flex flex-col gap-3 py-5 first:pt-5 last:pb-5 sm:flex-row sm:items-start sm:justify-between sm:gap-6 ${wrapperClass}`}
+    >
+      {labelBlock}
+      <div className="sm:w-64 sm:shrink-0">
+        {field.type === "textarea" ? (
+          <Textarea
+            id={field.key}
+            value={String(value ?? "")}
+            placeholder={field.placeholder}
+            disabled={disabled}
+            onChange={(e) => onUpdate(field.key, e.target.value)}
+          />
+        ) : field.type === "select" ? (
+          <select
+            id={field.key}
+            value={String(value ?? "")}
+            disabled={disabled}
+            onChange={(e) => onUpdate(field.key, e.target.value)}
+            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {field.options?.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <Input
+            id={field.key}
+            type={field.type === "number" ? "number" : "text"}
+            value={String(value ?? "")}
+            placeholder={field.placeholder}
+            disabled={disabled}
+            className={field.type === "number" ? "tabular-nums" : undefined}
+            onChange={(e) => onUpdate(field.key, field.type === "number" ? Number(e.target.value) : e.target.value)}
+          />
+        )}
+      </div>
     </div>
   )
 }
@@ -284,7 +274,7 @@ function SettingsFormSkeleton() {
                   {field.hasDescription && <Skeleton className="h-3 w-72 max-w-full" />}
                   <Skeleton className="h-9 w-full" />
                 </div>
-              ),
+              )
             )}
           </CardContent>
         </Card>

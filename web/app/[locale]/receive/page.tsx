@@ -33,7 +33,7 @@ export default function ReceivePage() {
       </Link>
 
       <div className="w-full text-center">
-        <h1 className="text-3xl font-bold tracking-tight md:text-4xl">{t("title")}</h1>
+        <h1 className="font-heading text-3xl font-bold tracking-tight md:text-4xl">{t("title")}</h1>
         <p className="mt-3 text-base text-muted-foreground">{t("description")}</p>
 
         <form onSubmit={handleSubmit} className="mt-10 flex flex-col gap-5">
@@ -44,7 +44,7 @@ export default function ReceivePage() {
             autoFocus
             spellCheck={false}
             aria-label={t("title")}
-            className="h-16 text-center font-mono text-lg tracking-[0.15em] md:text-xl"
+            className="h-16 text-center font-mono text-lg tracking-[0.15em] text-primary md:text-xl"
           />
 
           <Button

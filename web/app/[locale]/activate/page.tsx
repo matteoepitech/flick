@@ -14,8 +14,6 @@ import { loadSession } from "@/lib/auth"
 import { Link } from "@/i18n/navigation"
 import type { AuthSession } from "@/lib/api"
 
-// useSearchParams() forces this subtree to render on the client, so it must sit
-// behind a Suspense boundary to keep the route prerenderable at build time.
 export default function ActivatePage() {
   return (
     <Suspense>
@@ -35,8 +33,6 @@ function ActivateForm() {
   const [error, setError] = useState<string | null>(null)
   const [approved, setApproved] = useState(false)
 
-  // Resolve the signed-in session and pre-fill the code from the URL (the CLI
-  // opens /activate?code=<user_code>).
   useEffect(() => {
     setSession(loadSession())
     setReady(true)
@@ -74,20 +70,18 @@ function ActivateForm() {
       </Link>
 
       <div className="w-full text-center">
-        <h1 className="text-3xl font-bold tracking-tight md:text-4xl">{t("title")}</h1>
-        <p className="mt-3 text-base text-muted-foreground">
-          {t("description")}
-        </p>
+        <h1 className="font-heading text-3xl font-bold tracking-tight md:text-4xl">{t("title")}</h1>
+        <p className="mt-3 text-base text-muted-foreground">{t("description")}</p>
       </div>
 
       <Card className="mt-10 w-full gap-6 p-6">
         {!ready ? null : approved ? (
           <div className="flex flex-col items-center gap-3 text-center">
-            <CheckCircle2 className="size-12 text-primary" />
-            <p className="text-lg font-semibold">{t("approvedTitle")}</p>
-            <p className="text-sm text-muted-foreground">
-              {t("approvedBody")}
-            </p>
+            <span className="flex size-12 items-center justify-center rounded-full bg-success/12 text-success">
+              <CheckCircle2 className="size-6" />
+            </span>
+            <p className="font-heading text-lg font-bold">{t("approvedTitle")}</p>
+            <p className="text-sm text-muted-foreground">{t("approvedBody")}</p>
           </div>
         ) : !session ? (
           <div className="flex flex-col items-center gap-3 text-center">
@@ -110,11 +104,18 @@ function ActivateForm() {
                 autoComplete="off"
                 autoFocus
                 spellCheck={false}
+                className="font-mono tracking-[0.1em]"
               />
-              <p className="text-xs text-muted-foreground">{t("signedInAs", { email: session.user.email })}</p>
+              <p className="font-mono text-xs text-muted-foreground">
+                {t("signedInAs", { email: session.user.email })}
+              </p>
             </div>
 
-            {error && <p className="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</p>}
+            {error && (
+              <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                {error}
+              </p>
+            )}
 
             <Button type="submit" size="lg" className="h-12 w-full text-base font-semibold" disabled={!canSubmit}>
               <MonitorSmartphone className="size-5" />

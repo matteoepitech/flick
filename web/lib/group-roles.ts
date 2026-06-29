@@ -8,7 +8,7 @@ export const GROUP_ROLES: GroupRole[] = ["member", "maintainer", "owner"]
 export const GROUP_ROLE_BADGE: Record<GroupRole, string> = {
   owner: "bg-amber-500/15 text-amber-600 border-amber-500/30 dark:text-amber-400",
   maintainer: "bg-sky-500/15 text-sky-600 border-sky-500/30 dark:text-sky-400",
-  member: "bg-muted text-muted-foreground border-transparent",
+  member: "bg-muted text-foreground/80 border-border",
 }
 
 // The matching dot colour used in role pickers.

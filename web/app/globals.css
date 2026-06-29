@@ -5,8 +5,10 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-heading: var(--font-sans);
+  --font-heading: var(--font-heading);
   --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -24,6 +26,8 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -47,73 +51,85 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/*
+ * Tuned light theme. Same warm orange identity as the dark design, on a clean
+ * neutral surface so the toggle stays useful without diluting the brand.
+ */
 :root {
   --background: #ffffff;
-  --foreground: #17191c;
+  --foreground: #18181b;
   --card: #ffffff;
-  --card-foreground: #17191c;
+  --card-foreground: #18181b;
   --popover: #ffffff;
-  --popover-foreground: #17191c;
-  --primary: #de772f;
+  --popover-foreground: #18181b;
+  --primary: #e8843a;
   --primary-foreground: #ffffff;
-  --secondary: #f5f5f5;
-  --secondary-foreground: #17191c;
-  --muted: #f5f5f5;
-  --muted-foreground: #6b6f75;
-  --accent: #fbe7d4;
-  --accent-foreground: #de772f;
-  --destructive: #af071c;
-  --border: #e5e5e5;
-  --input: #e5e5e5;
-  --ring: #de772f;
-  --chart-1: #de772f;
-  --chart-2: #af071c;
-  --chart-3: #313332;
-  --chart-4: #17191c;
-  --chart-5: #181a1e;
-  --radius: 0.625rem;
-  --sidebar: #f5f5f5;
-  --sidebar-foreground: #17191c;
-  --sidebar-primary: #de772f;
+  --secondary: #f4f4f5;
+  --secondary-foreground: #27272a;
+  --muted: #f5f5f6;
+  --muted-foreground: #71717a;
+  --accent: #fbecdd;
+  --accent-foreground: #b25c18;
+  --destructive: #dc2626;
+  --success: #15a06b;
+  --success-foreground: #ffffff;
+  --border: #e8e8eb;
+  --input: #dededf;
+  --ring: #e8843a;
+  --chart-1: #e8843a;
+  --chart-2: #15a06b;
+  --chart-3: #7fb0ec;
+  --chart-4: #a78bfa;
+  --chart-5: #ec7fb2;
+  --radius: 0.75rem;
+  --sidebar: #fafafa;
+  --sidebar-foreground: #18181b;
+  --sidebar-primary: #e8843a;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #fbe7d4;
-  --sidebar-accent-foreground: #de772f;
-  --sidebar-border: #e5e5e5;
-  --sidebar-ring: #de772f;
+  --sidebar-accent: #f0f0f2;
+  --sidebar-accent-foreground: #18181b;
+  --sidebar-border: #e8e8eb;
+  --sidebar-ring: #e8843a;
 }
 
+/*
+ * Dark theme — the primary, faithful to the imported Flick design.
+ * Near-black canvas (#0A0A0B), faint elevated surfaces, warm orange accent.
+ */
 .dark {
-  --background: #17191c;
-  --foreground: #f5f5f5;
-  --card: #181a1e;
-  --card-foreground: #f5f5f5;
-  --popover: #181a1e;
-  --popover-foreground: #f5f5f5;
-  --primary: #de772f;
-  --primary-foreground: #17191c;
-  --secondary: #313332;
-  --secondary-foreground: #f5f5f5;
-  --muted: #313332;
-  --muted-foreground: #a1a4a8;
-  --accent: #3a2516;
-  --accent-foreground: #de772f;
-  --destructive: #af071c;
-  --border: rgba(255, 255, 255, 0.1);
-  --input: rgba(255, 255, 255, 0.15);
-  --ring: #de772f;
-  --chart-1: #de772f;
-  --chart-2: #af071c;
-  --chart-3: #313332;
-  --chart-4: #f5f5f5;
-  --chart-5: #181a1e;
-  --sidebar: #181a1e;
-  --sidebar-foreground: #f5f5f5;
-  --sidebar-primary: #de772f;
-  --sidebar-primary-foreground: #17191c;
-  --sidebar-accent: #3a2516;
-  --sidebar-accent-foreground: #de772f;
-  --sidebar-border: rgba(255, 255, 255, 0.1);
-  --sidebar-ring: #de772f;
+  --background: #0a0a0b;
+  --foreground: #f4f4f5;
+  --card: #0e0e11;
+  --card-foreground: #f4f4f5;
+  --popover: #121216;
+  --popover-foreground: #f4f4f5;
+  --primary: #e8843a;
+  --primary-foreground: #0a0a0b;
+  --secondary: #1b1b1f;
+  --secondary-foreground: #e4e4e7;
+  --muted: #121216;
+  --muted-foreground: #8a8a93;
+  --accent: #16110b;
+  --accent-foreground: #f4f4f5;
+  --destructive: #f0616d;
+  --success: #10b981;
+  --success-foreground: #0a0a0b;
+  --border: #1c1c20;
+  --input: #2a2a30;
+  --ring: #e8843a;
+  --chart-1: #e8843a;
+  --chart-2: #10b981;
+  --chart-3: #7fb0ec;
+  --chart-4: #a78bfa;
+  --chart-5: #ec7fb2;
+  --sidebar: #0c0c0d;
+  --sidebar-foreground: #f4f4f5;
+  --sidebar-primary: #e8843a;
+  --sidebar-primary-foreground: #0a0a0b;
+  --sidebar-accent: #1c1c22;
+  --sidebar-accent-foreground: #f4f4f5;
+  --sidebar-border: #141417;
+  --sidebar-ring: #e8843a;
 }
 
 @layer base {
@@ -122,8 +138,71 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "ss01", "cv01";
   }
   html {
     @apply font-sans;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  /* Headings inherit the display face by default. */
+  h1, h2, h3 {
+    font-family: var(--font-heading), sans-serif;
+    letter-spacing: -0.02em;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--primary) 30%, transparent);
   }
 }
+
+@layer utilities {
+  /* Thin, restrained scrollbars matching the dark surfaces. */
+  .flk-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .flk-scroll::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  .flk-scroll::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 8px;
+    border: 3px solid var(--background);
+  }
+  .flk-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+/*
+ * asciinema-player "flick" theme — matches the terminal mock used on the
+ * landing. The .cast uses truecolor for the highlighted bits; this just sets a
+ * sane default palette + our dark terminal background.
+ */
+.asciinema-player-theme-flick {
+  --term-color-foreground: #e6edf3;
+  --term-color-background: #0d1117;
+  --term-color-0: #0d1117;
+  --term-color-1: #ff7b72;
+  --term-color-2: #3fb950;
+  --term-color-3: #d29922;
+  --term-color-4: #58a6ff;
+  --term-color-5: #bc8cff;
+  --term-color-6: #39c5cf;
+  --term-color-7: #b1bac4;
+  --term-color-8: #6e7681;
+  --term-color-9: #ffa198;
+  --term-color-10: #56d364;
+  --term-color-11: #e3b341;
+  --term-color-12: #79c0ff;
+  --term-color-13: #d2a8ff;
+  --term-color-14: #56d4dd;
+  --term-color-15: #f0f6fc;
+}
+
+/* Let the surrounding window chrome own the frame; the player fills it flat. */
+.asciinema-player-theme-flick.ap-player {
+  background: transparent;
+}
+

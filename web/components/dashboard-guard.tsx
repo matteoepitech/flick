@@ -7,10 +7,6 @@ import { loadSession, verifySession } from "@/lib/auth"
 import { canAccessDashboard } from "@/lib/permissions"
 import { useRouter } from "@/i18n/navigation"
 
-// DashboardGuard: Client-side gate for the dashboard. Reads the stored session,
-// confirms it still maps to a real account, and only renders the dashboard for
-// users whose role grants access. Anonymous visitors and ghost (deleted-account)
-// sessions go to login; signed-in users without permission go back home.
 export function DashboardGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const [allowed, setAllowed] = useState<boolean | null>(null)
@@ -35,8 +31,7 @@ export function DashboardGuard({ children }: { children: React.ReactNode }) {
         router.replace("/login")
         return
       }
-      // verifySession refreshes the stored session, so re-read it to gate on the
-      // latest memberships rather than the copy loaded before the round-trip.
+
       const fresh = loadSession() ?? session
       if (!canAccessDashboard(fresh.user)) {
         router.replace("/")
@@ -51,8 +46,6 @@ export function DashboardGuard({ children }: { children: React.ReactNode }) {
     }
   }, [router])
 
-  // Render nothing while we resolve the session to avoid flashing the dashboard
-  // to users who will be redirected away.
   if (!allowed) return null
 
   return <>{children}</>

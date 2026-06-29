@@ -2,14 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useLocale, useTranslations } from "next-intl"
-import { Loader2, Search } from "lucide-react"
+import { Loader2, Search, X } from "lucide-react"
 
 import { ErrorState } from "@/components/error-state"
 import { GroupFiles } from "@/components/group-files"
+import { RoleSelect } from "@/components/role-select"
 import { UserAvatar } from "@/components/user-avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -58,8 +58,8 @@ export function MyGroupManager({ groupId }: { groupId: string }) {
   const membership = session?.user.groups.find((g) => g.id === groupId)
   const isMember = membership !== undefined
   const canManageGroup = canManage(membership)
-  // Only the owner (or a global admin) may change roles; maintainers cannot.
-  const canEditRoles = membership?.role === "owner" || session?.user.role === "admin"
+
+  const canEditRoles = membership?.role === "owner"
 
   useEffect(() => {
     if (!ready || !session || !canManageGroup) return
@@ -79,7 +79,6 @@ export function MyGroupManager({ groupId }: { groupId: string }) {
 
   const memberIds = useMemo(() => new Set(members.map((m) => m.id)), [members])
 
-  // Search the directory as the user types (server-side), hiding existing members.
   useEffect(() => {
     if (!session) return
     const q = query.trim()
@@ -90,9 +89,7 @@ export function MyGroupManager({ groupId }: { groupId: string }) {
     const ctrl = new AbortController()
     searchUsers(session.token, q, ctrl.signal)
       .then((found) => setResults(found.filter((u) => !memberIds.has(u.id))))
-      .catch(() => {
-        // Ignore search errors; the field stays usable.
-      })
+      .catch(() => {})
     return () => ctrl.abort()
   }, [query, session, memberIds])
 
@@ -184,21 +181,23 @@ export function MyGroupManager({ groupId }: { groupId: string }) {
   return (
     <div className="space-y-6">
       <div>
-        <div className="flex items-center gap-2">
-          <h2 className="text-2xl font-semibold tracking-tight">{membership.name}</h2>
-          <Badge className={cn("justify-center", GROUP_ROLE_BADGE[membership.role])}>
+        <p className="mb-2 font-heading text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">
+          {t("eyebrow")}
+        </p>
+        <div className="flex items-center gap-3">
+          <h2 className="font-heading text-3xl font-bold tracking-tight">{membership.name}</h2>
+          <Badge className={cn("justify-center rounded-full", GROUP_ROLE_BADGE[membership.role])}>
             {t(`role_${membership.role}`)}
           </Badge>
         </div>
-        <p className="text-muted-foreground">{t("detailSubtitle")}</p>
       </div>
 
       <GroupFiles groupId={groupId} token={session.token} canManage={canManageGroup} />
 
       {canManageGroup && (
         <>
-          <div className="space-y-1">
-            <label className="text-sm font-medium" htmlFor="add-member">
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-foreground" htmlFor="add-member">
               {t("addMemberLabel")}
             </label>
             <div className="relative max-w-sm">
@@ -212,7 +211,7 @@ export function MyGroupManager({ groupId }: { groupId: string }) {
                 autoComplete="off"
               />
               {query.trim().length >= 2 && (
-                <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-md border bg-popover shadow-md">
+                <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-xl border border-border bg-popover shadow-md">
                   {results.length === 0 ? (
                     <p className="px-3 py-2 text-sm text-muted-foreground">{t("noResults")}</p>
                   ) : (
@@ -227,7 +226,7 @@ export function MyGroupManager({ groupId }: { groupId: string }) {
                         <UserAvatar name={u.username} className="h-7 w-7" />
                         <span className="flex flex-col">
                           <span className="font-medium">{u.username}</span>
-                          <span className="text-xs text-muted-foreground">{u.email}</span>
+                          <span className="font-mono text-xs text-muted-foreground">{u.email}</span>
                         </span>
                         {addingId === u.id && <Loader2 className="ml-auto h-4 w-4 animate-spin" />}
                       </button>
@@ -240,7 +239,7 @@ export function MyGroupManager({ groupId }: { groupId: string }) {
 
           {actionError && <p className="text-sm text-destructive">{actionError}</p>}
 
-          <div className="rounded-md border">
+          <div className="overflow-hidden rounded-xl border border-border bg-card">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -261,59 +260,58 @@ export function MyGroupManager({ groupId }: { groupId: string }) {
                 ) : (
                   members.map((member) => {
                     const busy = pending.has(member.id)
-                    // A maintainer/owner cannot remove or re-role themselves; the API
-                    // enforces this, so we hide the controls on their own row too.
+
                     const isSelf = member.id === session.user.id
                     return (
                       <TableRow key={member.id}>
                         <TableCell className="font-medium">
-                          <span className="inline-flex items-center gap-2">
+                          <span className="inline-flex items-center gap-2.5">
                             <UserAvatar name={member.username} className="h-7 w-7" />
                             {member.username}
+                            {isSelf && (
+                              <span className="rounded-full bg-primary/12 px-2 py-0.5 font-heading text-[10px] font-semibold tracking-wide text-primary uppercase">
+                                {t("you")}
+                              </span>
+                            )}
                           </span>
                         </TableCell>
-                        <TableCell className="text-muted-foreground">{member.email}</TableCell>
+                        <TableCell className="font-mono text-xs text-muted-foreground">{member.email}</TableCell>
                         <TableCell>
                           {canEditRoles && !isSelf ? (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild disabled={busy}>
-                                <button type="button" className="disabled:opacity-50" aria-label={t("colGroupRole")}>
-                                  <Badge
-                                    className={cn(
-                                      "w-32 cursor-pointer justify-center",
-                                      GROUP_ROLE_BADGE[member.groupRole]
-                                    )}
-                                  >
-                                    {busy && <Loader2 className="h-3 w-3 animate-spin" />}
-                                    {t(`role_${member.groupRole}`)}
-                                  </Badge>
-                                </button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="start">
-                                {GROUP_ROLES.map((role) => (
-                                  <DropdownMenuItem key={role} onClick={() => handleRole(member, role)}>
-                                    <span className={cn("mr-2 h-2 w-2 rounded-full", GROUP_ROLE_DOT[role])} />
-                                    {t(`role_${role}`)}
-                                  </DropdownMenuItem>
-                                ))}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            <RoleSelect
+                              value={member.groupRole}
+                              options={GROUP_ROLES.map((role) => ({
+                                value: role,
+                                label: t(`role_${role}`),
+                                badgeClass: GROUP_ROLE_BADGE[role],
+                                dotClass: GROUP_ROLE_DOT[role],
+                              }))}
+                              onSelect={(role) => handleRole(member, role)}
+                              busy={busy}
+                              ariaLabel={t("colGroupRole")}
+                            />
                           ) : (
-                            <Badge className={cn("w-32 justify-center", GROUP_ROLE_BADGE[member.groupRole])}>
+                            <Badge
+                              className={cn("w-32 justify-center rounded-full", GROUP_ROLE_BADGE[member.groupRole])}
+                            >
                               {t(`role_${member.groupRole}`)}
                             </Badge>
                           )}
                         </TableCell>
-                        <TableCell className="text-muted-foreground">
+                        <TableCell className="font-mono text-xs text-muted-foreground">
                           {member.createdAt ? new Date(member.createdAt).toLocaleDateString(locale) : "—"}
                         </TableCell>
                         <TableCell className="text-right">
-                          {isSelf ? (
-                            <span className="text-sm text-muted-foreground">{t("you")}</span>
-                          ) : (
-                            <Button variant="ghost" size="sm" disabled={busy} onClick={() => handleRemove(member)}>
-                              {busy && <Loader2 className="animate-spin" />}
-                              {t("removeAction")}
+                          {!isSelf && (
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              className="text-muted-foreground hover:text-destructive"
+                              disabled={busy}
+                              onClick={() => handleRemove(member)}
+                              aria-label={t("removeAction")}
+                            >
+                              {busy ? <Loader2 className="animate-spin" /> : <X />}
                             </Button>
                           )}
                         </TableCell>

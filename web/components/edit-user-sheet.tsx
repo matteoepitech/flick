@@ -34,8 +34,6 @@ export function EditUserSheet({ user, token, onUpdated }: EditUserSheetProps) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Reset the form to the current user each time the sheet opens, so a cancelled
-  // edit never leaks into the next one.
   function handleOpenChange(next: boolean) {
     if (next) {
       setUsername(user.username)
@@ -49,8 +47,6 @@ export function EditUserSheet({ user, token, onUpdated }: EditUserSheetProps) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
 
-    // Build a partial payload: only fields that actually changed. An empty
-    // password means "leave it unchanged".
     const changes: UserUpdate = {}
     if (username.trim() && username.trim() !== user.username) changes.username = username.trim()
     if (email.trim() && email.trim() !== user.email) changes.email = email.trim()
@@ -83,7 +79,7 @@ export function EditUserSheet({ user, token, onUpdated }: EditUserSheetProps) {
       </SheetTrigger>
       <SheetContent>
         <SheetHeader>
-          <SheetTitle>{t("editTitle")}</SheetTitle>
+          <SheetTitle className="font-heading text-xl font-bold">{t("editTitle")}</SheetTitle>
           <SheetDescription>{t("editSubtitle", { username: user.username })}</SheetDescription>
         </SheetHeader>
 

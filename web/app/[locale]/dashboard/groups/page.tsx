@@ -8,10 +8,7 @@ export default function GroupsPage() {
   return (
     <SectionGuard section="groups">
       <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight">{t("title")}</h2>
-          <p className="text-muted-foreground">{t("subtitle")}</p>
-        </div>
+        <h2 className="font-heading text-3xl font-bold tracking-tight">{t("title")}</h2>
         <GroupsManager />
       </div>
     </SectionGuard>

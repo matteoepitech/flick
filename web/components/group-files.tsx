@@ -38,7 +38,6 @@ interface GroupFilesProps {
   canManage: boolean
 }
 
-// One step in the explored path; an empty stack means the group root.
 interface Crumb {
   id: string
   name: string
@@ -50,7 +49,7 @@ export function GroupFiles({ groupId, token, canManage }: GroupFilesProps) {
 
   const [path, setPath] = useState<Crumb[]>([])
   const [data, setData] = useState<GroupExplore>({ folders: [], uploads: [] })
-  // Real file names per upload (resolved from /download/info), keyed by upload id.
+
   const [names, setNames] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -95,8 +94,6 @@ export function GroupFiles({ groupId, token, canManage }: GroupFilesProps) {
     return () => ctrl.abort()
   }, [])
 
-  // Resolve each transfer's real file names so the list shows them rather than
-  // the internal share code.
   useEffect(() => {
     if (data.uploads.length === 0) {
       setNames({})
@@ -212,7 +209,8 @@ export function GroupFiles({ groupId, token, canManage }: GroupFilesProps) {
     [token, groupId, reload, t]
   )
 
-  const overMaxExpiration = expiration.length > 0 && parseDurationMinutes(expiration) > parseDurationMinutes(maxExpiration)
+  const overMaxExpiration =
+    expiration.length > 0 && parseDurationMinutes(expiration) > parseDurationMinutes(maxExpiration)
 
   const handleSend = useCallback(async () => {
     if (staged.length === 0 || overMaxExpiration) return
@@ -257,15 +255,16 @@ export function GroupFiles({ groupId, token, canManage }: GroupFilesProps) {
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="text-lg font-semibold tracking-tight">{t("filesTitle")}</h3>
-        <p className="text-sm text-muted-foreground">{t("filesSubtitle")}</p>
+        <h3 className="font-heading text-xl font-bold tracking-tight">{t("filesTitle")}</h3>
       </div>
 
-      {/* Breadcrumb */}
-      <div className="flex flex-wrap items-center gap-1 text-sm">
+      <div className="flex flex-wrap items-center gap-1 font-mono text-sm">
         <button
           type="button"
-          className={cn("cursor-pointer hover:underline", path.length === 0 ? "font-medium" : "text-muted-foreground")}
+          className={cn(
+            "cursor-pointer hover:underline",
+            path.length === 0 ? "font-medium text-foreground" : "text-muted-foreground"
+          )}
           onClick={() => setPath([])}
         >
           {t("root")}
@@ -277,7 +276,7 @@ export function GroupFiles({ groupId, token, canManage }: GroupFilesProps) {
               type="button"
               className={cn(
                 "cursor-pointer hover:underline",
-                i === path.length - 1 ? "font-medium" : "text-muted-foreground"
+                i === path.length - 1 ? "font-medium text-foreground" : "text-muted-foreground"
               )}
               onClick={() => setPath((p) => p.slice(0, i + 1))}
             >
@@ -308,8 +307,8 @@ export function GroupFiles({ groupId, token, canManage }: GroupFilesProps) {
 
           <div
             className={cn(
-              "rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground transition-colors",
-              isDragging && "border-primary bg-accent"
+              "flex flex-col items-center gap-4 rounded-2xl border-2 border-dashed border-border bg-card/40 px-6 py-10 text-center transition-colors",
+              isDragging && "border-primary bg-primary/5"
             )}
             onDragOver={(e) => {
               e.preventDefault()
@@ -318,9 +317,11 @@ export function GroupFiles({ groupId, token, canManage }: GroupFilesProps) {
             onDragLeave={() => setIsDragging(false)}
             onDrop={handleDrop}
           >
-            <UploadIcon className="mx-auto mb-2 h-5 w-5" />
-            <p>{t("dropHint")}</p>
-            <div className="mt-3 flex justify-center gap-2">
+            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+              <UploadIcon className="h-5 w-5" />
+            </span>
+            <p className="text-sm text-muted-foreground">{t("dropHint")}</p>
+            <div className="flex justify-center gap-2">
               <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
                 {t("browseFiles")}
               </Button>
@@ -334,12 +335,22 @@ export function GroupFiles({ groupId, token, canManage }: GroupFilesProps) {
 
           {staged.length > 0 && (
             <div className="space-y-2">
-              <ul className="space-y-1">
+              <ul className="space-y-2">
                 {staged.map((item) => (
-                  <li key={item.id} className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
-                    {item.isFolder ? <Folder className="h-4 w-4" /> : <FileIcon className="h-4 w-4" />}
+                  <li
+                    key={item.id}
+                    className="flex items-center gap-3 rounded-xl border border-border px-3 py-2.5 text-sm"
+                  >
+                    <span
+                      className={cn(
+                        "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+                        item.isFolder ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                      )}
+                    >
+                      {item.isFolder ? <Folder className="h-4 w-4" /> : <FileIcon className="h-4 w-4" />}
+                    </span>
                     <span className="truncate font-medium">{item.name}</span>
-                    <span className="ml-auto text-xs text-muted-foreground">{formatBytes(item.size)}</span>
+                    <span className="ml-auto font-mono text-xs text-muted-foreground">{formatBytes(item.size)}</span>
                     <button
                       type="button"
                       aria-label={t("removeStaged")}
@@ -354,9 +365,7 @@ export function GroupFiles({ groupId, token, canManage }: GroupFilesProps) {
               </ul>
 
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-foreground">
-                  {t("expirationLabel")}
-                </label>
+                <label className="text-sm font-semibold text-foreground">{t("expirationLabel")}</label>
                 <ExpirationPicker value={expiration} onChange={setExpiration} maxExpiration={maxExpiration} />
                 <Button className="ml-auto" onClick={handleSend} disabled={sending}>
                   {sending ? <Loader2 className="animate-spin" /> : <UploadIcon />}
@@ -388,13 +397,18 @@ export function GroupFiles({ groupId, token, canManage }: GroupFilesProps) {
       ) : (
         <ul className="space-y-2">
           {data.folders.map((folder) => (
-            <li key={folder.id} className="flex items-center gap-3 rounded-md border px-3 py-2">
+            <li
+              key={folder.id}
+              className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2.5 transition-colors hover:bg-muted/60"
+            >
               <button
                 type="button"
-                className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-left"
+                className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left"
                 onClick={() => setPath((p) => [...p, { id: folder.id, name: folder.name }])}
               >
-                <Folder className="h-4 w-4 text-sky-500" />
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <Folder className="h-4 w-4" />
+                </span>
                 <span className="truncate text-sm font-medium">{folder.name}</span>
               </button>
               {canManage && (
@@ -415,21 +429,21 @@ export function GroupFiles({ groupId, token, canManage }: GroupFilesProps) {
             </li>
           ))}
           {data.uploads.map((upload) => (
-            <li key={upload.id} className="flex items-center gap-3 rounded-md border px-3 py-2">
-              <FileIcon className="h-4 w-4 text-muted-foreground" />
+            <li
+              key={upload.id}
+              className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2.5 transition-colors hover:bg-muted/60"
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                <FileIcon className="h-4 w-4" />
+              </span>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{names[upload.id] ?? upload.code}</p>
-                <p className="text-xs text-muted-foreground">
+                <p className="font-mono text-xs text-muted-foreground">
                   {t("sentBy", { user: upload.uploader })}
                   {upload.createdAt ? ` · ${new Date(upload.createdAt).toLocaleDateString(locale)}` : ""}
                 </p>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={busyId === upload.id}
-                onClick={() => handleDownload(upload.id, upload.code)}
-              >
+              <Button size="sm" disabled={busyId === upload.id} onClick={() => handleDownload(upload.id, upload.code)}>
                 {busyId === upload.id ? <Loader2 className="animate-spin" /> : <Download />}
                 {t("download")}
               </Button>

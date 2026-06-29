@@ -103,24 +103,35 @@
   },
   "Hero": {
     "badge": "Transfert de fichiers sans friction",
+    "tag": "Sans compte · Open source",
     "titleStart": "Partagez en un",
     "titleHighlight": "code.",
     "description": "Flick génère un code court que votre contact entre pour télécharger. Sans compte requis.",
+    "copy": "Copier",
+    "copied": "Copié",
     "ctaSend": "Envoyer un fichier",
     "ctaReceive": "Recevoir avec un code"
   },
   "Features": {
+    "instantTag": "Instantané",
     "instantTitle": "Envoi instantané",
     "instantBody": "Glissez vos fichiers et obtenez un code en quelques secondes.",
+    "receiveTag": "Simple",
     "receiveTitle": "Réception simple",
     "receiveBody": "Entrez le code partagé par votre contact pour télécharger.",
+    "expirationTag": "Éphémère",
     "expirationTitle": "Expiration maîtrisée",
     "expirationBody": "Définissez une durée de vie : 1h, 24h, 7 jours ou personnalisée.",
+    "protectionTag": "Sécurisé",
     "protectionTitle": "Protection optionnelle",
     "protectionBody": "Ajoutez un mot de passe pour sécuriser l'accès à vos fichiers."
   },
+  "Footer": {
+    "rights": "Open source · Auto-hébergé · © 2026"
+  },
   "Send": {
     "back": "Retour",
+    "eyebrow": "Envoyer",
     "title": "Envoyer des fichiers",
     "description": "Déposez vos fichiers et configurez les options de partage.",
     "dropTitle": "Glissez vos fichiers ici",
@@ -163,6 +174,7 @@
   },
   "SendSuccess": {
     "back": "Nouvel envoi",
+    "eyebrow": "Envoyé",
     "title": "Votre code est prêt",
     "description": "Partagez ce code (ou le lien) avec votre destinataire.",
     "codeLabel": "Code de partage",
@@ -174,6 +186,7 @@
   },
   "Receive": {
     "back": "Retour",
+    "eyebrow": "Réception",
     "title": "Recevoir un fichier",
     "description": "Entrez le code communiqué par l'expéditeur.",
     "placeholder": "Ex : hello-world-123",
@@ -182,6 +195,7 @@
   },
   "ReceiveCode": {
     "back": "Changer de code",
+    "eyebrow": "Téléchargement",
     "title": "Fichier(s) disponible(s)",
     "subtitle": "Code {code}",
     "download": "Télécharger",
@@ -347,7 +361,8 @@
     "roleAdmin": "Admin"
   },
   "MyGroups": {
-    "title": "Mes groupes",
+    "eyebrow": "Espace de travail",
+    "title": "Espace de travail",
     "subtitle": "Les groupes auxquels vous appartenez, et votre rôle dans chacun.",
     "emptyTitle": "Aucun groupe",
     "emptyDescription": "Vous n'appartenez encore à aucun groupe.",
@@ -415,7 +430,7 @@
     "eyebrow": "Comment ça marche",
     "title": "Trois étapes, zéro friction.",
     "step1Title": "Déposez",
-    "step1Body": "Glissez vos fichiers dans Flick. On s'occupe de l'upload chiffré.",
+    "step1Body": "Glissez vos fichiers dans Flick.",
     "step2Title": "Partagez le code",
     "step2Body": "Un code court est généré. Copiez-le, dictez-le, envoyez-le par message.",
     "step3Title": "Téléchargement",
@@ -430,10 +445,11 @@
     "headerTitle": "Tableau de bord",
     "groupAdministration": "Administration",
     "groupGroup": "Groupe",
+    "workspace": "Espace de travail",
     "overview": "Vue d'ensemble",
     "users": "Utilisateurs",
     "groups": "Groupes",
-    "myGroups": "Mes groupes",
+    "myGroups": "Espace de travail",
     "settings": "Paramètres",
     "toggleTheme": "Changer de thème"
   },
@@ -445,7 +461,6 @@
     "activeLinks": "Liens actifs",
     "storageUsed": "Stockage utilisé",
     "usersCount": "Utilisateurs",
-    "cardPlaceholder": "Les données seront connectées à l'API Go.",
     "activeCodes": "Codes actifs",
     "activeCodesValue": "Codes actifs : {count}"
   },
