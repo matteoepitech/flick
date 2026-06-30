@@ -9,7 +9,7 @@ package path
 
 import "os"
 
-// Unexported package-level paths. They are initialized exactly once in init().
+// Paths vars, they are initialized exactly once in init().
 var (
 	homeDir   string
 	flickDir  string
