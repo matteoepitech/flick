@@ -14,7 +14,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/Flick-Corp/flick/internal/api/code"
 	"github.com/Flick-Corp/flick/internal/api/database"
 	"github.com/Flick-Corp/flick/internal/api/identification"
@@ -29,6 +28,7 @@ import (
 	groupsadmin "github.com/Flick-Corp/flick/internal/api/routes/groups/admin"
 	"github.com/Flick-Corp/flick/internal/api/routes/users"
 	usersadmin "github.com/Flick-Corp/flick/internal/api/routes/users/admin"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // Constants
@@ -85,7 +85,7 @@ func Run(ctx context.Context) error {
 	mux.HandleFunc("/api/v1/download/info", files.DownloadInfoHandler(queries))
 	mux.HandleFunc("/api/v1/quota", files.QuotaHandler(queries))
 	mux.HandleFunc("/api/v1/configure", routes.SendServerConfig())
-	mux.HandleFunc("/api/v1/stats", routes.SendStats(queries))
+	mux.HandleFunc("/api/v1/stats", routes.ServerStatsHandler(queries))
 	mux.HandleFunc("/api/v1/user-configure", routes.SendServerUserConfig())
 	mux.HandleFunc("/api/v1/register", account.RegisterHandler(queries))
 	mux.HandleFunc("/api/v1/login", account.LoginHandler(queries))

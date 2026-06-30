@@ -197,7 +197,7 @@ func preFinishResponse(queries *database.Queries) func(tusd.HookEvent) (tusd.HTT
 		// .info sidecar (finalizeUpload already moved the archive out of the store).
 		rememberResult(hook.Upload.ID, shareCode)
 		cleanupArtifacts("", infoPath)
-		routes.IncUploads()
+		routes.IncrementStatUploads()
 
 		return tusd.HTTPResponse{}, nil
 	}

@@ -14,7 +14,6 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	codepkg "github.com/Flick-Corp/flick/internal/api/code"
 	"github.com/Flick-Corp/flick/internal/api/database"
 	"github.com/Flick-Corp/flick/internal/api/logging"
@@ -22,6 +21,7 @@ import (
 	"github.com/Flick-Corp/flick/internal/api/path"
 	"github.com/Flick-Corp/flick/internal/api/routes"
 	"github.com/Flick-Corp/flick/internal/api/routes/account"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // onDownloadFinished: When a download is done we do this.
@@ -190,6 +190,6 @@ func DownloadFileHandler(queries *database.Queries) http.HandlerFunc {
 		}
 
 		onDownloadFinished(code)
-		routes.IncDownloads()
+		routes.IncrementStatDownloads()
 	}
 }

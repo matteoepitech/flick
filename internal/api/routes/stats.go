@@ -8,15 +8,17 @@
 package routes
 
 import (
+	"context"
 	"encoding/json"
-	"io/fs"
 	"net/http"
-	"path/filepath"
+	"os"
 	"sync/atomic"
 	"time"
 
 	"github.com/Flick-Corp/flick/internal/api/code"
 	"github.com/Flick-Corp/flick/internal/api/database"
+	"github.com/Flick-Corp/flick/internal/api/logging"
+	"github.com/Flick-Corp/flick/internal/api/metadata"
 	"github.com/Flick-Corp/flick/internal/api/path"
 )
 
@@ -26,79 +28,121 @@ var (
 	totalDownloads atomic.Uint64
 )
 
-// IncUploads: Increment the total uploads counter.
-func IncUploads() {
+// IncrementStatUploads: Increment the total uploads counter at the Flick instance level.
+func IncrementStatUploads() {
 	totalUploads.Add(1)
 }
 
-// IncDownloads: Increment the total downloads counter.
-func IncDownloads() {
+// IncrementStatDownloads: Increment the total downloads counter at the Flick instance level.
+func IncrementStatDownloads() {
 	totalDownloads.Add(1)
 }
 
-// Uploads: Read the total uploads counter.
+// TotalStatUploads: Read the total uploads counter on the Flick instance.
 //
 // Returns:
 // - result1 (uint64): Total uploads.
-func Uploads() uint64 {
+func TotalStatUploads() uint64 {
 	return totalUploads.Load()
 }
 
-// Downloads: Read the total downloads counter.
+// TotalStatDownloads: Read the total downloads counter on the Flick instance.
 //
 // Retruns:
 // - result1(uint64): Total downloads.
-func Downloads() uint64 {
+func TotalStatDownloads() uint64 {
 	return totalDownloads.Load()
 }
 
-// storageUsed: Walk the data directory and sum the size of every stored file.
+// TotalStatUserCount: Read the total of user registered on the Flick instance.
+//
+// Params:
+// - queries (*database.Queries): The query engine.
+// - c (context.Context):	The context of the query.
 //
 // Returns:
-// - result1 (int64): Total bytes used by uploaded files.
-func storageUsed() int64 {
+// - result1 (int64): Total user (can return -1 if there is any error, no error is returned).
+func TotalStatUserCount(queries *database.Queries, c context.Context) int64 {
+	userCount, err := queries.CountUsers(c)
+	if err != nil {
+		userCount = -1
+	}
+	return userCount
+}
+
+// TotalStatStorageUsed: Walk the data directory and sum the size of every stored file at this moment on the Flick instance.
+//
+// Returns:
+// - result1 (int64): Total bytes used by uploaded files at this moment.
+func TotalStatStorageUsed() int64 {
 	var total int64
-	_ = filepath.WalkDir(path.GetDataDir(), func(_ string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
-			return nil
+
+	entries, err := os.ReadDir(path.GetDataDir())
+	if err != nil {
+		return -1
+	}
+	for _, entry := range entries {
+		if entry.IsDir() == false {
+			continue
 		}
-		if info, err := d.Info(); err == nil {
-			total += info.Size()
+
+		metadata, err := metadata.LoadMetadata(path.GetDataDir(), entry.Name())
+		if err != nil {
+			continue
 		}
-		return nil
-	})
+
+		total += metadata.FileZipSize
+	}
 	return total
 }
 
-// SendStats: Build the stats handler.
+// TotalStatActiveCodeCount: Read the total of active code at this moment on the Flick instance.
+//
+// Returns:
+// - result1 (uint64): Total cache active at this moment.
+func TotalStatActiveCodeCount() int {
+	return code.Cache.ItemCount()
+}
+
+// ServerStatsHandler: API endpoint to get informations about the Flick instance.
+// Currently returning:
+//   - Number of code actives
+//   - Total uploads
+//   - Total downloads
+//   - Number of users registered
+//   - Total storage used
 //
 // Params:
 // - queries (*database.Queries): The database queries.
 //
 // Returns:
 // - http.HandlerFunc: The handler function.
-func SendStats(queries *database.Queries) http.HandlerFunc {
+func ServerStatsHandler(queries *database.Queries) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
 			return
 		}
 
-		userCount, err := queries.CountUsers(r.Context())
-		if err != nil {
-			userCount = -1
-		}
-
 		payload := map[string]any{
 			"timestamp":      time.Now().UTC().Format(time.RFC3339),
-			"activeCodes":    code.Cache.ItemCount(),
-			"totalUploads":   Uploads(),
-			"totalDownloads": Downloads(),
-			"userCount":      userCount,
-			"storageBytes":   storageUsed(),
+			"activeCodes":    TotalStatActiveCodeCount(),
+			"totalUploads":   TotalStatUploads(),
+			"totalDownloads": TotalStatDownloads(),
+			"userCount":      TotalStatUserCount(queries, r.Context()),
+			"storageBytes":   TotalStatStorageUsed(),
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(payload)
+
+		data, err := json.Marshal(payload)
+		if err != nil {
+			logging.LogInfoError("Cannot encode stats response: %v", err)
+			WriteError(w, http.StatusInternalServerError, "Cannot encode response")
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(data)
 	}
 }
