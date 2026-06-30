@@ -1,11 +1,11 @@
 /*
 ** FLICK PROJECT, 2026
-** flick/internal/api/routes/account/auth
+** flick/internal/api/auth/auth
 ** File description:
 ** Shared authorization guards for the management routes.
  */
 
-package account
+package auth
 
 import (
 	"context"
@@ -15,12 +15,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Flick-Corp/flick/internal/api/database"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/Flick-Corp/flick/internal/api/database"
 )
 
-// TokenFromHeader: Extracts the bearer token from the Authorization header.
+// GetTokenFromHTTPRequest: Extracts the bearer token from the Authorization header.
 // Returns an empty string when the header is missing or malformed.
 //
 // Params:
@@ -28,7 +28,7 @@ import (
 //
 // Returns:
 // - result1 (string): The bearer token, or "" if absent.
-func TokenFromHeader(r *http.Request) string {
+func GetTokenFromHTTPRequest(r *http.Request) string {
 	const prefix = "Bearer "
 
 	header := r.Header.Get("Authorization")
@@ -39,7 +39,7 @@ func TokenFromHeader(r *http.Request) string {
 	return strings.TrimSpace(strings.TrimPrefix(header, prefix))
 }
 
-// Authenticate: Resolves a session token to its active user, without requiring
+// ResolveUser: Resolves a session token to its active user, without requiring
 // any particular role. It is the shared first step of every authorization gate.
 //
 // Params:
@@ -51,7 +51,7 @@ func TokenFromHeader(r *http.Request) string {
 // - result1 (database.User): The authenticated user.
 // - result2 (int): The HTTP status to return when err != nil (0 on success).
 // - result3 (error): A user-facing error, or nil on success.
-func Authenticate(ctx context.Context, queries *database.Queries, token string) (database.User, int, error) {
+func ResolveUser(ctx context.Context, queries *database.Queries, token string) (database.User, int, error) {
 	session, err := queries.GetSessionByToken(ctx, token)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -92,7 +92,7 @@ func Authenticate(ctx context.Context, queries *database.Queries, token string) 
 // - result2 (int): The HTTP status to return when err != nil (0 on success).
 // - result3 (error): A user-facing error, or nil when the user is an admin.
 func RequireAdmin(ctx context.Context, queries *database.Queries, token string) (database.User, int, error) {
-	user, status, err := Authenticate(ctx, queries, token)
+	user, status, err := ResolveUser(ctx, queries, token)
 	if err != nil {
 		return database.User{}, status, err
 	}
@@ -119,7 +119,7 @@ func RequireAdmin(ctx context.Context, queries *database.Queries, token string) 
 // - result2 (int): The HTTP status to return when err != nil (0 on success).
 // - result3 (error): A user-facing error, or nil when the user may manage the group.
 func RequireGroupMaintainer(ctx context.Context, queries *database.Queries, token string, groupID pgtype.UUID) (database.User, int, error) {
-	user, status, err := Authenticate(ctx, queries, token)
+	user, status, err := ResolveUser(ctx, queries, token)
 	if err != nil {
 		return database.User{}, status, err
 	}
@@ -134,13 +134,13 @@ func RequireGroupMaintainer(ctx context.Context, queries *database.Queries, toke
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return database.User{}, http.StatusForbidden, fmt.Errorf("You must manage this group")
+			return database.User{}, http.StatusForbidden, fmt.Errorf("You must be in this group to manage it")
 		}
 		return database.User{}, http.StatusInternalServerError, err
 	}
 
 	if role != database.GroupRoleMaintainer && role != database.GroupRoleOwner {
-		return database.User{}, http.StatusForbidden, fmt.Errorf("You must manage this group")
+		return database.User{}, http.StatusForbidden, fmt.Errorf("You must be in this group to manage it")
 	}
 
 	return user, http.StatusOK, nil
@@ -162,7 +162,7 @@ func RequireGroupMaintainer(ctx context.Context, queries *database.Queries, toke
 // - result2 (int): The HTTP status to return when err != nil (0 on success).
 // - result3 (error): A user-facing error, or nil when the user owns the group.
 func RequireGroupOwner(ctx context.Context, queries *database.Queries, token string, groupID pgtype.UUID) (database.User, int, error) {
-	user, status, err := Authenticate(ctx, queries, token)
+	user, status, err := ResolveUser(ctx, queries, token)
 	if err != nil {
 		return database.User{}, status, err
 	}
@@ -204,7 +204,7 @@ func RequireGroupOwner(ctx context.Context, queries *database.Queries, token str
 // - result2 (int): The HTTP status to return when err != nil (0 on success).
 // - result3 (error): A user-facing error, or nil when the user belongs to the group.
 func RequireGroupMember(ctx context.Context, queries *database.Queries, token string, groupID pgtype.UUID) (database.User, int, error) {
-	user, status, err := Authenticate(ctx, queries, token)
+	user, status, err := ResolveUser(ctx, queries, token)
 	if err != nil {
 		return database.User{}, status, err
 	}
@@ -213,13 +213,16 @@ func RequireGroupMember(ctx context.Context, queries *database.Queries, token st
 		return user, http.StatusOK, nil
 	}
 
-	if _, err := queries.GetRoleInGroup(ctx, database.GetRoleInGroupParams{
+	_, err = queries.GetRoleInGroup(ctx, database.GetRoleInGroupParams{
 		UserID:  user.ID,
 		GroupID: groupID,
-	}); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return database.User{}, http.StatusForbidden, fmt.Errorf("You must belong to this group")
-		}
+	})
+
+	if errors.Is(err, pgx.ErrNoRows) {
+		return database.User{}, http.StatusForbidden, fmt.Errorf("You must belong to this group")
+	}
+
+	if err != nil {
 		return database.User{}, http.StatusInternalServerError, err
 	}
 

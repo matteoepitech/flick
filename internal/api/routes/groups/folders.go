@@ -15,11 +15,11 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/Flick-Corp/flick/internal/api/auth"
 	codepkg "github.com/Flick-Corp/flick/internal/api/code"
 	"github.com/Flick-Corp/flick/internal/api/database"
 	"github.com/Flick-Corp/flick/internal/api/logging"
 	"github.com/Flick-Corp/flick/internal/api/routes"
-	"github.com/Flick-Corp/flick/internal/api/routes/account"
 	"github.com/go-playground/validator/v10"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -99,7 +99,7 @@ func ExploreGroupHandler(queries *database.Queries) http.HandlerFunc {
 			return
 		}
 
-		if _, status, err := account.RequireGroupMember(r.Context(), queries, account.TokenFromHeader(r), groupID); err != nil {
+		if _, status, err := auth.RequireGroupMember(r.Context(), queries, auth.GetTokenFromHTTPRequest(r), groupID); err != nil {
 			routes.WriteError(w, status, err.Error())
 			return
 		}
@@ -186,7 +186,7 @@ func CreateGroupFolderHandler(queries *database.Queries) http.HandlerFunc {
 			return
 		}
 
-		caller, status, err := account.RequireGroupMaintainer(r.Context(), queries, account.TokenFromHeader(r), groupID)
+		caller, status, err := auth.RequireGroupMaintainer(r.Context(), queries, auth.GetTokenFromHTTPRequest(r), groupID)
 		if err != nil {
 			routes.WriteError(w, status, err.Error())
 			return
@@ -268,7 +268,7 @@ func DeleteGroupFolderHandler(queries *database.Queries) http.HandlerFunc {
 			return
 		}
 
-		caller, status, err := account.RequireGroupMaintainer(r.Context(), queries, account.TokenFromHeader(r), groupID)
+		caller, status, err := auth.RequireGroupMaintainer(r.Context(), queries, auth.GetTokenFromHTTPRequest(r), groupID)
 		if err != nil {
 			routes.WriteError(w, status, err.Error())
 			return

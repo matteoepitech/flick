@@ -14,13 +14,13 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/Flick-Corp/flick/internal/api/auth"
 	codepkg "github.com/Flick-Corp/flick/internal/api/code"
 	"github.com/Flick-Corp/flick/internal/api/database"
 	"github.com/Flick-Corp/flick/internal/api/logging"
 	"github.com/Flick-Corp/flick/internal/api/metadata"
 	"github.com/Flick-Corp/flick/internal/api/path"
 	"github.com/Flick-Corp/flick/internal/api/routes"
-	"github.com/Flick-Corp/flick/internal/api/routes/account"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -60,7 +60,6 @@ func doDownloadMultipartForm(writer *multipart.Writer, entries []os.DirEntry, pa
 	for _, entry := range entries {
 		fullPath := path + "/" + entry.Name()
 		file, err := os.Open(fullPath)
-
 		if err != nil {
 			logging.LogInfoError("Cannot open file %q: %v", entry.Name(), err)
 			return err
@@ -130,7 +129,7 @@ func DownloadFileHandler(queries *database.Queries) http.HandlerFunc {
 				routes.WriteError(w, http.StatusNotFound, "Code not found")
 				return
 			}
-			if _, _, err := account.RequireGroupMember(r.Context(), queries, account.TokenFromHeader(r), groupID); err != nil {
+			if _, _, err := auth.RequireGroupMember(r.Context(), queries, auth.GetTokenFromHTTPRequest(r), groupID); err != nil {
 				routes.WriteError(w, http.StatusNotFound, "Code not found")
 				return
 			}

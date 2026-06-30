@@ -12,12 +12,12 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/Flick-Corp/flick/internal/api/auth"
 	codepkg "github.com/Flick-Corp/flick/internal/api/code"
 	"github.com/Flick-Corp/flick/internal/api/database"
 	"github.com/Flick-Corp/flick/internal/api/routes"
-	"github.com/Flick-Corp/flick/internal/api/routes/account"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // DeleteGroupUploadHandler: Revokes the transfer identified by the uploadId path
@@ -43,7 +43,7 @@ func DeleteGroupUploadHandler(queries *database.Queries) http.HandlerFunc {
 			return
 		}
 
-		if _, status, err := account.RequireGroupMaintainer(r.Context(), queries, account.TokenFromHeader(r), groupID); err != nil {
+		if _, status, err := auth.RequireGroupMaintainer(r.Context(), queries, auth.GetTokenFromHTTPRequest(r), groupID); err != nil {
 			routes.WriteError(w, status, err.Error())
 			return
 		}

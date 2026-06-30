@@ -13,10 +13,10 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/Flick-Corp/flick/internal/api/auth"
 	"github.com/Flick-Corp/flick/internal/api/database"
 	"github.com/Flick-Corp/flick/internal/api/routes"
-	"github.com/Flick-Corp/flick/internal/api/routes/account"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // UserSearchResult: A minimal user match returned by the search, kept lean so a
@@ -40,7 +40,7 @@ type UserSearchResult struct {
 // - result1 (http.HandlerFunc): The handler function.
 func SearchUsersHandler(queries *database.Queries) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if _, status, err := account.Authenticate(r.Context(), queries, account.TokenFromHeader(r)); err != nil {
+		if _, status, err := auth.ResolveUser(r.Context(), queries, auth.GetTokenFromHTTPRequest(r)); err != nil {
 			routes.WriteError(w, status, err.Error())
 			return
 		}

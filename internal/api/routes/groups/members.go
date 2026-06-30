@@ -13,10 +13,10 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/Flick-Corp/flick/internal/api/auth"
 	"github.com/Flick-Corp/flick/internal/api/database"
 	"github.com/Flick-Corp/flick/internal/api/logging"
 	"github.com/Flick-Corp/flick/internal/api/routes"
-	"github.com/Flick-Corp/flick/internal/api/routes/account"
 	"github.com/go-playground/validator/v10"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -39,7 +39,7 @@ func AddGroupMemberHandler(queries *database.Queries) http.HandlerFunc {
 		}
 
 		// A global admin or a maintainer/owner of this group may add members.
-		caller, status, err := account.RequireGroupMaintainer(r.Context(), queries, account.TokenFromHeader(r), groupID)
+		caller, status, err := auth.RequireGroupMaintainer(r.Context(), queries, auth.GetTokenFromHTTPRequest(r), groupID)
 		if err != nil {
 			routes.WriteError(w, status, err.Error())
 			return
@@ -98,7 +98,7 @@ func ListGroupMembersHandler(queries *database.Queries) http.HandlerFunc {
 			return
 		}
 
-		if _, status, err := account.RequireGroupMaintainer(r.Context(), queries, account.TokenFromHeader(r), groupID); err != nil {
+		if _, status, err := auth.RequireGroupMaintainer(r.Context(), queries, auth.GetTokenFromHTTPRequest(r), groupID); err != nil {
 			routes.WriteError(w, status, err.Error())
 			return
 		}
@@ -145,7 +145,7 @@ func RemoveGroupMemberHandler(queries *database.Queries) http.HandlerFunc {
 			return
 		}
 
-		caller, status, err := account.RequireGroupMaintainer(r.Context(), queries, account.TokenFromHeader(r), groupID)
+		caller, status, err := auth.RequireGroupMaintainer(r.Context(), queries, auth.GetTokenFromHTTPRequest(r), groupID)
 		if err != nil {
 			routes.WriteError(w, status, err.Error())
 			return
@@ -223,7 +223,7 @@ func SetGroupMemberRoleHandler(queries *database.Queries) http.HandlerFunc {
 		}
 
 		// Only a global admin or the group owner may change roles.
-		caller, status, err := account.RequireGroupOwner(r.Context(), queries, account.TokenFromHeader(r), groupID)
+		caller, status, err := auth.RequireGroupOwner(r.Context(), queries, auth.GetTokenFromHTTPRequest(r), groupID)
 		if err != nil {
 			routes.WriteError(w, status, err.Error())
 			return

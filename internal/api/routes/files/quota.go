@@ -11,10 +11,10 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/Flick-Corp/flick/internal/api/auth"
 	"github.com/Flick-Corp/flick/internal/api/database"
 	"github.com/Flick-Corp/flick/internal/api/quota"
 	"github.com/Flick-Corp/flick/internal/api/routes"
-	"github.com/Flick-Corp/flick/internal/api/routes/account"
 	"github.com/Flick-Corp/flick/internal/api/serverconfig"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -46,7 +46,7 @@ func QuotaHandler(queries *database.Queries) http.HandlerFunc {
 				routes.WriteError(w, http.StatusBadRequest, "Invalid group id")
 				return
 			}
-			if _, status, err := account.RequireGroupMaintainer(r.Context(), queries, account.TokenFromHeader(r), groupPgID); err != nil {
+			if _, status, err := auth.RequireGroupMaintainer(r.Context(), queries, auth.GetTokenFromHTTPRequest(r), groupPgID); err != nil {
 				routes.WriteError(w, status, err.Error())
 				return
 			}

@@ -16,11 +16,11 @@ import (
 	"github.com/tus/tusd/v2/pkg/filestore"
 	tusd "github.com/tus/tusd/v2/pkg/handler"
 
+	"github.com/Flick-Corp/flick/internal/api/auth"
 	"github.com/Flick-Corp/flick/internal/api/database"
 	"github.com/Flick-Corp/flick/internal/api/logging"
 	"github.com/Flick-Corp/flick/internal/api/quota"
 	"github.com/Flick-Corp/flick/internal/api/routes"
-	"github.com/Flick-Corp/flick/internal/api/routes/account"
 	"github.com/Flick-Corp/flick/internal/api/routes/files"
 	"github.com/Flick-Corp/flick/internal/api/serverconfig"
 	"github.com/Flick-Corp/flick/internal/utils/checksum"
@@ -93,7 +93,7 @@ func authorizeUpload(hook tusd.HookEvent, queries *database.Queries) (uploadInpu
 		if err := groupID.Scan(in.GroupID); err != nil {
 			return in, tusd.NewError("ERR_FLICK_GROUP", "Invalid group id", http.StatusBadRequest)
 		}
-		caller, status, err := account.RequireGroupMaintainer(ctx, queries, bearerFromHeader(hook.HTTPRequest.Header), groupID)
+		caller, status, err := auth.RequireGroupMaintainer(ctx, queries, bearerFromHeader(hook.HTTPRequest.Header), groupID)
 		if err != nil {
 			return in, tusd.NewError("ERR_FLICK_AUTH", err.Error(), status)
 		}
