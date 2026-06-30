@@ -1,31 +1,27 @@
 /*
 ** FLICK PROJECT, 2026
-** flick/internal/api/routes/account/memberships
+** flick/internal/api/memberships
 ** File description:
 ** Group memberships carried on the authenticated user (login/whoami).
  */
 
-package account
+package memberships
 
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/Flick-Corp/flick/internal/api/database"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
-// GroupMembershipResponse: A group the user belongs to, with their role inside
-// it. Carried on the login/whoami user so the dashboard can show a member their
-// groups and gate the "My groups" tab.
+// GroupMembershipResponse: A group the user belongs to, with their role inside it.
 type GroupMembershipResponse struct {
 	ID   pgtype.UUID        `json:"id"`
 	Name string             `json:"name"`
 	Role database.GroupRole `json:"role"`
 }
 
-// userGroupMemberships: Resolves the groups a user belongs to, with their role
-// in each. Returns an empty (non-nil) slice when the user is in no group so the
-// JSON serialises as [] rather than null.
+// UserGroupMemberships: Resolves the groups a user belongs to, with their role in each.
 //
 // Params:
 // - ctx (context.Context): The request context.
@@ -34,8 +30,8 @@ type GroupMembershipResponse struct {
 //
 // Returns:
 // - result1 ([]GroupMembershipResponse): The user's group memberships.
-func userGroupMemberships(ctx context.Context, queries *database.Queries, userID pgtype.UUID) []GroupMembershipResponse {
-	rows, err := queries.ListGroupsForUserWithRole(ctx, userID)
+func UserGroupMemberships(ctx context.Context, queries *database.Queries, userID pgtype.UUID) []GroupMembershipResponse {
+	rows, err := queries.ListUserMemberships(ctx, userID)
 	if err != nil {
 		return []GroupMembershipResponse{}
 	}

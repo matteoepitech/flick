@@ -12,10 +12,11 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/Flick-Corp/flick/internal/api/database"
+	"github.com/Flick-Corp/flick/internal/api/memberships"
+	"github.com/Flick-Corp/flick/internal/api/routes"
 	"github.com/go-playground/validator/v10"
 	"github.com/jackc/pgx/v5"
-	"github.com/Flick-Corp/flick/internal/api/database"
-	"github.com/Flick-Corp/flick/internal/api/routes"
 )
 
 // WhoamiRequest structure.
@@ -45,7 +46,7 @@ func WhoamiHandler(queries *database.Queries) http.HandlerFunc {
 		decoder := json.NewDecoder(r.Body)
 		decoder.DisallowUnknownFields()
 		var request WhoamiRequest
-		var validate = validator.New()
+		validate := validator.New()
 
 		if err := decoder.Decode(&request); err != nil {
 			routes.WriteError(w, http.StatusBadRequest, "Invalid JSON: "+err.Error())
@@ -91,7 +92,7 @@ func WhoamiHandler(queries *database.Queries) http.HandlerFunc {
 				Role:      user.Role,
 				CreatedAt: user.CreatedAt,
 				Blocked:   user.Blocked,
-				Groups:    userGroupMemberships(r.Context(), queries, user.ID),
+				Groups:    memberships.UserGroupMemberships(r.Context(), queries, user.ID),
 			},
 		})
 	}

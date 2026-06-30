@@ -189,7 +189,7 @@ func (q *Queries) ListGroupsForUser(ctx context.Context, userID pgtype.UUID) ([]
 	return items, nil
 }
 
-const listGroupsForUserWithRole = `-- name: ListGroupsForUserWithRole :many
+const listUserMemberships = `-- name: ListUserMemberships :many
 SELECT g.id, g.name, g.created_at, ug.role AS group_role
 FROM groups g
 JOIN user_groups ug ON ug.group_id = g.id
@@ -197,22 +197,22 @@ WHERE ug.user_id = $1
 ORDER BY g.name
 `
 
-type ListGroupsForUserWithRoleRow struct {
+type ListUserMembershipsRow struct {
 	ID        pgtype.UUID        `json:"id"`
 	Name      string             `json:"name"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	GroupRole GroupRole          `json:"group_role"`
 }
 
-func (q *Queries) ListGroupsForUserWithRole(ctx context.Context, userID pgtype.UUID) ([]ListGroupsForUserWithRoleRow, error) {
-	rows, err := q.db.Query(ctx, listGroupsForUserWithRole, userID)
+func (q *Queries) ListUserMemberships(ctx context.Context, userID pgtype.UUID) ([]ListUserMembershipsRow, error) {
+	rows, err := q.db.Query(ctx, listUserMemberships, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListGroupsForUserWithRoleRow
+	var items []ListUserMembershipsRow
 	for rows.Next() {
-		var i ListGroupsForUserWithRoleRow
+		var i ListUserMembershipsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,

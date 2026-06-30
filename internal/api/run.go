@@ -62,7 +62,7 @@ func setupDatabase(ctx context.Context) (*pgxpool.Pool, *database.Queries, error
 // Returns:
 // - result1 (error): nil if no error, otherwise an error.
 func Run(ctx context.Context) error {
-	if err := os.MkdirAll(path.GetDataDir(), 0755); err != nil {
+	if err := os.MkdirAll(path.GetDataDir(), 0o755); err != nil {
 		return logging.LogInfoError("Cannot create data directory %q: %v", path.GetDataDir(), err)
 	}
 

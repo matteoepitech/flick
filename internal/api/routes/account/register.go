@@ -14,6 +14,7 @@ import (
 
 	"github.com/Flick-Corp/flick/internal/api/database"
 	"github.com/Flick-Corp/flick/internal/api/logging"
+	"github.com/Flick-Corp/flick/internal/api/memberships"
 	"github.com/Flick-Corp/flick/internal/api/routes"
 	"github.com/go-playground/validator/v10"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -29,13 +30,13 @@ type RegisterRequest struct {
 
 // RegisterResponse: The JSON body returned on a successful registration.
 type RegisterResponse struct {
-	ID        pgtype.UUID               `json:"id"`
-	Username  string                    `json:"username"`
-	Email     string                    `json:"email"`
-	Role      database.UserRole         `json:"role"`
-	CreatedAt pgtype.Timestamptz        `json:"created_at"`
-	Blocked   bool                      `json:"blocked"`
-	Groups    []GroupMembershipResponse `json:"groups,omitempty"`
+	ID        pgtype.UUID                   `json:"id"`
+	Username  string                        `json:"username"`
+	Email     string                        `json:"email"`
+	Role      database.UserRole             `json:"role"`
+	CreatedAt pgtype.Timestamptz            `json:"created_at"`
+	Blocked   bool                          `json:"blocked"`
+	Groups    []memberships.GroupMembershipResponse `json:"groups,omitempty"`
 }
 
 // RegisterHandler: Register function route.
@@ -55,7 +56,7 @@ func RegisterHandler(queries *database.Queries) http.HandlerFunc {
 		decoder := json.NewDecoder(r.Body)
 		decoder.DisallowUnknownFields()
 		var request RegisterRequest
-		var validate = validator.New()
+		validate := validator.New()
 
 		if err := decoder.Decode(&request); err != nil {
 			routes.WriteError(w, http.StatusBadRequest, "Invalid JSON: "+err.Error())

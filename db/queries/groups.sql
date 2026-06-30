@@ -40,7 +40,7 @@ JOIN user_groups ug ON ug.user_id = u.id
 WHERE ug.group_id = $1
 ORDER BY u.username;
 
--- name: ListGroupsForUserWithRole :many
+-- name: ListUserMemberships :many
 SELECT g.id, g.name, g.created_at, ug.role AS group_role
 FROM groups g
 JOIN user_groups ug ON ug.group_id = g.id
