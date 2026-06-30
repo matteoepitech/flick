@@ -4,8 +4,17 @@
 # everything else to the Next.js web app.
 #
 # FLICK_SITE_ADDRESS drives the TLS behavior:
-#   flick.example.com  -> automatic HTTPS (Let's Encrypt) + HTTP/3
-#   http://localhost   -> plain HTTP, no certificates (dev / local default)
+#   flick.example.com         -> Caddy owns the domain: automatic HTTPS (Let's Encrypt) + HTTP/3
+#   http://flick.example.com  -> plain HTTP only: use this when an EXTERNAL reverse proxy
+#                                (Nginx Proxy Manager, Traefik, another Caddy...) already
+#                                terminates TLS in front of Flick. Avoids the HTTP->HTTPS
+#                                redirect loop (ERR_TOO_MANY_REDIRECTS).
+#   http://localhost          -> plain HTTP, no certificates (dev / local default)
+{
+	servers {
+		trusted_proxies static private_ranges
+	}
+}
 
 {$FLICK_SITE_ADDRESS:http://localhost} {
 	handle /api/v1/* {

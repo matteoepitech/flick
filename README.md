@@ -94,6 +94,21 @@ Open `http://localhost`. 🎉
 >
 > No certificate to generate or manage: Caddy takes care of it.
 
+> [!TIP]
+> **Already running your own reverse proxy?** (Nginx Proxy Manager, Traefik, another
+> Caddy...) Let it keep handling TLS and tell Flick's bundled Caddy to serve plain
+> HTTP, otherwise the two fight over HTTPS and you get a redirect loop
+> (`ERR_TOO_MANY_REDIRECTS`):
+>
+> ```bash
+> # .env - keep the http:// scheme, no trailing slash
+> FLICK_SITE_ADDRESS=http://flick.example.com
+> ```
+>
+> Then point your reverse proxy at the Flick host on **port 80** (HTTP), and make sure
+> it forwards the `X-Forwarded-Proto` and `X-Forwarded-Host` headers so uploads keep
+> working.
+
 To stop Flick, run `make down`. Your data is kept safe.
 
 ### Development mode
