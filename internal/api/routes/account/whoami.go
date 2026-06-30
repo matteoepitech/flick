@@ -2,7 +2,7 @@
 ** FLICK PROJECT, 2026
 ** flick/internal/api/routes/account/whoami
 ** File description:
-** whoami route
+** Whoami route
  */
 
 package account
@@ -61,7 +61,7 @@ func WhoamiHandler(queries *database.Queries) http.HandlerFunc {
 			if errors.Is(err, pgx.ErrNoRows) {
 				routes.WriteError(w, http.StatusUnauthorized, "Invalid token")
 			} else {
-				routes.WriteError(w, http.StatusInternalServerError, "Cannot get informations")
+				routes.WriteError(w, http.StatusInternalServerError, "Cannot get informations about this token")
 			}
 			return
 		}
@@ -71,13 +71,8 @@ func WhoamiHandler(queries *database.Queries) http.HandlerFunc {
 			if errors.Is(err, pgx.ErrNoRows) {
 				routes.WriteError(w, http.StatusUnauthorized, "Invalid user")
 			} else {
-				routes.WriteError(w, http.StatusInternalServerError, "Cannot get informations")
+				routes.WriteError(w, http.StatusInternalServerError, "Cannot get informations about this token")
 			}
-			return
-		}
-
-		if user.Blocked {
-			routes.WriteError(w, http.StatusForbidden, "Account blocked")
 			return
 		}
 
