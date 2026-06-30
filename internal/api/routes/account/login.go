@@ -2,24 +2,23 @@
 ** FLICK PROJECT, 2026
 ** flick/internal/api/routes/account/login
 ** File description:
-** login route
+** Login route
  */
 
 package account
 
 import (
-	"crypto/rand"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"time"
 
+	"github.com/Flick-Corp/flick/internal/api/auth"
+	"github.com/Flick-Corp/flick/internal/api/database"
+	"github.com/Flick-Corp/flick/internal/api/routes"
 	"github.com/go-playground/validator/v10"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/Flick-Corp/flick/internal/api/database"
-	"github.com/Flick-Corp/flick/internal/api/routes"
 )
 
 // SessionDuration is the session lifetime before the token expires.
@@ -36,20 +35,6 @@ type LoginResponse struct {
 	Token     string             `json:"token"`
 	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
 	User      RegisterResponse   `json:"user"`
-}
-
-// GenerateToken: Generate a random opaque session token.
-//
-// Returns:
-// - result1 (string): The token, URL-safe base64 encoded.
-// - result2 (error): An error if randomness is unavailable.
-func GenerateToken() (string, error) {
-	raw := make([]byte, 32)
-	if _, err := rand.Read(raw); err != nil {
-		return "", err
-	}
-
-	return base64.RawURLEncoding.EncodeToString(raw), nil
 }
 
 // LoginHandler: Login function route.
@@ -69,7 +54,7 @@ func LoginHandler(queries *database.Queries) http.HandlerFunc {
 		decoder := json.NewDecoder(r.Body)
 		decoder.DisallowUnknownFields()
 		var request LoginRequest
-		var validate = validator.New()
+		validate := validator.New()
 
 		if err := decoder.Decode(&request); err != nil {
 			routes.WriteError(w, http.StatusBadRequest, "Invalid JSON: "+err.Error())
@@ -94,7 +79,7 @@ func LoginHandler(queries *database.Queries) http.HandlerFunc {
 			return
 		}
 
-		token, err := GenerateToken()
+		token, err := auth.GenerateToken()
 		if err != nil {
 			routes.WriteError(w, http.StatusInternalServerError, "Cannot create session")
 			return

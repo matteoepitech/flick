@@ -12,12 +12,12 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/Flick-Corp/flick/internal/api/auth"
 	"github.com/Flick-Corp/flick/internal/api/code"
 	"github.com/Flick-Corp/flick/internal/api/database"
 	"github.com/Flick-Corp/flick/internal/api/logging"
 	"github.com/Flick-Corp/flick/internal/api/routes"
-	"github.com/Flick-Corp/flick/internal/api/routes/account"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // Lifetime of a device authorization before the user_code expires.
@@ -50,7 +50,7 @@ func DeviceCodeHandler(queries *database.Queries) http.HandlerFunc {
 			return
 		}
 
-		deviceCode, err := account.GenerateToken()
+		deviceCode, err := auth.GenerateToken()
 		if err != nil {
 			routes.WriteError(w, http.StatusInternalServerError, "Cannot create device code")
 			return

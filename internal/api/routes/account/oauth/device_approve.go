@@ -13,13 +13,14 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-playground/validator/v10"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/Flick-Corp/flick/internal/api/auth"
 	"github.com/Flick-Corp/flick/internal/api/database"
 	"github.com/Flick-Corp/flick/internal/api/logging"
 	"github.com/Flick-Corp/flick/internal/api/routes"
 	"github.com/Flick-Corp/flick/internal/api/routes/account"
+	"github.com/go-playground/validator/v10"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // DeviceApproveRequest: The JSON body request.
@@ -54,7 +55,7 @@ func DeviceApproveHandler(queries *database.Queries) http.HandlerFunc {
 		decoder := json.NewDecoder(r.Body)
 		decoder.DisallowUnknownFields()
 		var request DeviceApproveRequest
-		var validate = validator.New()
+		validate := validator.New()
 
 		if err := decoder.Decode(&request); err != nil {
 			routes.WriteError(w, http.StatusBadRequest, "Invalid JSON: "+err.Error())
@@ -87,7 +88,7 @@ func DeviceApproveHandler(queries *database.Queries) http.HandlerFunc {
 		}
 
 		// Create the session the CLI will end up using.
-		token, err := account.GenerateToken()
+		token, err := auth.GenerateToken()
 		if err != nil {
 			routes.WriteError(w, http.StatusInternalServerError, "Cannot create session")
 			return

@@ -9,6 +9,8 @@ package auth
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/http"
@@ -19,6 +21,20 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+// GenerateToken: Generate a random opaque session token.
+//
+// Returns:
+// - result1 (string): The token, URL-safe base64 encoded.
+// - result2 (error): An error if randomness is unavailable.
+func GenerateToken() (string, error) {
+	raw := make([]byte, 32)
+	if _, err := rand.Read(raw); err != nil {
+		return "", err
+	}
+
+	return base64.RawURLEncoding.EncodeToString(raw), nil
+}
 
 // GetTokenFromHTTPRequest: Extracts the bearer token from the Authorization header.
 // Returns an empty string when the header is missing or malformed.
