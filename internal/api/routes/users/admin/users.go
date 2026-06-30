@@ -18,7 +18,6 @@ import (
 	"github.com/Flick-Corp/flick/internal/api/database"
 	"github.com/Flick-Corp/flick/internal/api/logging"
 	"github.com/Flick-Corp/flick/internal/api/routes"
-	"github.com/Flick-Corp/flick/internal/api/routes/account"
 	"github.com/go-playground/validator/v10"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -144,7 +143,7 @@ func UpdateUserHandler(queries *database.Queries) http.HandlerFunc {
 		}
 
 		if request.Password != nil {
-			hashed := account.HashPassword(*request.Password)
+			hashed := auth.HashUserPassword(*request.Password)
 			params.PasswordHash = &hashed
 		}
 

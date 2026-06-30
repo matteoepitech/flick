@@ -1,11 +1,11 @@
 /*
 ** FLICK PROJECT, 2026
-** flick/internal/api/routes/account/utils
+** flick/internal/api/auth/password
 ** File description:
-** Accounts utils
+** Password functions
  */
 
-package account
+package auth
 
 import (
 	"crypto/rand"
@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Flick-Corp/flick/internal/api/logging"
 	"golang.org/x/crypto/argon2"
 )
 
@@ -26,22 +27,26 @@ const (
 	saltLen      int    = 16
 )
 
-// hashPassword: Hash a password using salt.
+// HashUserPassword: Hash a user's password using salt.
 //
 // Params:
 // - password (string): The password to hash.
 //
 // Returns:
 // - result1 (string): Final password hashed, encoded as "salt$hash".
-func HashPassword(password string) string {
+func HashUserPassword(password string) string {
 	salt := make([]byte, saltLen)
 	rand.Read(salt)
+	if _, err := rand.Read(salt); err != nil {
+		logging.LogInfoError("Cannot generate password salt: %v", err)
+		return ""
+	}
 	hash := argon2.IDKey([]byte(password), salt, argonTime, argonMemory, argonThreads, argonKeyLen)
 
 	return fmt.Sprintf("%s$%s", base64.RawStdEncoding.EncodeToString(salt), base64.RawStdEncoding.EncodeToString(hash))
 }
 
-// verifyPassword: Check a password against a stored "salt$hash" value.
+// VerifyUserPassword: Check a user's password against a stored "salt$hash" value.
 //
 // Params:
 // - password (string): The password to check.
@@ -49,7 +54,7 @@ func HashPassword(password string) string {
 //
 // Returns:
 // - result1 (bool): true if the password matches.
-func verifyPassword(password string, encoded string) bool {
+func VerifyUserPassword(password string, encoded string) bool {
 	parts := strings.Split(encoded, "$")
 	if len(parts) != 2 {
 		return false

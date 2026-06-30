@@ -75,7 +75,7 @@ func LoginHandler(queries *database.Queries) http.HandlerFunc {
 			}
 			return
 		}
-		if verifyPassword(request.Password, user.PasswordHash) == false {
+		if auth.VerifyUserPassword(request.Password, user.PasswordHash) == false {
 			routes.WriteError(w, http.StatusUnauthorized, "Invalid credentials")
 			return
 		}

@@ -12,6 +12,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/Flick-Corp/flick/internal/api/auth"
 	"github.com/Flick-Corp/flick/internal/api/database"
 	"github.com/Flick-Corp/flick/internal/api/logging"
 	"github.com/Flick-Corp/flick/internal/api/memberships"
@@ -68,7 +69,7 @@ func RegisterHandler(queries *database.Queries) http.HandlerFunc {
 		user, err := queries.CreateUser(r.Context(), database.CreateUserParams{
 			Username:     request.Username,
 			Email:        request.Email,
-			PasswordHash: HashPassword(request.Password),
+			PasswordHash: auth.HashUserPassword(request.Password),
 		})
 		if err != nil {
 			var pgErr *pgconn.PgError
