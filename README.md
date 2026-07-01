@@ -72,21 +72,22 @@ git clone https://github.com/Flick-Corp/flick.git
 cd flick
 
 # Create your configuration
-cp .env.example .env
+make setup
 
 # Start everything: database, migrations, API, web app
 make up
 ```
 
-Open `http://localhost`. 🎉
+Open the address you set during `make setup` (`http://localhost` by default). 🎉
 
 > [!IMPORTANT]
-> Set a strong `POSTGRES_PASSWORD` in `.env` before starting for the first time.
+> Keep your `POSTGRES_PASSWORD` safe. `make setup` generates a strong random one; if
+> you write `.env` by hand, set a strong password before starting for the first time.
 
 > [!NOTE]
 > Everything goes through the bundled [Caddy](https://caddyserver.com/) reverse proxy.
 > To serve Flick on your own domain with automatic HTTPS (Let's Encrypt) and HTTP/3,
-> just set it in `.env`:
+> set your domain in `.env`:
 >
 > ```bash
 > FLICK_SITE_ADDRESS=flick.example.com
@@ -95,19 +96,10 @@ Open `http://localhost`. 🎉
 > No certificate to generate or manage: Caddy takes care of it.
 
 > [!TIP]
-> **Already running your own reverse proxy?** (Nginx Proxy Manager, Traefik, another
-> Caddy...) Let it keep handling TLS and tell Flick's bundled Caddy to serve plain
-> HTTP, otherwise the two fight over HTTPS and you get a redirect loop
-> (`ERR_TOO_MANY_REDIRECTS`):
->
-> ```bash
-> # .env - keep the http:// scheme, no trailing slash
-> FLICK_SITE_ADDRESS=http://flick.example.com
-> ```
->
-> Then point your reverse proxy at the Flick host on **port 80** (HTTP), and make sure
-> it forwards the `X-Forwarded-Proto` and `X-Forwarded-Host` headers so uploads keep
-> working.
+> **Already have your own reverse proxy?** (Nginx Proxy Manager, Traefik, Caddy...)
+> `make setup` takes care of it: answer "yes" when it asks, then just point your proxy
+> at the Flick host on **port 80**. Your proxy keeps handling TLS, and there is nothing
+> to edit by hand.
 
 To stop Flick, run `make down`. Your data is kept safe.
 

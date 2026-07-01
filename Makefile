@@ -14,6 +14,10 @@ MIGRATE       := $(COMPOSE) run --rm --no-deps flick-migrate
 help:
 	@awk 'BEGIN {FS=":"} /^### / {desc=substr($$0,5); next} /^[a-zA-Z_-]+:/ && desc {printf "  \033[36m%-14s\033[0m %s\n", $$1, desc; desc=""} !/^### / {desc=""}' $(MAKEFILE_LIST)
 
+### Interactive first-run setup: generates your .env (scripts/setup.sh)
+setup:
+	./scripts/setup.sh
+
 ### Build CLI binaries for all platforms (scripts/build.sh)
 build:
 	./scripts/build.sh
@@ -70,4 +74,4 @@ sqlc-generate:
 clean:
 	rm -rf build/bin tmp
 
-.PHONY: help dev down down-dev up pull build images images-push clean migrate-new migrate-up migrate-down migrate-status sqlc-generate
+.PHONY: help setup dev down down-dev up pull build images images-push clean migrate-new migrate-up migrate-down migrate-status sqlc-generate
