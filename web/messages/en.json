@@ -1,4 +1,58 @@
 {
+  "Seo": {
+    "siteTitle": "Flick: self-hosted, open-source file transfer",
+    "titleTemplate": "%s · Flick",
+    "description": "Flick is a free, open-source, self-hosted file transfer tool. Share files with a short code, set expiry and passwords, host it on your own server. No account required.",
+    "ogAlt": "Flick, self-hosted file transfer with a short code",
+    "keywords": "self-hosted file transfer, open source file transfer, send files with a code, private file sharing, self-hosted file sharing, secure file transfer, open source file sharing"
+  },
+  "Landing": {
+    "compar": {
+      "eyebrow": "Why Flick",
+      "title": "File sharing that stays yours",
+      "body": "Most file-sharing tools store your files on someone else's cloud. Flick is open source and self-hosted: you own the server, the data and the rules. Send files with a short code, no account, no tracking.",
+      "row": {
+        "selfhosted": {
+          "title": "Self-hosted",
+          "body": "Run Flick on your own server. Your files never leave infrastructure you control."
+        },
+        "opensource": {
+          "title": "Open source",
+          "body": "The whole codebase is open. Read it, audit it, and adapt it to your needs."
+        },
+        "nocloud": {
+          "title": "No third-party cloud",
+          "body": "Transfers stay on your machine, not on someone else's storage."
+        },
+        "code": {
+          "title": "Share with a short code",
+          "body": "Send a file and get a short, human-readable code. No long links to copy."
+        },
+        "noaccount": {
+          "title": "No account required",
+          "body": "Anyone can send or receive a file anonymously. Accounts are optional."
+        },
+        "expiry": {
+          "title": "Expiry & password control",
+          "body": "Set how long a file lives, add a password, and limit downloads."
+        }
+      }
+    },
+    "faq": {
+      "eyebrow": "FAQ",
+      "title": "Frequently asked questions",
+      "q1": "Is Flick really self-hosted?",
+      "a1": "Yes. You deploy Flick on your own server, so your files stay on infrastructure you own and control. They never pass through a third-party cloud.",
+      "q2": "Is Flick free and open source?",
+      "a2": "Yes. Flick is free and fully open source. You can read the code, self-host it, and adapt it to your needs.",
+      "q3": "Do I need an account to send a file?",
+      "a3": "No. Anyone can send files anonymously and share the generated code. Accounts are optional and only add groups, history and advanced controls.",
+      "q4": "How do recipients download a file?",
+      "a4": "They enter the short code you share (or open the link) and download from a clean web page. No install and no account needed.",
+      "q5": "Can I control how long files stay available?",
+      "a5": "Yes. You can set an expiry, require a password and limit the number of downloads for each transfer."
+    }
+  },
   "Settings": {
     "title": "Settings",
     "subtitle": "General configuration of the application.",

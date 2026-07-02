@@ -1,18 +1,71 @@
-import { ArrowUpRight } from "lucide-react"
-import { useTranslations } from "next-intl"
+import { ArrowUpRight, Check } from "lucide-react"
+import { useLocale, useTranslations } from "next-intl"
 
 import { AsciinemaPlayer } from "@/components/asciinema-player"
 import { GithubIcon } from "@/components/icons"
+import { JsonLd } from "@/components/json-ld"
 import { MouseMist } from "@/components/mouse-mist"
 import { Button } from "@/components/ui/button"
 import { Link } from "@/i18n/navigation"
+import { localizedPath, SITE_NAME, SITE_URL } from "@/lib/seo"
 
 export default function Page() {
+  const locale = useLocale()
   const tHero = useTranslations("Hero")
   const tFeatures = useTranslations("Features")
   const tHow = useTranslations("HowItWorks")
   const tCTA = useTranslations("CallToAction")
   const tFooter = useTranslations("Footer")
+  const tL = useTranslations("Landing")
+  const tSeo = useTranslations("Seo")
+
+  const comparPoints = [
+    { title: tL("compar.row.selfhosted.title"), body: tL("compar.row.selfhosted.body") },
+    { title: tL("compar.row.opensource.title"), body: tL("compar.row.opensource.body") },
+    { title: tL("compar.row.nocloud.title"), body: tL("compar.row.nocloud.body") },
+    { title: tL("compar.row.code.title"), body: tL("compar.row.code.body") },
+    { title: tL("compar.row.noaccount.title"), body: tL("compar.row.noaccount.body") },
+    { title: tL("compar.row.expiry.title"), body: tL("compar.row.expiry.body") },
+  ]
+
+  const faqs = [
+    { q: tL("faq.q1"), a: tL("faq.a1") },
+    { q: tL("faq.q2"), a: tL("faq.a2") },
+    { q: tL("faq.q3"), a: tL("faq.a3") },
+    { q: tL("faq.q4"), a: tL("faq.a4") },
+    { q: tL("faq.q5"), a: tL("faq.a5") },
+  ]
+
+  const jsonLd = [
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      name: SITE_NAME,
+      url: localizedPath(locale, "/"),
+      applicationCategory: "Open-source self-hosted file transfer",
+      operatingSystem: "Linux, Docker, Web",
+      description: tSeo("description"),
+      offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+      sameAs: ["https://github.com/Flick-Corp/flick"],
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: faqs.map((f) => ({
+        "@type": "Question",
+        name: f.q,
+        acceptedAnswer: { "@type": "Answer", text: f.a },
+      })),
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      name: SITE_NAME,
+      url: SITE_URL,
+      logo: `${SITE_URL}/assets/flick_logo.png`,
+      sameAs: ["https://github.com/Flick-Corp/flick"],
+    },
+  ]
 
   const features = [
     { tag: tFeatures("instantTag"), title: tFeatures("instantTitle"), body: tFeatures("instantBody") },
@@ -29,6 +82,7 @@ export default function Page() {
 
   return (
     <main className="relative mx-auto max-w-6xl px-6 pb-24">
+      <JsonLd data={jsonLd} />
       <MouseMist />
 
       <section className="flex flex-col items-center pt-20 text-center sm:pt-24">
@@ -96,6 +150,45 @@ export default function Page() {
               </div>
               <h3 className="mt-4 font-heading text-xl font-bold">{step.title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{step.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-28">
+        <div className="mx-auto max-w-2xl text-center">
+          <p className="font-heading text-xs font-semibold tracking-[0.14em] text-primary uppercase">
+            {tL("compar.eyebrow")}
+          </p>
+          <h2 className="mt-4 font-heading text-3xl font-bold tracking-tight sm:text-4xl">{tL("compar.title")}</h2>
+          <p className="mt-4 leading-relaxed text-muted-foreground">{tL("compar.body")}</p>
+        </div>
+
+        <div className="mx-auto mt-10 grid max-w-3xl grid-cols-1 gap-4 sm:grid-cols-2">
+          {comparPoints.map((point) => (
+            <div key={point.title} className="flex gap-3 rounded-xl border border-border bg-accent/20 p-5">
+              <Check className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden />
+              <div>
+                <h3 className="font-heading font-semibold">{point.title}</h3>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{point.body}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-28">
+        <div className="mx-auto max-w-2xl text-center">
+          <p className="font-heading text-xs font-semibold tracking-[0.14em] text-primary uppercase">
+            {tL("faq.eyebrow")}
+          </p>
+          <h2 className="mt-4 font-heading text-3xl font-bold tracking-tight sm:text-4xl">{tL("faq.title")}</h2>
+        </div>
+        <div className="mx-auto mt-10 max-w-2xl divide-y divide-border">
+          {faqs.map((item) => (
+            <div key={item.q} className="py-5">
+              <h3 className="font-heading text-lg font-semibold">{item.q}</h3>
+              <p className="mt-2 leading-relaxed text-muted-foreground">{item.a}</p>
             </div>
           ))}
         </div>

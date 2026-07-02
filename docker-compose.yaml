@@ -81,6 +81,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
+      FLICK_SITE_ADDRESS: ${FLICK_SITE_ADDRESS:-http://localhost}
     depends_on:
       - flick-api
     networks:

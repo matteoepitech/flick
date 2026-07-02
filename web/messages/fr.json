@@ -1,4 +1,58 @@
 {
+  "Seo": {
+    "siteTitle": "Flick : transfert de fichiers auto-hébergé et open source",
+    "titleTemplate": "%s · Flick",
+    "description": "Flick est un outil de transfert de fichiers libre, open-source et auto-hébergé. Partagez vos fichiers avec un code court, gérez l'expiration et les mots de passe, hébergez-le sur votre propre serveur. Sans compte.",
+    "ogAlt": "Flick, transfert de fichiers auto-hébergé avec un code court",
+    "keywords": "transfert de fichiers auto-hébergé, transfert de fichiers open source, envoyer des fichiers avec un code, partage de fichiers privé, partage de fichiers auto-hébergé, transfert de fichiers sécurisé, partage de fichiers open source"
+  },
+  "Landing": {
+    "compar": {
+      "eyebrow": "Pourquoi Flick",
+      "title": "Un partage de fichiers qui reste le vôtre",
+      "body": "La plupart des outils de partage stockent vos fichiers sur le cloud de quelqu'un d'autre. Flick est open source et auto-hébergé : vous possédez le serveur, les données et les règles. Envoyez des fichiers avec un code court, sans compte, sans pistage.",
+      "row": {
+        "selfhosted": {
+          "title": "Auto-hébergé",
+          "body": "Faites tourner Flick sur votre propre serveur. Vos fichiers ne quittent jamais une infrastructure que vous contrôlez."
+        },
+        "opensource": {
+          "title": "Open source",
+          "body": "Tout le code est ouvert. Lisez-le, auditez-le et adaptez-le à vos besoins."
+        },
+        "nocloud": {
+          "title": "Aucun cloud tiers",
+          "body": "Les transferts restent sur votre machine, pas sur le stockage d'un autre."
+        },
+        "code": {
+          "title": "Partage par code court",
+          "body": "Envoyez un fichier et obtenez un code court et lisible. Aucun lien interminable à copier."
+        },
+        "noaccount": {
+          "title": "Sans compte requis",
+          "body": "N'importe qui peut envoyer ou recevoir un fichier de façon anonyme. Les comptes sont optionnels."
+        },
+        "expiry": {
+          "title": "Expiration & mot de passe",
+          "body": "Définissez la durée de vie d'un fichier, ajoutez un mot de passe et limitez les téléchargements."
+        }
+      }
+    },
+    "faq": {
+      "eyebrow": "FAQ",
+      "title": "Questions fréquentes",
+      "q1": "Flick est-il vraiment auto-hébergé ?",
+      "a1": "Oui. Vous déployez Flick sur votre propre serveur : vos fichiers restent sur une infrastructure que vous possédez et contrôlez. Ils ne passent jamais par un cloud tiers.",
+      "q2": "Flick est-il gratuit et open source ?",
+      "a2": "Oui. Flick est gratuit et entièrement open source. Vous pouvez lire le code, l'héberger vous-même et l'adapter à vos besoins.",
+      "q3": "Faut-il un compte pour envoyer un fichier ?",
+      "a3": "Non. N'importe qui peut envoyer des fichiers de façon anonyme et partager le code généré. Les comptes sont optionnels et n'ajoutent que les groupes, l'historique et les contrôles avancés.",
+      "q4": "Comment le destinataire télécharge-t-il un fichier ?",
+      "a4": "Il saisit le code court que vous partagez (ou ouvre le lien) et télécharge depuis une page web claire. Aucune installation ni création de compte.",
+      "q5": "Puis-je contrôler la durée de disponibilité des fichiers ?",
+      "a5": "Oui. Vous pouvez définir une expiration, exiger un mot de passe et limiter le nombre de téléchargements pour chaque transfert."
+    }
+  },
   "Settings": {
     "title": "Paramètres",
     "subtitle": "Configuration générale de l'application.",
