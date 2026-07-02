@@ -8,9 +8,14 @@
 package serverconfig
 
 import (
+	"encoding/json"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 
+	"github.com/Flick-Corp/flick/internal/api/logging"
+	"github.com/Flick-Corp/flick/internal/api/path"
 	"github.com/Flick-Corp/flick/internal/api/utils"
 	"github.com/go-playground/validator/v10"
 )
@@ -36,7 +41,7 @@ type Configuration struct {
 }
 
 // Server configuration default values
-var Conf Configuration = Configuration{
+var DefaultConfig Configuration = Configuration{
 	Persistence:             true,
 	MaxFileSizeMb:           1000,
 	DefaultExpiration:       "15m",
@@ -55,6 +60,9 @@ var Conf Configuration = Configuration{
 	GroupQuotaMb:            10000,
 }
 
+// Server configuration currently in use
+var Conf Configuration = DefaultConfig
+
 // Validate for the struct tag.
 var validate = validator.New()
 
@@ -66,14 +74,45 @@ func init() {
 	})
 }
 
-// UserFields: Returns only the configuration fields tagged with `user:"true"`.
+// WriteDefaultConfig: Writes the default server configuration.
+func WriteDefaultConfig() {
+	dir := path.GetFlickDir()
+	if _, err := os.Stat(filepath.Join(dir, "server-config.json")); err == nil {
+		logging.LogInfo("Server configuration file already exists")
+		return
+	}
+	data, _ := json.MarshalIndent(DefaultConfig, "", " ")
+	os.WriteFile(filepath.Join(dir, "server-config.json"), data, 0644)
+}
+
+// LoadServerConfigFromDisk: Loads the server configuration file into Conf.
+//
+// Returns:
+// - error: The loading error, if any.
+func LoadServerConfigFromDisk() error {
+	dir := path.GetFlickDir()
+	data, err := os.ReadFile(filepath.Join(dir, "server-config.json"))
+	if err != nil {
+		return logging.LogInfoError("Cannot read server configuration: %v", err)
+	}
+
+	var conf Configuration
+	if err := json.Unmarshal(data, &conf); err != nil {
+		return logging.LogInfoError("Cannot parse server configuration: %v", err)
+	}
+	Conf = conf
+
+	return nil
+}
+
+// FilterUserFields: Returns only the configuration fields tagged with user:"true".
 //
 // Params:
 // - c (Configuration): The configuration to filter.
 //
 // Returns:
 // - map[string]any: The user-facing fields keyed by their JSON name.
-func UserFields(c Configuration) map[string]any {
+func FilterUserFields(c Configuration) map[string]any {
 	out := make(map[string]any)
 	t := reflect.TypeFor[Configuration]()
 	v := reflect.ValueOf(c)
@@ -92,13 +131,10 @@ func UserFields(c Configuration) map[string]any {
 	return out
 }
 
-// Validate: Validates the given configuration against the struct tags.
-//
-// Params:
-// - c (*Configuration): The configuration to validate.
+// Validate: Validates the configuration against the struct tags.
 //
 // Returns:
 // - error: The validation error, if any.
-func Validate(c *Configuration) error {
+func (c *Configuration) Validate() error {
 	return validate.Struct(c)
 }
