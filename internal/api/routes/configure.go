@@ -20,17 +20,6 @@ import (
 	"github.com/Flick-Corp/flick/internal/api/utils"
 )
 
-// WriteDefaultConfig: Writes the default server configuration.
-func WriteDefaultConfig() {
-	dir := path.GetFlickDir()
-	if _, err := os.Stat(filepath.Join(dir, "server-config.json")); err == nil {
-		logging.LogInfo("Server configuration file already exists")
-		return
-	}
-	data, _ := json.MarshalIndent(serverconfig.Conf, "", "")
-	os.WriteFile(filepath.Join(dir, "server-config.json"), data, 0644)
-}
-
 // SendServerConfig: Sends the server config to the web if GET,
 // if POST modifies the server config.
 //
@@ -71,7 +60,7 @@ func SendServerConfig() http.HandlerFunc {
 				return
 			}
 
-			if err := serverconfig.Validate(&newConf); err != nil {
+			if err := newConf.Validate(); err != nil {
 				WriteError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
 				return
 			}

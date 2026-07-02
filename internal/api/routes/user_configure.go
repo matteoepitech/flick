@@ -40,7 +40,7 @@ func SendServerUserConfig() http.HandlerFunc {
 				return
 			}
 
-			out, _ := json.MarshalIndent(serverconfig.UserFields(conf), "", "  ")
+			out, _ := json.MarshalIndent(serverconfig.FilterUserFields(conf), "", "  ")
 			w.Header().Set("Content-Type", "application/json")
 			w.Write(out)
 			return

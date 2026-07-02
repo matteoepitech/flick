@@ -28,6 +28,7 @@ import (
 	groupsadmin "github.com/Flick-Corp/flick/internal/api/routes/groups/admin"
 	"github.com/Flick-Corp/flick/internal/api/routes/users"
 	usersadmin "github.com/Flick-Corp/flick/internal/api/routes/users/admin"
+	"github.com/Flick-Corp/flick/internal/api/serverconfig"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -64,6 +65,11 @@ func setupDatabase(ctx context.Context) (*pgxpool.Pool, *database.Queries, error
 func Run(ctx context.Context) error {
 	if err := os.MkdirAll(path.GetDataDir(), 0o755); err != nil {
 		return logging.LogInfoError("Cannot create data directory %q: %v", path.GetDataDir(), err)
+	}
+
+	serverconfig.WriteDefaultConfig()
+	if err := serverconfig.LoadServerConfigFromDisk(); err != nil {
+		return err
 	}
 
 	pool, queries, err := setupDatabase(ctx)
@@ -104,7 +110,6 @@ func Run(ctx context.Context) error {
 	mux.HandleFunc("/api/v1/admin/groups/{id}/folders", groups.CreateGroupFolderHandler(queries))
 	mux.HandleFunc("/api/v1/admin/groups/{id}/folders/{folderId}", groups.DeleteGroupFolderHandler(queries))
 	mux.HandleFunc("/api/v1/admin/groups/{id}/uploads/{uploadId}", groups.DeleteGroupUploadHandler(queries))
-	routes.WriteDefaultConfig()
 
 	server := &http.Server{
 		Addr:    addr,
