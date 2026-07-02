@@ -115,7 +115,7 @@ func finalizeUpload(ctx context.Context, queries *database.Queries, in uploadInp
 	var shareCode string
 	for {
 		shareCode = code.CodeGen()
-		if code.IsCodeAlreadyExistInList(shareCode) {
+		if code.IsCodeExist(shareCode) {
 			continue
 		}
 		code.AddCodeToList(shareCode, in.Expiration)

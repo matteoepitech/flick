@@ -95,14 +95,14 @@ func DeleteCode(code string) error {
 	return nil
 }
 
-// IsCodeAlreadyExistInList: Does the code exists or not?
+// IsCodeExist: Does the code exists or not?
 //
 // Params:
 // - code (string): The code to find.
 //
 // Returns:
 // - result1 (bool): true or false if it exists.
-func IsCodeAlreadyExistInList(code string) bool {
+func IsCodeExist(code string) bool {
 	_, exist := Cache.Get(code)
 	return exist
 }

@@ -61,7 +61,7 @@ func DownloadInfoHandler(queries *database.Queries) http.HandlerFunc {
 			return
 		}
 
-		if codepkg.IsCodeAlreadyExistInList(code) == false {
+		if codepkg.IsCodeExist(code) == false {
 			logging.LogInfoError("Code %q is expired or does not exist", code)
 			routes.WriteError(w, http.StatusNotFound, "Code not found")
 			return
