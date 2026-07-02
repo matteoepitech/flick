@@ -91,7 +91,7 @@ func Run(ctx context.Context) error {
 	mux.HandleFunc("/api/v1/quota", files.QuotaHandler(queries))
 	mux.HandleFunc("/api/v1/configure", routes.SendServerConfig())
 	mux.HandleFunc("/api/v1/stats", routes.ServerStatsHandler(queries))
-	mux.HandleFunc("/api/v1/user-configure", routes.SendServerUserConfig())
+	mux.HandleFunc("/api/v1/user-configure", routes.ServerUserConfigHandler())
 	mux.HandleFunc("/api/v1/register", account.RegisterHandler(queries))
 	mux.HandleFunc("/api/v1/login", account.LoginHandler(queries))
 	mux.HandleFunc("/api/v1/whoami", account.WhoamiHandler(queries))
