@@ -16,7 +16,6 @@ import (
 
 	"github.com/Flick-Corp/flick/internal/api/code"
 	"github.com/Flick-Corp/flick/internal/api/database"
-	"github.com/Flick-Corp/flick/internal/api/identification"
 	"github.com/Flick-Corp/flick/internal/api/logging"
 	"github.com/Flick-Corp/flick/internal/api/path"
 	"github.com/Flick-Corp/flick/internal/api/routes"
@@ -86,7 +85,7 @@ func Run(ctx context.Context) error {
 	mux := http.NewServeMux()
 	mux.Handle(tus.BasePath, http.StripPrefix(tus.BasePath, tusHandler))
 	mux.HandleFunc("/api/v1/upload-result", tus.ResultHandler())
-	mux.HandleFunc("/api/v1/identify", identification.IdentifyHandler(queries))
+	mux.HandleFunc("/api/v1/identify", account.IdentifyHandler(queries))
 	mux.HandleFunc("/api/v1/download", files.DownloadFileHandler(queries))
 	mux.HandleFunc("/api/v1/download/info", files.DownloadInfoHandler(queries))
 	mux.HandleFunc("/api/v1/quota", files.QuotaHandler(queries))
