@@ -68,8 +68,7 @@ export default function ReceiveCodePage({ params }: { params: Promise<{ code: st
       </Link>
 
       <div className="w-full text-center">
-        <p className="font-heading text-xs font-semibold tracking-[0.12em] text-primary uppercase">{t("eyebrow")}</p>
-        <h1 className="mt-4 font-heading text-3xl font-bold tracking-tight md:text-4xl">{t("title")}</h1>
+        <h1 className="font-heading text-3xl font-bold tracking-tight md:text-4xl">{t("title")}</h1>
         <p className="mt-3 font-mono text-sm text-primary">{t("subtitle", { code })}</p>
       </div>
 
@@ -99,20 +98,47 @@ export default function ReceiveCodePage({ params }: { params: Promise<{ code: st
   )
 }
 
-function ReadyView({ info, code }: { info: DownloadInfo; code: string }) {
+function ReadyView({ info: initialInfo, code }: { info: DownloadInfo; code: string }) {
   const t = useTranslations("ReceiveCode")
+  // The listing shown. For a locked code it starts as a placeholder and is
+  // replaced by the real listing once the password unlocks it.
+  const [info, setInfo] = useState(initialInfo)
   const [busy, setBusy] = useState(false)
   const [password, setPassword] = useState("")
   const [wrongPassword, setWrongPassword] = useState(false)
+  // The password verified by the unlock re-fetch, reused for the consuming
+  // download so we never ask for it twice.
+  const [verifiedPassword, setVerifiedPassword] = useState<string | undefined>(undefined)
   const items = info.items
 
-  async function downloadAll() {
-    if (busy) return
-    if (info.passwordProtected && password.trim().length === 0) return
+  // unlock: re-run download info WITH the password. A correct password reveals
+  // the real listing (passwordProtected drops to false); a wrong one comes back
+  // still locked, which we surface as an error.
+  async function unlock() {
+    if (busy || password.trim().length === 0) return
     setBusy(true)
     setWrongPassword(false)
     try {
-      const archives = await downloadByCode(code, undefined, info.passwordProtected ? password : undefined)
+      const unlocked = await fetchDownloadInfo(code, undefined, password)
+      if (unlocked.passwordProtected) {
+        setWrongPassword(true)
+        return
+      }
+      setVerifiedPassword(password)
+      setInfo(unlocked)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function downloadAll() {
+    if (busy) return
+    setBusy(true)
+    setWrongPassword(false)
+    try {
+      const archives = await downloadByCode(code, undefined, verifiedPassword)
       for (const archive of archives) triggerBlobDownload(archive.blob, archive.name)
     } catch (err) {
       if (err instanceof PasswordRequiredError) {
@@ -125,13 +151,14 @@ function ReadyView({ info, code }: { info: DownloadInfo; code: string }) {
     }
   }
 
-  function handleDownload(event: FormEvent<HTMLFormElement>) {
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    downloadAll()
+    if (info.passwordProtected) unlock()
+    else downloadAll()
   }
 
   return (
-    <form onSubmit={handleDownload} className="flex flex-col gap-4">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       {info.message && (
         <Card className="flex flex-col gap-2 p-4">
           <div className="flex items-center gap-2 font-heading text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">
@@ -144,31 +171,34 @@ function ReadyView({ info, code }: { info: DownloadInfo; code: string }) {
 
       <Card className="p-2">
         <ul className="flex flex-col">
-          {items.map((item) => (
-            <li key={item.name} className="flex items-center gap-3 rounded-lg px-3 py-2.5">
+          {info.encrypted || info.passwordProtected ? (
+            <li className="flex items-center gap-3 rounded-lg px-3 py-2.5">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                {info.encrypted ? (
-                  <Lock className="h-4 w-4" />
-                ) : info.passwordProtected ? (
-                  <KeyRound className="h-4 w-4" />
-                ) : item.isFolder ? (
-                  <Folder className="h-4 w-4" />
-                ) : (
-                  <FileText className="h-4 w-4" />
-                )}
+                {info.encrypted ? <Lock className="h-4 w-4" /> : <KeyRound className="h-4 w-4" />}
               </span>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">
-                  {info.encrypted ? t("encrypted") : info.passwordProtected ? t("passwordProtected") : item.name}
-                </p>
-                <p className="font-mono text-xs text-muted-foreground">
-                  {item.isFolder
-                    ? `${t("folderFiles", { count: item.fileCount })} · ${formatBytes(item.size)}`
-                    : formatBytes(item.size)}
+                  {info.encrypted ? t("encrypted") : t("passwordProtected")}
                 </p>
               </div>
             </li>
-          ))}
+          ) : (
+            items.map((item) => (
+              <li key={item.name} className="flex items-center gap-3 rounded-lg px-3 py-2.5">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  {item.isFolder ? <Folder className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{item.name}</p>
+                  <p className="font-mono text-xs text-muted-foreground">
+                    {item.isFolder
+                      ? `${t("folderFiles", { count: item.fileCount })} · ${formatBytes(item.size)}`
+                      : formatBytes(item.size)}
+                  </p>
+                </div>
+              </li>
+            ))
+          )}
         </ul>
       </Card>
 
@@ -179,31 +209,33 @@ function ReadyView({ info, code }: { info: DownloadInfo; code: string }) {
         </p>
       ) : (
         <>
-          {info.passwordProtected && (
-            <div className="flex flex-col gap-2">
-              <Input
-                type="password"
-                value={password}
-                onChange={(event) => {
-                  setPassword(event.target.value)
-                  setWrongPassword(false)
-                }}
-                placeholder={t("passwordPlaceholder")}
-                autoComplete="off"
-                autoFocus
-              />
-              {wrongPassword && <p className="text-sm text-destructive">{t("wrongPassword")}</p>}
-            </div>
+          {info.passwordProtected ? (
+            <>
+              <div className="flex flex-col gap-2">
+                <Input
+                  type="password"
+                  value={password}
+                  onChange={(event) => {
+                    setPassword(event.target.value)
+                    setWrongPassword(false)
+                  }}
+                  placeholder={t("passwordPlaceholder")}
+                  autoComplete="off"
+                  autoFocus
+                />
+                {wrongPassword && <p className="text-sm text-destructive">{t("wrongPassword")}</p>}
+              </div>
+              <Button type="submit" size="lg" className="h-12 w-full" disabled={busy || password.trim().length === 0}>
+                {busy ? <Loader2 className="size-5 animate-spin" /> : <KeyRound className="size-5" />}
+                {t("unlock")}
+              </Button>
+            </>
+          ) : (
+            <Button type="submit" size="lg" className="h-12 w-full" disabled={busy}>
+              {busy ? <Loader2 className="size-5 animate-spin" /> : <Download className="size-5" />}
+              {items.length > 1 ? t("downloadAll") : t("download")}
+            </Button>
           )}
-          <Button
-            type="submit"
-            size="lg"
-            className="h-12 w-full"
-            disabled={busy || (info.passwordProtected && password.trim().length === 0)}
-          >
-            {busy ? <Loader2 className="size-5 animate-spin" /> : <Download className="size-5" />}
-            {items.length > 1 ? t("downloadAll") : t("download")}
-          </Button>
         </>
       )}
     </form>

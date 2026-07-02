@@ -79,7 +79,12 @@ func DownloadInfoHandler(queries *database.Queries) http.HandlerFunc {
 
 		meta, metaErr := metadata.LoadMetadata(path.GetDataDir(), code)
 
-		if metaErr == nil && meta.IsGroupCode() {
+		if metaErr != nil {
+			routes.WriteError(w, http.StatusNotFound, "Code not found")
+			return
+		}
+
+		if meta.IsGroupCode() {
 			var groupID pgtype.UUID
 			if err := groupID.Scan(meta.GroupID); err != nil {
 				routes.WriteError(w, http.StatusNotFound, "Code not found")
@@ -91,58 +96,44 @@ func DownloadInfoHandler(queries *database.Queries) http.HandlerFunc {
 			}
 		}
 
-		passwordProtected := metaErr == nil && meta.IsPasswordProtected()
-
-		message := ""
-		if metaErr == nil {
-			message = meta.Message
-		}
-
-		if passwordProtected && !meta.VerifyCodePassword(r.Header.Get("X-Flick-Password")) {
-			var total int64
-			for _, entry := range entries {
-				if entry.Name() == metadataFilename {
-					continue
-				}
-				if info, err := entry.Info(); err == nil {
-					total += info.Size()
-				}
-			}
-
+		password := r.Header.Get("X-Flick-Password")
+		if meta.IsPasswordProtected() && !meta.VerifyCodePassword(password) {
 			resp := downloadInfoResponse{
 				PasswordProtected: true,
-				Encrypted:         metaErr == nil && meta.Encrypted,
-				Message:           message,
-				Items:             []downloadInfoItem{{Name: "password protected content", FileCount: 1, Size: total}},
+				Encrypted:         meta.Encrypted,
+				Message:           meta.Message,
+				Items:             []downloadInfoItem{},
 			}
+
+			data, err := json.Marshal(resp)
+			if err != nil {
+				logging.LogInfoError("Cannot encode stats response: %v", err)
+				routes.WriteError(w, http.StatusInternalServerError, "Cannot encode response")
+				return
+			}
+
 			w.Header().Set("Content-Type", "application/json")
-			if err := json.NewEncoder(w).Encode(resp); err != nil {
-				logging.LogInfoError("Cannot encode info response for code %q: %v", code, err)
-			}
+			w.Write(data)
 			return
 		}
 
 		// Check if this is encrypted or not
-		if metaErr == nil && meta.Encrypted {
-			var total int64
-			for _, entry := range entries {
-				if entry.Name() == metadataFilename {
-					continue
-				}
-				if info, err := entry.Info(); err == nil {
-					total += info.Size()
-				}
-			}
-
+		if meta.Encrypted {
 			resp := downloadInfoResponse{
 				Encrypted: true,
-				Message:   message,
-				Items:     []downloadInfoItem{{Name: "encrypted content", FileCount: 1, Size: total}},
+				Message:   meta.Message,
+				Items:     []downloadInfoItem{},
 			}
+
+			data, err := json.Marshal(resp)
+			if err != nil {
+				logging.LogInfoError("Cannot encode stats response: %v", err)
+				routes.WriteError(w, http.StatusInternalServerError, "Cannot encode response")
+				return
+			}
+
 			w.Header().Set("Content-Type", "application/json")
-			if err := json.NewEncoder(w).Encode(resp); err != nil {
-				logging.LogInfoError("Cannot encode info response for code %q: %v", code, err)
-			}
+			w.Write(data)
 			return
 		}
 
@@ -188,14 +179,19 @@ func DownloadInfoHandler(queries *database.Queries) http.HandlerFunc {
 			reader.Close()
 		}
 
-		resp.Message = message
+		resp.Message = meta.Message
 		for _, name := range order {
 			resp.Items = append(resp.Items, *byTop[name])
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(resp); err != nil {
-			logging.LogInfoError("Cannot encode info response for code %q: %v", code, err)
+		data, err := json.Marshal(resp)
+		if err != nil {
+			logging.LogInfoError("Cannot encode stats response: %v", err)
+			routes.WriteError(w, http.StatusInternalServerError, "Cannot encode response")
+			return
 		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(data)
 	}
 }
