@@ -2,13 +2,14 @@ import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { Bricolage_Grotesque, Hanken_Grotesk, JetBrains_Mono } from "next/font/google"
 import { hasLocale, NextIntlClientProvider } from "next-intl"
-import { setRequestLocale } from "next-intl/server"
+import { getTranslations, setRequestLocale } from "next-intl/server"
 
 import "../globals.css"
 import { PageTransition } from "@/components/page-transition"
 import SiteHeader from "@/components/site-header"
 import { ThemeProvider } from "@/components/theme-provider"
 import { routing } from "@/i18n/routing"
+import { alternatesFor, localizedPath, SITE_NAME, SITE_URL } from "@/lib/seo"
 import { cn } from "@/lib/utils"
 
 const fontSans = Hanken_Grotesk({
@@ -29,12 +30,58 @@ const fontMono = JetBrains_Mono({
   weight: ["400", "500", "600", "700"],
 })
 
-export const metadata: Metadata = {
-  icons: {
-    icon: "/assets/flick_logo.png",
-    shortcut: "/favicon.ico",
-    apple: "/assets/flick_logo.png",
-  },
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>
+}): Promise<Metadata> {
+  const { locale } = await params
+  const t = await getTranslations({ locale, namespace: "Seo" })
+  const title = t("siteTitle")
+  const description = t("description")
+  const url = localizedPath(locale, "/")
+
+  return {
+    metadataBase: new URL(SITE_URL),
+    title: {
+      default: title,
+      template: t("titleTemplate"),
+    },
+    description,
+    applicationName: SITE_NAME,
+    keywords: t("keywords")
+      .split(",")
+      .map((k) => k.trim()),
+    alternates: {
+      canonical: url,
+      languages: alternatesFor("/"),
+    },
+    openGraph: {
+      type: "website",
+      siteName: SITE_NAME,
+      title,
+      description,
+      url,
+      locale,
+      images: [{ url: "/assets/flick_logo.png", alt: t("ogAlt") }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: ["/assets/flick_logo.png"],
+    },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: { index: true, follow: true, "max-image-preview": "large" },
+    },
+    icons: {
+      icon: "/assets/flick_logo.png",
+      shortcut: "/favicon.ico",
+      apple: "/assets/flick_logo.png",
+    },
+  }
 }
 
 export function generateStaticParams() {
