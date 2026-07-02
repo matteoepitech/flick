@@ -13,20 +13,19 @@ import (
 
 	"github.com/Flick-Corp/flick/internal/api/auth"
 	"github.com/Flick-Corp/flick/internal/api/database"
+	"github.com/Flick-Corp/flick/internal/api/logging"
 	"github.com/Flick-Corp/flick/internal/api/quota"
 	"github.com/Flick-Corp/flick/internal/api/routes"
 	"github.com/Flick-Corp/flick/internal/api/serverconfig"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-// QuotaHandler: Build the quota usage handler. With a `group_id` query parameter
-// it reports the group's usage (caller must be a maintainer); otherwise it
-// reports the usage of the uploader given by the X-Flick-User-ID header. The
-// response feeds a "used / limit" indicator in the UI. A limit of 0 means the
-// scope is unlimited.
+// QuotaHandler: Get the quota of a group or an upload. Both by ID.
+// If the request has the query parameter group_id (?group_id=...) then it will return the group's quota.
+// Otherwise it's the uploader's quota.
 //
 // Params:
-// - queries (*database.Queries): The database queries.
+// - queries (*database.Queries): The database queries, used to authorize a member when the code is bound to a group.
 //
 // Returns:
 // - http.HandlerFunc: The handler function.
@@ -46,15 +45,20 @@ func QuotaHandler(queries *database.Queries) http.HandlerFunc {
 				routes.WriteError(w, http.StatusBadRequest, "Invalid group id")
 				return
 			}
-			if _, status, err := auth.RequireGroupMaintainer(r.Context(), queries, auth.GetTokenFromHTTPRequest(r), groupPgID); err != nil {
+
+			token := auth.GetTokenFromHTTPRequest(r)
+			_, status, err := auth.RequireGroupMaintainer(r.Context(), queries, token, groupPgID)
+			if err != nil {
 				routes.WriteError(w, status, err.Error())
 				return
 			}
+
 			u, err := quota.CalculateQuotaByGroupID(groupID)
 			if err != nil {
 				routes.WriteError(w, http.StatusInternalServerError, "Cannot read quota")
 				return
 			}
+
 			usedBytes = u
 			limitMb = serverconfig.Conf.GroupQuotaMb
 		} else {
@@ -63,11 +67,13 @@ func QuotaHandler(queries *database.Queries) http.HandlerFunc {
 				routes.WriteError(w, http.StatusBadRequest, "Invalid or unknown user")
 				return
 			}
+
 			u, err := quota.CalculateQuotaByUploaderID(rawID)
 			if err != nil {
 				routes.WriteError(w, http.StatusInternalServerError, "Cannot read quota")
 				return
 			}
+
 			usedBytes = u
 			limitMb = serverconfig.Conf.UserQuotaMb
 			if isAnonymous {
@@ -75,10 +81,17 @@ func QuotaHandler(queries *database.Queries) http.HandlerFunc {
 			}
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]any{
+		data, err := json.Marshal(map[string]any{
 			"usedBytes": usedBytes,
 			"limitMb":   limitMb,
 		})
+		if err != nil {
+			logging.LogInfoError("Cannot encode quota response: %v", err)
+			routes.WriteError(w, http.StatusInternalServerError, "Cannot encode response")
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(data)
 	}
 }
