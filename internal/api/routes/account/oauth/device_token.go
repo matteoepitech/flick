@@ -2,7 +2,7 @@
 ** FLICK PROJECT, 2026
 ** flick/internal/api/routes/account/oauth/device_token
 ** File description:
-** Device authorization flow (CLI polling)
+** Device authorization flow (polling stage)
  */
 
 package oauth
@@ -11,9 +11,10 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/Flick-Corp/flick/internal/api/database"
+	"github.com/Flick-Corp/flick/internal/api/logging"
 	"github.com/Flick-Corp/flick/internal/api/routes"
+	"github.com/go-playground/validator/v10"
 )
 
 // DeviceTokenRequest: The JSON body request.
@@ -68,28 +69,66 @@ func DeviceTokenHandler(queries *database.Queries) http.HandlerFunc {
 
 		switch auth.Status {
 		case database.OauthStatusPending:
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(DeviceTokenPendingResponse{Status: "pending"})
+			writePendingResponse(w)
 			return
 		case database.OauthStatusDenied:
-			routes.WriteError(w, http.StatusForbidden, "Authorization denied")
+			writeDeniedResponse(w)
 			return
 		case database.OauthStatusApproved:
-			if auth.SessionToken == nil {
-				routes.WriteError(w, http.StatusInternalServerError, "Approved device has no session token")
-				return
-			}
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(DeviceTokenResponse{
-				Token:  *auth.SessionToken,
-				UserID: auth.UserID.String(),
-			})
+			writeApprovedResponse(w, auth)
 			return
 		default:
 			routes.WriteError(w, http.StatusInternalServerError, "Unknown authorization status")
 			return
 		}
 	}
+}
+
+// writePendingResponse: Write the JSON response while the device is still waiting.
+//
+// Params:
+// - w (http.ResponseWriter): The response writer.
+func writePendingResponse(w http.ResponseWriter) {
+	data, err := json.Marshal(DeviceTokenPendingResponse{Status: "pending"})
+	if err != nil {
+		logging.LogInfoError("Cannot encode device token pending response: %v", err)
+		routes.WriteError(w, http.StatusInternalServerError, "Cannot encode response")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(data)
+}
+
+// writeDeniedResponse: Write the error response when the authorization was denied.
+//
+// Params:
+// - w (http.ResponseWriter): The response writer.
+func writeDeniedResponse(w http.ResponseWriter) {
+	routes.WriteError(w, http.StatusForbidden, "Authorization denied")
+}
+
+// writeApprovedResponse: Write the JSON response when the device is approved.
+//
+// Params:
+// - w (http.ResponseWriter): The response writer.
+// - auth (database.DeviceAuthorization): The approved device authorization.
+func writeApprovedResponse(w http.ResponseWriter, auth database.DeviceAuthorization) {
+	if auth.SessionToken == nil {
+		routes.WriteError(w, http.StatusInternalServerError, "Approved device has no session token")
+		return
+	}
+
+	data, err := json.Marshal(DeviceTokenResponse{
+		Token:  *auth.SessionToken,
+		UserID: auth.UserID.String(),
+	})
+	if err != nil {
+		logging.LogInfoError("Cannot encode device token approved response: %v", err)
+		routes.WriteError(w, http.StatusInternalServerError, "Cannot encode response")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(data)
 }
