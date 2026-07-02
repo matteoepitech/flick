@@ -1,11 +1,11 @@
 /*
 ** FLICK PROJECT, 2026
-** flick/internal/api/utils/colors
+** flick/internal/utils/colors/colors
 ** File description:
 ** Utils colors file
  */
 
-package utils
+package colors
 
 const (
 	// Foreground colors

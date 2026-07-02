@@ -10,8 +10,8 @@ package commands
 import (
 	"fmt"
 
-	"github.com/Flick-Corp/flick/internal/api/utils"
 	"github.com/Flick-Corp/flick/internal/cli/config"
+	"github.com/Flick-Corp/flick/internal/utils/colors"
 	"github.com/spf13/cobra"
 )
 
@@ -47,7 +47,7 @@ func RunLogout(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("you are not able to be logged out.")
 	}
 
-	fmt.Printf(utils.Dim + "You are now logged out.\n" + utils.Reset)
+	fmt.Printf(colors.Dim + "You are now logged out.\n" + colors.Reset)
 	return nil
 
 }

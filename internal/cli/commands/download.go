@@ -20,11 +20,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Flick-Corp/flick/internal/api/utils"
 	"github.com/Flick-Corp/flick/internal/cli/config"
 	"github.com/Flick-Corp/flick/internal/cli/network"
 	archiveutil "github.com/Flick-Corp/flick/internal/utils/archive"
 	"github.com/Flick-Corp/flick/internal/utils/checksum"
+	"github.com/Flick-Corp/flick/internal/utils/colors"
 	"github.com/Flick-Corp/flick/internal/utils/encryption"
 	"github.com/schollz/progressbar/v3"
 	"github.com/spf13/cobra"
@@ -260,7 +260,7 @@ func fetchDownloadInfo(code string, password string) (downloadInfoResponse, erro
 // - info (downloadInfoResponse): The listing to print.
 func printDownloadInfo(info downloadInfoResponse) {
 	if info.Message != "" {
-		fmt.Printf("\n"+utils.Yellow+"Message from the sender:"+utils.Reset+" %s\n", info.Message)
+		fmt.Printf("\n"+colors.Yellow+"Message from the sender:"+colors.Reset+" %s\n", info.Message)
 	}
 	if len(info.Items) == 0 {
 		fmt.Println("This code holds no files.")
@@ -269,9 +269,9 @@ func printDownloadInfo(info downloadInfoResponse) {
 	fmt.Println("\nThis code contains:")
 	for _, item := range info.Items {
 		if item.IsFolder {
-			fmt.Printf("  • "+utils.Blue+"%s/ (%d files, %s)\n"+utils.Reset, item.Name, item.FileCount, humanSize(item.Size))
+			fmt.Printf("  • "+colors.Blue+"%s/ (%d files, %s)\n"+colors.Reset, item.Name, item.FileCount, humanSize(item.Size))
 		} else {
-			fmt.Printf("  • "+utils.Dim+"%s (%s)\n"+utils.Reset, item.Name, humanSize(item.Size))
+			fmt.Printf("  • "+colors.Dim+"%s (%s)\n"+colors.Reset, item.Name, humanSize(item.Size))
 		}
 	}
 }
@@ -325,7 +325,7 @@ func RunDownload(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("Failure: This Flick is end-to-end encrypted. Use the full code including the part after #.")
 	}
 	if info.Encrypted {
-		fmt.Println(utils.Dim + "This content is end-to-end encrypted; it will be decrypted locally." + utils.Reset)
+		fmt.Println(colors.Dim + "This content is end-to-end encrypted; it will be decrypted locally." + colors.Reset)
 	}
 	printDownloadInfo(info)
 
