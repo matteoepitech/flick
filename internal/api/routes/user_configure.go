@@ -17,12 +17,13 @@ import (
 	"github.com/Flick-Corp/flick/internal/api/serverconfig"
 )
 
-// SendServerUserConfig: Sends the user-facing server config to the web by a GET.
-// Only the fields tagged with `user:"true"` are returned.
+// ServerUserConfigHandler: Send the user config.
+// The server-config.json contains field that the user can read.
+// We filter the fields and send the results.
 //
 // Returns:
-// - http.HandlerFunc
-func SendServerUserConfig() http.HandlerFunc {
+// - result1 (http.HandlerFunc): The handler function.
+func ServerUserConfigHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		dir := path.GetFlickDir()
 
@@ -46,6 +47,24 @@ func SendServerUserConfig() http.HandlerFunc {
 			return
 		}
 
-		WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		data, err := os.ReadFile(filepath.Join(path.GetFlickDir(), "server-config.json"))
+		if err != nil {
+			WriteError(w, http.StatusInternalServerError, "Failed to read config")
+			return
+		}
+
+		var conf serverconfig.Configuration
+		if err := json.Unmarshal(data, &conf); err != nil {
+			WriteError(w, http.StatusInternalServerError, "Failed to parse config")
+			return
+		}
+
+		out, err := json.MarshalIndent(serverconfig.UserFields(conf), "", "  ")
+		if err != nil {
+			WriteError(w, http.StatusInternalServerError, "Failed to encode config")
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(out)
 	}
 }
