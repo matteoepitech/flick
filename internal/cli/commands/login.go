@@ -16,9 +16,9 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/Flick-Corp/flick/internal/api/utils"
 	"github.com/Flick-Corp/flick/internal/cli/config"
 	"github.com/Flick-Corp/flick/internal/cli/network"
+	"github.com/Flick-Corp/flick/internal/utils/colors"
 	"github.com/spf13/cobra"
 )
 
@@ -149,11 +149,11 @@ func RunLogin(cmd *cobra.Command, args []string) error {
 	activateURL := fmt.Sprintf("%s/activate?code=%s", config.NormalizeServerURL(config.Conf.ServerURL), device.UserCode)
 
 	fmt.Printf("To log in, open the following page in your browser:\n\n")
-	fmt.Printf("  %s%s%s\n\n", utils.Cyan, activateURL, utils.Reset)
-	fmt.Printf("and confirm this code: %s%s%s\n\n", utils.Bold, device.UserCode, utils.Reset)
+	fmt.Printf("  %s%s%s\n\n", colors.Cyan, activateURL, colors.Reset)
+	fmt.Printf("and confirm this code: %s%s%s\n\n", colors.Bold, device.UserCode, colors.Reset)
 	openBrowser(activateURL)
 
-	fmt.Printf("%sWaiting for approval...%s\n", utils.Dim, utils.Reset)
+	fmt.Printf("%sWaiting for approval...%s\n", colors.Dim, colors.Reset)
 
 	deadline := time.Now().Add(time.Duration(device.ExpiresIn) * time.Second)
 	for time.Now().Before(deadline) {
@@ -171,7 +171,7 @@ func RunLogin(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("failed to save credentials: %w", err)
 		}
 
-		fmt.Printf(utils.Green + "You are now logged in!\n" + utils.Reset)
+		fmt.Printf(colors.Green + "You are now logged in!\n" + colors.Reset)
 		return nil
 	}
 

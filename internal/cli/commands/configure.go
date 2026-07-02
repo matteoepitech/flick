@@ -13,8 +13,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Flick-Corp/flick/internal/api/utils"
 	"github.com/Flick-Corp/flick/internal/cli/config"
+	"github.com/Flick-Corp/flick/internal/utils/colors"
 	"github.com/spf13/cobra"
 )
 
@@ -90,6 +90,6 @@ func RunConfigure(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Printf(utils.Green + "Configuration updated\n" + utils.Reset)
+	fmt.Printf(colors.Green + "Configuration updated\n" + colors.Reset)
 	return nil
 }

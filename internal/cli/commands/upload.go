@@ -22,11 +22,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Flick-Corp/flick/internal/api/utils"
 	"github.com/Flick-Corp/flick/internal/cli/config"
 	"github.com/Flick-Corp/flick/internal/cli/network"
 	archiveutil "github.com/Flick-Corp/flick/internal/utils/archive"
 	"github.com/Flick-Corp/flick/internal/utils/checksum"
+	"github.com/Flick-Corp/flick/internal/utils/colors"
 	"github.com/Flick-Corp/flick/internal/utils/encryption"
 	tusutil "github.com/Flick-Corp/flick/internal/utils/tus"
 	tus "github.com/eventials/go-tus"
@@ -64,9 +64,9 @@ func printShareCode(code string, exp string, keyFragment string) error {
 	if keyFragment != "" {
 		shareCode += "#" + keyFragment
 	}
-	fmt.Printf("\nCode: %s "+utils.Yellow+"[%s left]\n"+utils.Reset, shareCode, exp)
+	fmt.Printf("\nCode: %s "+colors.Yellow+"[%s left]\n"+colors.Reset, shareCode, exp)
 	if keyFragment != "" {
-		fmt.Println(utils.Dim + "Encrypted: share the whole code, the part after # is the decryption key." + utils.Reset)
+		fmt.Println(colors.Dim + "Encrypted: share the whole code, the part after # is the decryption key." + colors.Reset)
 	}
 
 	c := clipboard.New(clipboard.ClipboardOptions{Primary: true})
@@ -273,9 +273,9 @@ func printUploadInfo(args []string) {
 			continue
 		}
 		if item.isFolder {
-			fmt.Printf("  • "+utils.Blue+"%s/ (%d files, %s)\n"+utils.Reset, item.name, item.fileCount, humanSize(item.size))
+			fmt.Printf("  • "+colors.Blue+"%s/ (%d files, %s)\n"+colors.Reset, item.name, item.fileCount, humanSize(item.size))
 		} else {
-			fmt.Printf("  • "+utils.Dim+"%s (%s)\n"+utils.Reset, item.name, humanSize(item.size))
+			fmt.Printf("  • "+colors.Dim+"%s (%s)\n"+colors.Reset, item.name, humanSize(item.size))
 		}
 	}
 }
@@ -405,7 +405,7 @@ func RunUpload(cmd *cobra.Command, args []string, exp string, mdc string, encryp
 	if q, err := fetchQuota(creds.UserID); err == nil {
 		printQuotaBar(q)
 	} else {
-		fmt.Printf(utils.BrightRed + "Quota cannot be fetched" + utils.Reset)
+		fmt.Printf(colors.BrightRed + "Quota cannot be fetched" + colors.Reset)
 	}
 
 	reader := bufio.NewReader(os.Stdin)
@@ -487,7 +487,7 @@ func RunUpload(cmd *cobra.Command, args []string, exp string, mdc string, encryp
 		return err
 	}
 	if password != "" {
-		fmt.Println(utils.BrightGreen + "Password protected: the downloader must enter the password to download." + utils.Reset)
+		fmt.Println(colors.BrightGreen + "Password protected: the downloader must enter the password to download." + colors.Reset)
 	}
 	fmt.Println("Code copied to clipboard.")
 	return nil
