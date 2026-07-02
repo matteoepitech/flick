@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -22,7 +23,6 @@ import (
 	"github.com/Flick-Corp/flick/internal/api/path"
 	"github.com/Flick-Corp/flick/internal/api/serverconfig"
 	"github.com/Flick-Corp/flick/internal/api/utils"
-	"github.com/Flick-Corp/flick/internal/api/utils/data"
 	"github.com/Flick-Corp/flick/internal/utils/checksum"
 	"golang.org/x/crypto/argon2"
 )
@@ -327,7 +327,7 @@ func CheckExpirationToRemove() error {
 				continue
 			}
 			if time.Now().After(dateExp) {
-				data.DeleteDataDirWithCode(entry.Name())
+				os.RemoveAll(filepath.Join(dataDir, code))
 			}
 		}
 	}

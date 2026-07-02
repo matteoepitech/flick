@@ -9,12 +9,12 @@ package code
 
 import (
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/Flick-Corp/flick/internal/api/metadata"
 	"github.com/Flick-Corp/flick/internal/api/path"
 	"github.com/Flick-Corp/flick/internal/api/utils"
-	"github.com/Flick-Corp/flick/internal/api/utils/data"
 	"github.com/patrickmn/go-cache"
 )
 
@@ -77,6 +77,18 @@ func LoadCacheManagerFile(path string) error {
 	return nil
 }
 
+// DeleteDataDirWithCode: Delete the data directory of a code from disk.
+//
+// Params:
+// - code (string): The code to delete.
+//
+// Returns:
+// - result1 (error): Error if removing the data directory fails.
+func DeleteDataDirWithCode(code string) error {
+	dataDir := filepath.Join(path.GetDataDir(), code)
+	return os.RemoveAll(dataDir)
+}
+
 // DeleteCode: Evict a code from the cache, remove its data directory,
 // and refresh metadata expirations.
 //
@@ -87,7 +99,7 @@ func LoadCacheManagerFile(path string) error {
 // - result1 (error): Error if removing the data directory fails.
 func DeleteCode(code string) error {
 	Cache.Delete(code)
-	if err := data.DeleteDataDirWithCode(code); err != nil {
+	if err := DeleteDataDirWithCode(code); err != nil {
 		return err
 	}
 	_ = SaveCacheManagerFile(path.GetCacheFile())
