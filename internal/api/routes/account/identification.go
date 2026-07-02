@@ -1,20 +1,20 @@
 /*
 ** FLICK PROJECT, 2026
-** flick/internal/api/identification/identification
+** flick/internal/api/routes/account/identification
 ** File description:
-** Identification go file
+** Identification route
  */
 
-package identification
+package account
 
 import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/Flick-Corp/flick/internal/api/database"
 	"github.com/Flick-Corp/flick/internal/api/logging"
 	"github.com/Flick-Corp/flick/internal/api/routes"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // IdentifyResponse: The JSON body returned when an anonymous user is created.
@@ -42,14 +42,21 @@ func IdentifyHandler(queries *database.Queries) http.HandlerFunc {
 		user, err := queries.CreateAnonymousUser(r.Context())
 		if err != nil {
 			logging.LogInfoError("Cannot create id for anonymous user: %v", err)
-			routes.WriteError(w, http.StatusPreconditionFailed, "Could not create an id")
+			routes.WriteError(w, http.StatusPreconditionFailed, "Could not identify anonymous user")
 			return
 		}
 
 		logging.LogInfoSuccess("Created anonymous user %q", user.ID.String())
 
+		data, err := json.Marshal(IdentifyResponse{UserID: user.ID})
+		if err != nil {
+			logging.LogInfoError("Cannot encode identify response: %v", err)
+			routes.WriteError(w, http.StatusInternalServerError, "Cannot encode response")
+			return
+		}
+
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(IdentifyResponse{UserID: user.ID})
+		w.Write(data)
 	}
 }
