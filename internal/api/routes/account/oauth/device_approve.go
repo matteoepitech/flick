@@ -116,8 +116,13 @@ func DeviceApproveHandler(queries *database.Queries) http.HandlerFunc {
 			return
 		}
 
+		data, err := json.Marshal(DeviceApproveResponse{Status: "approved"})
+		if err != nil {
+			logging.LogInfoError("Cannot encode device approve response: %v", err)
+			routes.WriteError(w, http.StatusInternalServerError, "Cannot encode response")
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(DeviceApproveResponse{Status: "approved"})
+		w.Write(data)
 	}
 }
