@@ -13,20 +13,19 @@ import (
 	"time"
 )
 
-// printLogLabel: Print a label in this format <date> [<title>] <subtitle> > .
+// printLogLabel: Print a label in this format <date> [<title>] > .
 //
 // Params:
 // - title (string): The title.
 // - titleColor (string): The title color.
-// - subtitle (string): The subtitle title.
-// - subtitleColor (string): The subtitle title color.
-func printLogLabel(title string, titleColor string, subtitle string, subtitleColor string) {
+func printLogLabel(title string, titleColor string) {
 	now := time.Now().Format("15:04:05")
 
-	fmt.Printf(colors.Dim+"%s"+colors.Reset+" "+
-		colors.Gray+"["+colors.Reset+titleColor+colors.Bold+"%s"+colors.Reset+colors.Gray+"]"+colors.Reset+" "+
-		subtitleColor+colors.Bold+"%s"+colors.Reset+colors.Gray+" > "+colors.Reset,
-		now, title, subtitle)
+	fmt.Printf(utils.Dim+"%s"+utils.Reset+" ", now)
+	fmt.Printf(utils.Gray + "[" + utils.Reset)
+	fmt.Printf(titleColor+utils.Bold+"%s"+utils.Reset, title)
+	fmt.Printf(utils.Gray + "]" + utils.Reset)
+	fmt.Printf(utils.Gray + " > " + utils.Reset)
 }
 
 // LogInfoSuccess: Print a success log message.
@@ -37,7 +36,7 @@ func printLogLabel(title string, titleColor string, subtitle string, subtitleCol
 func LogInfoSuccess(format string, args ...any) {
 	msg := fmt.Sprintf(format, args...)
 
-	printLogLabel("SUCCESS", colors.BrightGreen, "INFO", colors.BrightWhite)
+	printLogLabel("SUCCESS", utils.BrightGreen)
 	fmt.Printf("%s\n", msg)
 }
 
@@ -52,7 +51,7 @@ func LogInfoSuccess(format string, args ...any) {
 func LogInfoError(format string, args ...any) error {
 	msg := fmt.Sprintf(format, args...)
 
-	printLogLabel("ERROR", colors.BrightRed, "INFO", colors.BrightWhite)
+	printLogLabel("ERROR", utils.BrightRed)
 	fmt.Printf("%s\n", msg)
 	return fmt.Errorf("%s", msg)
 }
@@ -65,6 +64,6 @@ func LogInfoError(format string, args ...any) error {
 func LogInfo(format string, args ...any) {
 	msg := fmt.Sprintf(format, args...)
 
-	printLogLabel("INFO", colors.BrightBlue, "INFO", colors.BrightWhite)
+	printLogLabel("INFO", utils.BrightBlue)
 	fmt.Printf("%s\n", msg)
 }
