@@ -209,6 +209,7 @@
     "encryptedHint": "Ce fichier est chiffré de bout en bout, il ne peut donc pas être téléchargé depuis le web. Utilisez le CLI Flick avec le code complet, y compris la partie après #.",
     "passwordProtected": "Protégé par mot de passe",
     "passwordPlaceholder": "Saisissez le mot de passe",
+    "unlock": "Déverrouiller",
     "wrongPassword": "Mot de passe incorrect. Réessayez.",
     "message": "Message de l'expéditeur"
   },
